@@ -54,8 +54,13 @@ export default function LoginPage() {
     }
   };
 
-  const quickLogin = () => {
-    handleLogin();
+  const quickLogin = (tenant: string) => {
+    const host = `${tenant}.${process.env.NEXT_PUBLIC_APP_URL}`;
+    const url = new URL("/painel/dashboard", window.location.origin);
+    url.host = host;
+
+    // Redireciona
+    window.location.href = url.toString();
   };
 
   return (
@@ -150,20 +155,21 @@ export default function LoginPage() {
               </p>
               <div className="flex flex-col gap-2">
                 <Button
-                  onClick={() => quickLogin()}
+                  onClick={() => quickLogin("pax")}
                   variant="outline"
                   className="w-full bg-white/10 border-white/30 text-white hover:bg-white/20"
                   size="sm"
                 >
-                  Login como Consultor
+                  Login como Pax
                 </Button>
+
                 <Button
-                  onClick={() => quickLogin()}
+                  onClick={() => quickLogin("lider")}
                   variant="outline"
                   className="w-full bg-white/10 border-white/30 text-white hover:bg-white/20"
                   size="sm"
                 >
-                  Login como Administrador
+                  Login como Lider
                 </Button>
               </div>
             </div>
