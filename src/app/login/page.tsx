@@ -55,7 +55,7 @@ export default function LoginPage() {
   };
 
   const quickLogin = (tenant: string) => {
-    const host = `${tenant}.${process.env.NEXT_PUBLIC_APP_URL}`;
+    const host = `${tenant}.${process.env.NEXT_PUBLIC_DOMAIN_URL}`;
     const url = new URL("/painel/dashboard", window.location.origin);
     url.host = host;
 
