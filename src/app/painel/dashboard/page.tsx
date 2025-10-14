@@ -92,6 +92,13 @@ const mockData: MockData = {
 export default function Dashboard({ userEmail, onViewClient }: DashboardProps) {
   const router = useRouter();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -136,7 +143,7 @@ export default function Dashboard({ userEmail, onViewClient }: DashboardProps) {
         <div className="flex items-center space-x-4">
           <div className="flex items-center text-sm text-gray-500">
             <Clock className="w-4 h-4 mr-2" />
-            {currentTime.toLocaleString("pt-BR")}
+            {mounted && currentTime.toLocaleString("pt-BR")}
           </div>
           <Button className="bg-green-600 hover:bg-green-700 hover-lift text-white">
             <UserPlus className="w-4 h-4 mr-2" />
