@@ -14,6 +14,8 @@ import {
   Menu,
   X,
   Shield,
+  Layers,
+  UserCog,
   CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -55,7 +57,7 @@ export function Sidebar() {
     {
       id: "planos",
       label: "Gestão de Planos",
-      icon: Shield,
+      icon: Layers,
       href: "/painel/gestao/planos",
     },
     {
@@ -71,12 +73,32 @@ export function Sidebar() {
       href: "/painel/relatorios",
     },
     {
+      id: "permissions",
+      label: "Permissões",
+      icon: Shield,
+      href: "/painel/permissoes",
+    },
+    {
+      id: "colaboradores",
+      label: "Colaboradores",
+      icon: UserCog,
+      href: "/painel/colaboradores",
+    },
+    {
       id: "configuracoes",
       label: "Configurações",
       icon: Settings,
       href: "/painel/configuracoes",
     },
   ];
+
+  const handleLogout = async () => {
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
+    router.push("/login");
+  };
 
   return (
     <>
@@ -184,7 +206,7 @@ export function Sidebar() {
             </Card>
 
             <Button
-              onClick={() => router.push("/login")}
+              onClick={handleLogout}
               variant="ghost"
               className="w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700"
             >

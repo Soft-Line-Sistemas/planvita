@@ -17,22 +17,20 @@ import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import logoPlanvita from "@/assets/logo-planvita.png";
 import { useRouter } from "next/navigation";
+import api from "@/utils/api";
+import { AxiosError } from "axios";
 
-// Schema
 const loginSchema = z.object({
   email: z.string().email("E-mail inválido").min(1, "E-mail é obrigatório"),
-  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
+  password: z.string(),
 });
 
 type LoginFormInputs = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const router = useRouter();
-
-  const handleLogin = () => {
-    router.push("/painel/dashboard");
-  };
 
   const {
     register,
@@ -42,34 +40,36 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = async () => {
+  const onSubmit = async (data: LoginFormInputs) => {
     setIsLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      handleLogin();
+      await api.post("/api/v1/auth/login", {
+        email: data.email,
+        password: data.password,
+      });
+
+      router.push("/painel/dashboard");
     } catch (error) {
-      console.error(error);
+      const axiosError = error as AxiosError<{ message: string }>;
+      setErrorMessage(
+        axiosError.response?.data?.message || "Erro ao efetuar login",
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const quickLogin = (tenant: string) => {
-    const host = `${tenant}.${process.env.NEXT_PUBLIC_DOMAIN_URL}`;
-    const url = new URL("/painel/dashboard", window.location.origin);
-    url.host = host;
-
-    // Redireciona
-    window.location.href = url.toString();
+  const handleFocus = () => {
+    if (errorMessage) setErrorMessage(null);
   };
 
   return (
     <div className="relative flex items-center justify-center min-h-screen bg-gradient-to-br from-green-400 via-green-500 to-green-700 overflow-hidden">
-      {/* background decorativo */}
+      {/* background */}
       <div
         className="absolute inset-0 opacity-20"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,...")`,
         }}
       />
       <div className="absolute inset-0 bg-black/20" />
@@ -90,8 +90,12 @@ export default function LoginPage() {
             </CardTitle>
             <CardDescription className="text-green-100 font-medium">
               Gestão de Planos Funerários
-              <p className="text-yellow-300 font-bold uppercase mt-1">
-                Acesso Restrito
+              <p
+                className={`mt-1 font-bold uppercase ${
+                  errorMessage ? "text-red-600 font-bold" : "text-yellow-300"
+                }`}
+              >
+                {errorMessage || "Acesso Restrito"}
               </p>
             </CardDescription>
           </CardHeader>
@@ -108,6 +112,7 @@ export default function LoginPage() {
                   placeholder="seu@email.com"
                   className="bg-white/90 placeholder-gray-500 border-none focus:ring-2 focus:ring-green-400"
                   {...register("email")}
+                  onFocus={handleFocus}
                 />
                 {errors.email && (
                   <p className="text-sm text-red-300">{errors.email.message}</p>
@@ -124,6 +129,7 @@ export default function LoginPage() {
                   placeholder="Digite sua senha"
                   className="bg-white/90 placeholder-gray-500 border-none focus:ring-2 focus:ring-green-400"
                   {...register("password")}
+                  onFocus={handleFocus}
                 />
                 {errors.password && (
                   <p className="text-sm text-red-300">
@@ -147,32 +153,6 @@ export default function LoginPage() {
                 )}
               </Button>
             </form>
-
-            {/* login rápido */}
-            <div className="mt-6">
-              <p className="text-center text-sm text-green-100/80 mb-3">
-                Login rápido para testes:
-              </p>
-              <div className="flex flex-col gap-2">
-                <Button
-                  onClick={() => quickLogin("pax")}
-                  variant="outline"
-                  className="w-full bg-white/10 border-white/30 text-white hover:bg-white/20"
-                  size="sm"
-                >
-                  Login como Pax
-                </Button>
-
-                <Button
-                  onClick={() => quickLogin("lider")}
-                  variant="outline"
-                  className="w-full bg-white/10 border-white/30 text-white hover:bg-white/20"
-                  size="sm"
-                >
-                  Login como Lider
-                </Button>
-              </div>
-            </div>
 
             <p className="text-center text-sm text-green-100/90 mt-6">
               Área reservada para funcionários autorizados
