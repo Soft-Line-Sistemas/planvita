@@ -4,28 +4,46 @@ import { getSubdomainFromHost } from "@/lib/getSubdomain";
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const host = req.headers.get("host");
+  const host = req.headers.get("host") || "";
   const subdomain = getSubdomainFromHost(host);
-
-  if (pathname === "/")
-    return NextResponse.redirect(new URL("/login", req.url));
 
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
     pathname.match(/\.(.*)$/)
-  )
+  ) {
     return NextResponse.next();
+  }
 
-  if (pathname.startsWith("/login")) return NextResponse.next();
+  if (pathname === "/") {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
 
-  if (pathname.startsWith("/painel") && !subdomain)
-    return NextResponse.redirect(new URL("/login", req.url));
+  if (pathname.startsWith("/login/redirecionamento")) {
+    return NextResponse.next();
+  }
 
-  const res = NextResponse.next();
-  if (subdomain) res.headers.set("x-tenant-id", subdomain);
+  if (pathname.startsWith("/login") && !subdomain) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login/redirecionamento";
+    return NextResponse.redirect(url);
+  }
 
-  return res;
+  if (pathname.startsWith("/painel") && !subdomain) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login/redirecionamento";
+    return NextResponse.redirect(url);
+  }
+
+  const response = NextResponse.next();
+
+  if (subdomain) {
+    response.headers.set("X-tenant", subdomain);
+  }
+
+  return response;
 }
 
 export const config = {
