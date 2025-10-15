@@ -25,6 +25,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { motion } from "framer-motion";
 import { UserCog, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type Role = {
   id: number;
@@ -43,6 +44,10 @@ export default function AcessoPage() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserRole, setNewUserRole] = useState<number | null>(null);
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -72,6 +77,33 @@ export default function AcessoPage() {
     } catch (err) {
       console.error(err);
       alert("Erro ao atribuir cargo ao usuário");
+    }
+  };
+
+  const handleCreateUser = async () => {
+    if (!newUserName || !newUserEmail || !newUserRole) {
+      alert("Preencha todos os campos para criar o colaborador");
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const res = await api.post("/api/v1/users", {
+        nome: newUserName,
+        email: newUserEmail,
+        roleId: newUserRole,
+      });
+
+      setUsers((prev) => [...prev, res.data]);
+      setNewUserName("");
+      setNewUserEmail("");
+      setNewUserRole(null);
+      alert("Colaborador criado com sucesso!");
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao criar colaborador");
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -117,14 +149,57 @@ export default function AcessoPage() {
 
       <Separator />
 
-      {/* Tabela */}
+      {/* Criar novo colaborador */}
+      <Card className="shadow-md">
+        <CardHeader>
+          <CardTitle>Criar Novo Colaborador</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <Input
+            placeholder="Nome completo"
+            value={newUserName}
+            onChange={(e) => setNewUserName(e.target.value)}
+          />
+          <Input
+            placeholder="E-mail"
+            value={newUserEmail}
+            onChange={(e) => setNewUserEmail(e.target.value)}
+          />
+          <Select
+            value={newUserRole?.toString() || ""}
+            onValueChange={(val) => setNewUserRole(Number(val))}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Selecione o cargo" />
+            </SelectTrigger>
+            <SelectContent>
+              {roles.map((role) => (
+                <SelectItem key={role.id} value={role.id.toString()}>
+                  {role.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            onClick={handleCreateUser}
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
+            disabled={creating}
+          >
+            {creating ? "Criando..." : "Criar Colaborador"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Separator />
+
+      {/* Tabela de usuários */}
       <Card className="shadow-md">
         <CardHeader>
           <CardTitle>Colaboradores e seus Cargos</CardTitle>
         </CardHeader>
 
         <CardContent>
-          <ScrollArea className="h-[70vh]">
+          <ScrollArea className="h-[50vh]">
             <Table>
               <TableCaption>
                 {filteredUsers.length > 0
