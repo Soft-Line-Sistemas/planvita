@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import logoPlanvita from "@/assets/logo-planvita.png";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 
 interface MenuItem {
   id: string;
@@ -34,6 +35,13 @@ export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !user && process.env.NODE_ENV === "production") {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
 
   const menuItems: MenuItem[] = [
     {

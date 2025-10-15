@@ -7,7 +7,6 @@ export function middleware(req: NextRequest) {
   const host = req.headers.get("host") || "";
   const subdomain = getSubdomainFromHost(host);
 
-  // Ignorar assets e api
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
@@ -16,36 +15,32 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Redireciona a raiz para login
   if (pathname === "/") {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  // Evita loop: se já estiver na página de redirecionamento, não redireciona
   if (pathname.startsWith("/login/redirecionamento")) {
     return NextResponse.next();
   }
 
-  // Página de login sem subdomínio
   if (pathname.startsWith("/login") && !subdomain) {
     const url = req.nextUrl.clone();
     url.pathname = "/login/redirecionamento";
     return NextResponse.redirect(url);
   }
 
-  // Painel sem subdomínio
   if (pathname.startsWith("/painel") && !subdomain) {
     const url = req.nextUrl.clone();
     url.pathname = "/login/redirecionamento";
     return NextResponse.redirect(url);
   }
 
-  // Adiciona header do tenant
   const response = NextResponse.next();
+
   if (subdomain) {
-    response.headers.set("x-tenant-id", subdomain);
+    response.headers.set("X-tenant", subdomain);
   }
 
   return response;
