@@ -54,6 +54,8 @@ interface Pagamento {
   status: StatusPagamento;
   metodoPagamento: MetodoPagamento;
   diasAtraso?: number;
+  referencia?: string;
+  observacoes?: string;
 }
 
 export interface Cliente {

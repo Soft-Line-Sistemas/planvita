@@ -8,7 +8,7 @@ interface Cliente {
 }
 
 export type StatusPagamento = "PENDENTE" | "PAGO" | "VENCIDO" | "CANCELADO";
-type MetodoPagamento = "Boleto" | "PIX" | "Cartão de Crédito";
+export type MetodoPagamento = "Boleto" | "PIX" | "Cartão de Crédito";
 
 export interface Pagamento {
   id: string;

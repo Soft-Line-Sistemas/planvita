@@ -63,6 +63,12 @@ export function Sidebar() {
       href: "/painel/cliente/",
     },
     {
+      id: "colaboradores",
+      label: "Colaboradores",
+      icon: UserCog,
+      href: "/painel/colaboradores",
+    },
+    {
       id: "planos",
       label: "Gestão de Planos",
       icon: Layers,
@@ -85,12 +91,6 @@ export function Sidebar() {
       label: "Permissões",
       icon: Shield,
       href: "/painel/permissoes",
-    },
-    {
-      id: "colaboradores",
-      label: "Colaboradores",
-      icon: UserCog,
-      href: "/painel/colaboradores",
     },
     {
       id: "configuracoes",
