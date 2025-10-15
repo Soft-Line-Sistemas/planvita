@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/useAuth";
 
 type LayoutConfig = {
   id?: number;
@@ -52,6 +53,7 @@ export default function ConfiguracoesPage() {
   });
 
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     api.get(`/api/v1/layout`).then((res) => {
@@ -70,9 +72,12 @@ export default function ConfiguracoesPage() {
 
     try {
       if (config.id) {
-        await api.put(`/api/v1/layout/${config.id}`, config);
+        await api.put(`/api/v1/layout/${config.id}`, {
+          ...config,
+          tenantId: user?.tenant,
+        });
       } else {
-        await api.post(`/api/v1/layout`, config);
+        await api.post(`/api/v1/layout`, { ...config, tenantId: user?.tenant });
       }
       alert("Configurações salvas com sucesso!");
     } catch (err) {
