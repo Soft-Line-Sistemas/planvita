@@ -4,7 +4,9 @@ import { getSubdomainFromHost } from "@/lib/getSubdomain";
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const host = req.headers.get("host") || "";
+  const host =
+    req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
+
   const subdomain = getSubdomainFromHost(host);
 
   if (

@@ -13,8 +13,11 @@ import logoPlanvita from "@/assets/logo-planvita.png";
 
 export default function SelectTenantPage() {
   const handleSelectTenant = (tenant: string) => {
+    const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+
     const host = window.location.host.split(".").slice(-2).join(".");
-    const url = `${window.location.protocol}//${tenant}.${host}/login`;
+    const url = `${protocol}://${tenant}.${host}/login`;
+
     window.location.href = url;
   };
 
