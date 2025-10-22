@@ -9,11 +9,11 @@ import {
   UserPlus,
   Users,
   FileText,
-  Settings,
   LogOut,
   Menu,
   X,
   Shield,
+  ClipboardCheck,
   Layers,
   UserCog,
   CreditCard,
@@ -23,6 +23,7 @@ import { Card } from "@/components/ui/card";
 import logoPlanvita from "@/assets/logo-planvita.png";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import api from "@/utils/api";
 
 interface MenuItem {
   id: string;
@@ -94,17 +95,14 @@ export function Sidebar() {
     },
     {
       id: "configuracoes",
-      label: "Configurações",
-      icon: Settings,
+      label: "Regras",
+      icon: ClipboardCheck,
       href: "/painel/configuracoes",
     },
   ];
 
   const handleLogout = async () => {
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-    });
+    await api.post(`/auth/logout`);
     router.push("/login");
   };
 

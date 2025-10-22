@@ -42,8 +42,8 @@ export default function RolesPermissionsPage() {
     const fetchData = async () => {
       try {
         const [rolesRes, permRes] = await Promise.all([
-          api.get("/api/v1/roles"),
-          api.get("/api/v1/permissions"),
+          api.get("/roles"),
+          api.get("/permissions"),
         ]);
         setRoles(rolesRes.data);
         setPermissions(permRes.data);
@@ -61,7 +61,7 @@ export default function RolesPermissionsPage() {
     if (!newRoleName.trim()) return;
     setSaving(true);
     try {
-      const res = await api.post("/api/v1/roles", { name: newRoleName });
+      const res = await api.post("/roles", { name: newRoleName });
       setRoles([...roles, res.data]);
       setNewRoleName("");
     } catch (err) {
@@ -86,7 +86,7 @@ export default function RolesPermissionsPage() {
       : [...currentPermissions, permissionId];
 
     try {
-      await api.put(`/api/v1/roles/${roleId}/permissions`, {
+      await api.put(`/roles/${roleId}/permissions`, {
         permissionIds: updatedPermissions,
       });
       setRoles(

@@ -16,7 +16,7 @@ export function useAuth() {
 
   const checkAuth = useCallback(async () => {
     try {
-      const res = await api.get<User>("/api/v1/auth/check");
+      const res = await api.get<User>("/auth/check");
 
       setUser(res.data);
       return true;

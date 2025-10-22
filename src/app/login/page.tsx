@@ -43,7 +43,7 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormInputs) => {
     setIsLoading(true);
     try {
-      await api.post("/api/v1/auth/login", {
+      await api.post("/auth/login", {
         email: data.email,
         password: data.password,
       });

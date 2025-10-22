@@ -1,0 +1,20 @@
+export type LayoutConfigType = {
+  nomeTema: string;
+  corPrimaria: string;
+  corSecundaria: string;
+  corFundo: string;
+  corTexto: string;
+  corBotaoPrimario: string;
+  corBotaoSecundario: string;
+  corLink: string;
+  fontePrimaria: string;
+  fonteSecundaria: string;
+  tamanhoFonteBase: number;
+  tamanhoFonteTitulo: number;
+  logoUrl: string;
+  faviconUrl: string;
+  backgroundUrl: string;
+  bordaRadius: number;
+  sombraPadrao: string;
+  ativo: boolean;
+};

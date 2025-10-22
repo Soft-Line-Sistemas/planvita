@@ -1,9 +1,11 @@
 import axios from "axios";
 import getTenantFromHost from "./getTenantFromHost";
 
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_VERSION = process.env.API_VERSION || "v1";
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
-  timeout: 5000,
+  baseURL: `${BASE_URL}/${API_VERSION}`,
   headers: {
     "Content-Type": "application/json",
   },

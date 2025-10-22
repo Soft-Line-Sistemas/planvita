@@ -8,7 +8,7 @@ export default function SidebarWrapper({ children }: { children: ReactNode }) {
   const showSidebar = !pathname.includes("/login");
 
   return (
-    <div className="flex min-h-screen bg-gray-50 text-gray-900">
+    <div className="flex min-h-screen">
       {showSidebar && <Sidebar />}
       <main className="flex-1">{children}</main>
     </div>
