@@ -9,11 +9,11 @@ import {
   UserPlus,
   Users,
   FileText,
-  Settings,
   LogOut,
   Menu,
   X,
   Shield,
+  ClipboardCheck,
   Layers,
   UserCog,
   CreditCard,
@@ -94,8 +94,8 @@ export function Sidebar() {
     },
     {
       id: "configuracoes",
-      label: "Configurações",
-      icon: Settings,
+      label: "Regras",
+      icon: ClipboardCheck,
       href: "/painel/configuracoes",
     },
   ];
