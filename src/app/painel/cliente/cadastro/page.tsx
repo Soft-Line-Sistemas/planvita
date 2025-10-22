@@ -59,7 +59,6 @@ export default function CadastroCliente() {
       currentStep - 1
     ];
     const isValid = await form?.trigger(undefined, { shouldFocus: true });
-    console.log("Validação step", currentStep, isValid);
     if (isValid) {
       setFormData((prev) => ({
         ...prev,
