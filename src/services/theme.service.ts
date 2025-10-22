@@ -10,7 +10,7 @@ export const fetchTheme = async (): Promise<LayoutConfigType | null> => {
   if (cached) return JSON.parse(cached);
 
   try {
-    const { data } = await api.get<LayoutConfigType>("/api/v1/layout");
+    const { data } = await api.get<LayoutConfigType>("/layout");
     if (data) {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
       return data;

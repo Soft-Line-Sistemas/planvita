@@ -51,7 +51,7 @@ export default function ConfiguracoesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get(`/api/v1/regras`).then((res) => {
+    api.get(`/regras`).then((res) => {
       if (res.data.length > 0) setConfig(res.data[0]);
       setLoading(false);
     });
@@ -70,9 +70,9 @@ export default function ConfiguracoesPage() {
 
     try {
       if (config.tenantId) {
-        await api.put(`/api/v1/regras/${config.tenantId}`, config);
+        await api.put(`/regras/${config.tenantId}`, config);
       } else {
-        await api.post(`/api/v1/regras`, { ...config, tenantId: user?.tenant });
+        await api.post(`/regras`, { ...config, tenantId: user?.tenant });
       }
       alert("Regras de negócio salvas com sucesso!");
     } catch (err) {

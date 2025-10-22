@@ -53,8 +53,8 @@ export default function AcessoPage() {
     const load = async () => {
       try {
         const [usersRes, rolesRes] = await Promise.all([
-          api.get("/api/v1/users"),
-          api.get("/api/v1/roles"),
+          api.get("/users"),
+          api.get("/roles"),
         ]);
         setUsers(usersRes.data);
         setRoles(rolesRes.data);
@@ -70,7 +70,7 @@ export default function AcessoPage() {
 
   const handleChangeRole = async (userId: number, newRoleId: number) => {
     try {
-      await api.put(`/api/v1/users/${userId}/role`, { roleId: newRoleId });
+      await api.put(`/users/${userId}/role`, { roleId: newRoleId });
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, roleId: newRoleId } : u)),
       );
@@ -88,7 +88,7 @@ export default function AcessoPage() {
 
     setCreating(true);
     try {
-      const res = await api.post("/api/v1/users", {
+      const res = await api.post("/users", {
         nome: newUserName,
         email: newUserEmail,
         roleId: newUserRole,

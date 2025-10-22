@@ -4,7 +4,7 @@ import api from "@/utils/api";
 
 /**
  * Carrega e injeta o CSS dinâmico de tema no <head>
- * - Busca do backend (/api/v1/layout/css)
+ * - Busca do backend (/layout/css)
  * - Cache local opcional via localStorage
  * - Substitui automaticamente se o tema mudar
  */
@@ -23,7 +23,7 @@ export const useTheme = async () => {
     const cachedCss = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (cachedCss) injectTheme(cachedCss);
 
-    const res = await api.get("/api/v1/layout/css", { responseType: "text" });
+    const res = await api.get("/layout/css", { responseType: "text" });
     const css = res.data;
 
     if (css && css !== cachedCss) {

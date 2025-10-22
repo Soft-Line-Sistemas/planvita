@@ -56,7 +56,7 @@ export default function ConfiguracoesPage() {
   const { user } = useAuth();
 
   useEffect(() => {
-    api.get(`/api/v1/layout`).then((res) => {
+    api.get(`/layout`).then((res) => {
       if (res.data.length > 0) setConfig(res.data[0]);
       setLoading(false);
     });
@@ -72,12 +72,12 @@ export default function ConfiguracoesPage() {
 
     try {
       if (config.id) {
-        await api.put(`/api/v1/layout/${config.id}`, {
+        await api.put(`/layout/${config.id}`, {
           ...config,
           tenantId: user?.tenant,
         });
       } else {
-        await api.post(`/api/v1/layout`, { ...config, tenantId: user?.tenant });
+        await api.post(`/layout`, { ...config, tenantId: user?.tenant });
       }
       alert("Configurações salvas com sucesso!");
     } catch (err) {
