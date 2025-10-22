@@ -29,9 +29,11 @@ export const ClienteCards = ({ clientes }: Props) => (
               {c.statusPlano}
             </span>
           </div>
-          <p className="text-sm text-gray-600">{c.plano.nome}</p>
-          <p className="text-sm text-gray-600">{c.endereco.cidade}</p>
-          <p className="text-sm text-gray-600">{c.telefone}</p>
+          <p className="text-sm text-gray-600">
+            {c.plano?.nome || "Plano não disponível"}
+          </p>
+          <p className="text-sm text-gray-600">{c.endereco?.cidade || "-"}</p>
+          <p className="text-sm text-gray-600">{c.telefone || "-"}</p>
         </CardContent>
       </Card>
     ))}
