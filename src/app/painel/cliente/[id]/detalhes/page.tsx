@@ -370,10 +370,16 @@ const DetalhesCliente = () => {
                 <div className="space-y-4">
                   <div>
                     <p className="text-2xl font-bold text-green-600">
-                      {cliente.plano.nome}
+                      {cliente.plano
+                        ? cliente.plano.nome
+                        : "Plano não disponível"}
                     </p>
                     <p className="text-gray-600">
-                      R$ {cliente.plano.valorMensal.toFixed(2)}/mês
+                      R${" "}
+                      {cliente.plano
+                        ? cliente.plano.valorMensal.toFixed(2)
+                        : "--"}
+                      /mês
                     </p>
                   </div>
                   <div className="space-y-2">
