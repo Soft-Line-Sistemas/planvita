@@ -35,7 +35,6 @@ const GestaoFinanceira = () => {
     useState<Pagamento | null>(null);
 
   useEffect(() => {
-    // Simular dados de pagamentos baseado nas imagens fornecidas
     const pagamentosSimulados: Pagamento[] = [
       {
         id: "1",
