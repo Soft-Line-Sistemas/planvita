@@ -12,10 +12,23 @@ export interface Plano {
   assistenciaFuneral: number;
   auxilioCemiterio: number | null;
   taxaInclusaCemiterioPublico: boolean;
-  beneficiarios: Array<string>;
-  coberturas: {
-    servicosPadrao: string[];
-    coberturaTranslado: string[];
-    servicosEspecificos: string[];
-  };
+  beneficios?: {
+    id: number;
+    nome: string;
+    tipo: string;
+    descricao?: string | null;
+    valor?: number | null;
+    validade?: number | null;
+  }[];
+  coberturas?: { id: number; tipo: string; descricao: string }[];
+  beneficiarios?: { id: number; nome: string }[];
 }
+
+export type Beneficio = {
+  id: number;
+  nome: string;
+  tipo: string;
+  descricao: string;
+  valor?: number | null;
+  validade?: number | null;
+};

@@ -2,13 +2,11 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle } from "lucide-react";
 import { Plano } from "@/types/PlanType";
-import { Button } from "../ui/button";
 
 interface ParticipanteMin {
   nome?: string;
-  idade?: number;
+  idade?: number | null;
   dataNascimento?: string | null;
   [key: string]: unknown;
 }
@@ -85,25 +83,22 @@ export function Confirmacao({ dados }: ConfirmacaoProps) {
                 ? "Sem limite"
                 : `${planoSelecionado.idadeMaxima} anos`}
             </p>
-            <p>
-              <strong>Beneficiários:</strong>{" "}
-              {planoSelecionado.beneficiarios.join(", ")}
-            </p>
+            {planoSelecionado.beneficiarios &&
+              planoSelecionado.beneficiarios.length > 0 && (
+                <p>
+                  <strong>Beneficiários:</strong>{" "}
+                  {planoSelecionado.beneficiarios
+                    .map((beneficiario) => beneficiario.nome)
+                    .join(", ")}
+                </p>
+              )}
           </div>
-        ) : (
+        ) : planoSelecionado === null ? (
           <p className="text-red-600 font-medium">
             Nenhum plano disponível para a faixa etária dos participantes.
           </p>
-        )}
+        ) : null}
       </CardContent>
-      <Button
-        variant="success"
-        className="mt-4 w-full"
-        // onClick={handleSubmit(onSubmit)}
-      >
-        <CheckCircle className="mr-2" />
-        Confirmar Cadastro
-      </Button>
     </Card>
   );
 }
