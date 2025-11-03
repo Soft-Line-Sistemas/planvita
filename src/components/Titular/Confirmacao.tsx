@@ -17,7 +17,7 @@ interface ConfirmacaoProps {
     titular: ParticipanteMin;
     dependentes?: ParticipanteMin[];
     planoSelecionado?: Plano | null;
-    consultor?: { name: string }; // 👈 consultor vem do cadastro
+    consultor?: { name: string };
     [key: string]: unknown;
   };
 }
