@@ -17,6 +17,7 @@ import {
   AlertCircle,
   Activity,
 } from "lucide-react";
+import ModalCliente from "@/components/ui/ModalCliente";
 
 // Tipagem
 interface Cliente {
@@ -89,7 +90,7 @@ const mockData: MockData = {
   ],
 };
 
-export default function Dashboard({ userEmail, onViewClient }: DashboardProps) {
+export default function Dashboard({ userEmail }: DashboardProps) {
   const router = useRouter();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [mounted, setMounted] = useState(false);
@@ -126,7 +127,16 @@ export default function Dashboard({ userEmail, onViewClient }: DashboardProps) {
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
+  const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
+  const handleViewClient = (id: number) => {
+    const cliente = mockData.clientesRecentes.find((c) => c.id === id) || null;
+    if (cliente) {
+      setSelectedCliente(cliente);
+      setModalOpen(true);
+    }
+  };
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       {/* Header */}
@@ -145,7 +155,10 @@ export default function Dashboard({ userEmail, onViewClient }: DashboardProps) {
             <Clock className="w-4 h-4 mr-2" />
             {mounted && currentTime.toLocaleString("pt-BR")}
           </div>
-          <Button className="bg-green-600 hover:bg-green-700 hover-lift text-white">
+          <Button
+            className="bg-green-600 hover:bg-green-700 hover-lift text-white"
+            onClick={() => router.push("/painel/cliente/cadastro")}
+          >
             <UserPlus className="w-4 h-4 mr-2" />
             Novo Cliente
           </Button>
@@ -305,11 +318,16 @@ export default function Dashboard({ userEmail, onViewClient }: DashboardProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onViewClient && onViewClient(cliente.id)}
+                    onClick={() => handleViewClient(cliente.id)}
                     className="ml-2"
                   >
                     Ver Detalhes
                   </Button>
+                  <ModalCliente
+                    cliente={selectedCliente}
+                    open={modalOpen}
+                    onClose={() => setModalOpen(false)}
+                  />
                 </div>
               </div>
             ))}

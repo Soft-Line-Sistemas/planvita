@@ -41,7 +41,7 @@ export const ResponsavelFinanceiroForm = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-3 p-4 bg-green-50 rounded-lg border border-green-200">
+      {/* <div className="flex items-center space-x-3 p-4 bg-green-50 rounded-lg border border-green-200">
         <Switch
           checked={usarMesmosDados}
           onCheckedChange={setUsarMesmosDados}
@@ -50,7 +50,7 @@ export const ResponsavelFinanceiroForm = ({
         <Label className="text-green-800 font-medium">
           USAR OS MESMOS DADOS DO TITULAR?
         </Label>
-      </div>
+      </div> */}
 
       {!usarMesmosDados && (
         <div className="space-y-6">

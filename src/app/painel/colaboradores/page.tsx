@@ -26,6 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { motion } from "framer-motion";
 import { UserCog, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import LinksRedesSociais from "@/components/LinksRedesSocias";
 
 type Role = {
   id: number;
@@ -33,6 +34,7 @@ type Role = {
 };
 
 type User = {
+  linkCadastro: string;
   id: number;
   name: string;
   email: string;
@@ -94,7 +96,11 @@ export default function AcessoPage() {
         roleId: newUserRole,
       });
 
-      setUsers((prev) => [...prev, res.data]);
+      // 🔗 gera o link pessoal automaticamente
+      const linkCadastro = `${window.location.origin}/cadastro-cliente?consultorId=${res.data.id}`;
+      const novoUser = { ...res.data, linkCadastro };
+
+      setUsers((prev) => [...prev, novoUser]);
       setNewUserName("");
       setNewUserEmail("");
       setNewUserRole(null);
@@ -106,6 +112,9 @@ export default function AcessoPage() {
       setCreating(false);
     }
   };
+
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [selectedLink, setSelectedLink] = useState<string | null>(null);
 
   const filteredUsers = users.filter(
     (u) =>
@@ -212,7 +221,8 @@ export default function AcessoPage() {
                   <TableHead>Nome</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Cargo Atual</TableHead>
-                  <TableHead className="text-right">Alterar Cargo</TableHead>
+                  <TableHead>Alterar Cargo</TableHead>
+                  <TableHead className="text-right">Enviar Link</TableHead>
                 </TableRow>
               </TableHeader>
 
@@ -262,6 +272,21 @@ export default function AcessoPage() {
                         </SelectContent>
                       </Select>
                     </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const link =
+                            user.linkCadastro ||
+                            `${window.location.origin}/cadastro-cliente?consultorId=${user.id}`;
+                          setSelectedLink(link);
+                          setShareModalOpen(true);
+                        }}
+                      >
+                        Enviar
+                      </Button>
+                    </TableCell>
                   </motion.tr>
                 ))}
               </TableBody>
@@ -269,6 +294,13 @@ export default function AcessoPage() {
           </ScrollArea>
         </CardContent>
       </Card>
+      {selectedLink && (
+        <LinksRedesSociais
+          link={selectedLink}
+          open={shareModalOpen}
+          onClose={() => setShareModalOpen(false)}
+        />
+      )}
     </motion.div>
   );
 }

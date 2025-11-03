@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -17,6 +18,7 @@ import {
   Trash2,
   Phone,
   Mail,
+  PlaneIcon,
 } from "lucide-react";
 import Image from "next/image";
 import logoPlanvita from "@/assets/logo-planvita.png";
@@ -32,18 +34,28 @@ import { EnderecoForm } from "@/components/Titular/EnderecoForm";
 import { ResponsavelFinanceiroForm } from "@/components/Titular/ResponsavelFinanceiroForm";
 import { DependentesForm } from "@/components/Titular/DependentesForm";
 import { Dependente } from "@/types/DependentesType";
+import { PlanoForm } from "@/components/Titular/PlanoForm";
+import { Confirmacao } from "@/components/Titular/Confirmacao";
+import { Plano } from "@/types/PlanType";
+import {
+  obterMaiorIdadeParticipantes,
+  selecionarPlanoPorMaiorIdade,
+} from "@/utils/planos";
 
 export default function CadastroCliente() {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({});
   const [dependentes, setDependentes] = useState<Dependente[]>([]);
   const [usarMesmosDados, setUsarMesmosDados] = useState(false);
+  const [planos, setPlanos] = useState<Plano[]>([]);
 
   const steps = [
     { id: 1, title: "Dados pessoais", icon: User },
     { id: 2, title: "Endereço", icon: MapPin },
     { id: 3, title: "Responsável Financeiro", icon: CreditCard },
     { id: 4, title: "Dependentes", icon: Users },
+    { id: 5, title: "Plano", icon: PlaneIcon },
+    { id: 6, title: "Confirmação", icon: Check },
   ];
 
   const dadosPessoaisForm = useForm({
@@ -53,11 +65,17 @@ export default function CadastroCliente() {
   const responsavelForm = useForm({
     resolver: zodResolver(responsavelFinanceiroSchema),
   });
+  const planoForm = useForm();
+  const confirmacao = useForm();
 
   const handleNext = async () => {
-    const form = [dadosPessoaisForm, enderecoForm, responsavelForm][
-      currentStep - 1
-    ];
+    const form = [
+      dadosPessoaisForm,
+      enderecoForm,
+      responsavelForm,
+      planoForm,
+      confirmacao,
+    ][currentStep - 1];
     const isValid = await form?.trigger(undefined, { shouldFocus: true });
     if (isValid) {
       setFormData((prev) => ({
@@ -172,6 +190,43 @@ export default function CadastroCliente() {
             handleDependenteChange={handleDependenteChange}
           />
         );
+      case 5: {
+        const participantes = [{ ...formData }, ...(dependentes || [])];
+
+        // calcula maior idade (sincrono)
+        const maiorIdade = obterMaiorIdadeParticipantes(participantes);
+
+        // seleciona plano a partir da lista de planos carregada (estado `planos`)
+        const planoSelecionado = selecionarPlanoPorMaiorIdade(
+          planos,
+          maiorIdade,
+        );
+
+        // Renderiza PlanoForm já com o plano selecionado
+        return (
+          <PlanoForm
+            form={planoForm}
+            planoSelecionado={planoSelecionado}
+            participantes={participantes}
+            campoPlanoId="planoId" // mantenha o nome do campo que seu backend espera
+          />
+        );
+      }
+      case 6: {
+        const dependentesParaConfirmacao = dependentes.map((d) => ({
+          ...d,
+          idade: d.idade ?? undefined,
+        }));
+        // Ensure we pass a 'titular' object required by ConfirmacaoProps.
+        const titular =
+          (formData as any)?.step1 ?? (formData as any)?.step0 ?? {};
+        return (
+          <Confirmacao
+            dados={{ titular, dependentes: dependentesParaConfirmacao }}
+          />
+        );
+      }
+
       default:
         return null;
     }
@@ -229,7 +284,7 @@ export default function CadastroCliente() {
                 <ChevronLeft className="w-4 h-4" /> Voltar
               </Button>
 
-              {currentStep < 4 ? (
+              {currentStep < 6 ? (
                 <Button
                   onClick={handleNext}
                   className="bg-green-600 hover:bg-green-700 flex items-center gap-2"

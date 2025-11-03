@@ -75,12 +75,13 @@ export const DependentesForm = ({
               </div>
 
               {/* Idade */}
+
               <div>
                 <Label className="inline-flex items-center gap-1">
                   Idade <span className="text-red-500">*</span>
                 </Label>
                 <Input
-                  type="number"
+                  type="date"
                   value={String(dep.idade || "")}
                   onChange={(e) =>
                     handleDependenteChange(
@@ -133,7 +134,7 @@ export const DependentesForm = ({
                     handleDependenteChange(
                       index,
                       "cpf",
-                      formatCPF(e.target.value),
+                      formatCPF ? formatCPF(e.target.value) : e.target.value,
                     )
                   }
                 />
