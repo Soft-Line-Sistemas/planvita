@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 
 export default function SidebarWrapper({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const showSidebar = !pathname.includes("/login");
+  const showSidebar =
+    !pathname.includes("/login") && !pathname.includes("/cliente");
 
   return (
     <div className="flex min-h-screen">
