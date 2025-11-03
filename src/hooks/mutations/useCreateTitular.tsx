@@ -10,6 +10,7 @@ import {
   responsavelFinanceiroSchema,
 } from "@/components/Titular/schemas";
 import type { Dependente } from "@/types/DependentesType";
+import { useRouter } from "next/navigation";
 
 type Step1Values = z.infer<typeof dadosPessoaisSchema>;
 type Step2Values = z.infer<typeof enderecoSchema>;
@@ -31,6 +32,7 @@ export type CreateTitularInput = {
 export type CreateTitularOutput = unknown;
 
 export function useCreateTitular() {
+  const router = useRouter();
   return useMutation<CreateTitularOutput, unknown, CreateTitularInput>({
     mutationFn: async (payload) => {
       const { data } = await api.post("/titular/full", payload);
@@ -79,6 +81,7 @@ export function useCreateTitular() {
       toast.success("Titular criado com sucesso!", {
         description: "Cadastro concluído e vinculado ao plano.",
       });
+      router.push("/cliente");
     },
   });
 }

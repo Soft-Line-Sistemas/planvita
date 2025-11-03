@@ -94,7 +94,7 @@ export default function CarteirinhaAsImage({
         color:${COLORS.white};
       ">
         <div style="
-          position:absolute;inset:0;border-radius:28px;padding:28px;box-sizing:border-box;
+          position:absolute;inset:0;border-radius:17px;padding:28px;box-sizing:border-box;
           background: linear-gradient(135deg, ${COLORS.emerald400} 0%, ${COLORS.emerald500} 50%, ${COLORS.emerald600} 100%);
           box-shadow: 0 25px 50px rgba(0,0,0,.25);
           display:flex;flex-direction:column;gap:0;
@@ -184,7 +184,7 @@ export default function CarteirinhaAsImage({
         color:${COLORS.slate700};
       ">
         <div style="
-          position:absolute;inset:0;border-radius:28px;padding:28px;box-sizing:border-box;
+          position:absolute;inset:0;border-radius:17px;padding:28px;box-sizing:border-box;
           background: linear-gradient(135deg, ${COLORS.white} 0%, ${COLORS.emerald50} 50%, ${COLORS.white} 100%);
           box-shadow: 0 25px 50px rgba(0,0,0,.25);
           display:flex;flex-direction:column;gap:0;
@@ -352,8 +352,9 @@ export default function CarteirinhaAsImage({
               transition: "transform 700ms cubic-bezier(.2,.8,.2,1)",
             }}
           >
-            <div className="absolute inset-0 rounded-[1.75rem] overflow-hidden shadow-2xl [backface-visibility:hidden]">
+            <div className="absolute inset-0 rounded-[0.75rem] overflow-hidden shadow-2xl [backface-visibility:hidden]">
               <img
+                key={frontSrc.length}
                 src={frontSrc}
                 alt="Carteirinha - frente"
                 className="w-full h-full object-cover"
@@ -361,8 +362,9 @@ export default function CarteirinhaAsImage({
               />
             </div>
 
-            <div className="absolute inset-0 rounded-[1.75rem] overflow-hidden shadow-2xl [backface-visibility:hidden] [transform:rotateY(180deg)]">
+            <div className="absolute inset-0 rounded-[0.75rem] overflow-hidden shadow-2xl [backface-visibility:hidden] [transform:rotateY(180deg)]">
               <img
+                key={backSrc.length}
                 src={backSrc}
                 alt="Carteirinha - verso"
                 className="w-full h-full object-cover"
