@@ -16,12 +16,13 @@ interface ConfirmacaoProps {
     titular: ParticipanteMin;
     dependentes?: ParticipanteMin[];
     planoSelecionado?: Plano | null;
+    consultor?: { name: string }; // 👈 consultor vem do cadastro
     [key: string]: unknown;
   };
 }
 
 export function Confirmacao({ dados }: ConfirmacaoProps) {
-  const { titular, dependentes = [], planoSelecionado } = dados;
+  const { titular, dependentes = [], planoSelecionado, consultor } = dados;
 
   return (
     <Card className="border-green-200 shadow-md">
@@ -30,6 +31,16 @@ export function Confirmacao({ dados }: ConfirmacaoProps) {
       </CardHeader>
 
       <CardContent className="space-y-6">
+        {/* Consultor Responsável */}
+        {consultor && (
+          <div className="flex items-center gap-2 bg-gray-100 border border-gray-200 rounded-lg px-4 py-2">
+            <User className="w-5 h-5 text-green-600" />
+            <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1.5 rounded-full text-sm font-medium border border-green-200">
+              <User className="w-4 h-4" /> Consultor: {consultor.name}
+            </span>
+          </div>
+        )}
+
         {/* Titular */}
         <div className="bg-green-50 p-4 rounded-lg">
           <h3 className="text-lg font-semibold text-green-700">Titular</h3>
