@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,27 @@ export default function CadastroCliente() {
   const [dependentes, setDependentes] = useState<Dependente[]>([]);
   const [usarMesmosDados, setUsarMesmosDados] = useState(false);
   const [planos, setPlanos] = useState<Plano[]>([]);
+
+  const searchParams = useSearchParams();
+  const consultorId = searchParams.get("consultorId");
+  const [consultor, setConsultor] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchConsultor = async () => {
+      if (consultorId) {
+        try {
+          const res = await api.get(`/users/${consultorId}`);
+          setConsultor(res.data);
+        } catch (err) {
+          console.error("Erro ao buscar consultor", err);
+        }
+      }
+    };
+    fetchConsultor();
+  }, [consultorId]);
 
   const steps = [
     { id: 1, title: "Dados pessoais", icon: User },
@@ -109,7 +130,13 @@ export default function CadastroCliente() {
   };
 
   const handleFinish = async () => {
-    const finalData = { ...formData, dependentes, usarMesmosDados };
+    const finalData = {
+      ...formData,
+      dependentes,
+      usarMesmosDados,
+      consultorId: consultor?.id, // 🔗 associar o consultor
+    };
+
     try {
       await api.post("/titular/full", finalData);
       alert("Cadastro realizado com sucesso!");
@@ -118,6 +145,17 @@ export default function CadastroCliente() {
       alert("Falha ao salvar cadastro");
     }
   };
+
+  // const handleFinish = async () => {
+  //   const finalData = { ...formData, dependentes, usarMesmosDados };
+  //   try {
+  //     await api.post("/titular/full", finalData);
+  //     alert("Cadastro realizado com sucesso!");
+  //   } catch (err) {
+  //     console.error(err);
+  //     alert("Falha ao salvar cadastro");
+  //   }
+  // };
 
   const renderStepIndicator = () => (
     <div className="flex items-center justify-center mb-8 px-4">
@@ -217,12 +255,17 @@ export default function CadastroCliente() {
           ...d,
           idade: d.idade ?? undefined,
         }));
-        // Ensure we pass a 'titular' object required by ConfirmacaoProps.
+
         const titular =
           (formData as any)?.step1 ?? (formData as any)?.step0 ?? {};
+
         return (
           <Confirmacao
-            dados={{ titular, dependentes: dependentesParaConfirmacao }}
+            dados={{
+              titular,
+              dependentes: dependentesParaConfirmacao,
+              consultor: consultor || undefined, // 👈 envia o consultor
+            }}
           />
         );
       }
