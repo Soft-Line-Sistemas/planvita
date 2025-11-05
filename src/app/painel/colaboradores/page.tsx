@@ -279,7 +279,7 @@ export default function AcessoPage() {
                         onClick={() => {
                           const link =
                             user.linkCadastro ||
-                            `${window.location.origin}//painel/cliente/cadastro?consultorId=${user.id}`;
+                            `${window.location.origin}/painel/cliente/cadastro?consultorId=${user.id}`;
                           setSelectedLink(link);
                           setShareModalOpen(true);
                         }}
