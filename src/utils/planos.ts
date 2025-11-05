@@ -1,6 +1,128 @@
 // utils/planos.ts
 import { Plano } from "@/types/PlanType";
 
+type PlanoBeneficio = NonNullable<Plano["beneficios"]>[number];
+type PlanoCobertura = NonNullable<Plano["coberturas"]>[number];
+type PlanoBeneficiario = NonNullable<Plano["beneficiarios"]>[number];
+
+const toNumber = (value: unknown, fallback = 0): number => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value.replace(",", "."));
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+};
+
+const toNullableNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  const parsed = toNumber(value, NaN);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const isPlanoBeneficio = (value: unknown): value is PlanoBeneficio => {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Record<string, unknown>;
+  return (
+    typeof data.id === "number" &&
+    typeof data.nome === "string" &&
+    typeof data.tipo === "string"
+  );
+};
+
+const isPlanoCobertura = (value: unknown): value is PlanoCobertura => {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Record<string, unknown>;
+  return (
+    typeof data.id === "number" &&
+    typeof data.tipo === "string" &&
+    typeof data.descricao === "string"
+  );
+};
+
+const isPlanoBeneficiario = (value: unknown): value is PlanoBeneficiario => {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Record<string, unknown>;
+  return typeof data.id === "number" && typeof data.nome === "string";
+};
+
+export const sanitizePlano = (raw: unknown): Plano | null => {
+  if (!raw || typeof raw !== "object") return null;
+  const data = raw as Record<string, unknown>;
+
+  const idValue = data.id ?? data.codigo;
+  const nome = data.nome;
+  const valorMensal = toNumber(
+    data.valorMensal ?? data.valor ?? data.precoMensal,
+    NaN,
+  );
+
+  if (idValue === null || idValue === undefined) return null;
+  if (typeof nome !== "string" || !Number.isFinite(valorMensal)) return null;
+
+  return {
+    id: String(idValue),
+    nome,
+    valorMensal,
+    idadeMaxima: toNullableNumber(data.idadeMaxima ?? data.limiteIdade),
+    coberturaMaxima: toNumber(data.coberturaMaxima ?? data.cobertura),
+    carenciaDias: toNumber(data.carenciaDias ?? data.carencia),
+    vigenciaMeses: toNumber(data.vigenciaMeses ?? data.vigencia),
+    ativo: "ativo" in data ? Boolean(data.ativo) : true,
+    totalClientes: toNumber(data.totalClientes ?? data.qtdClientes),
+    receitaMensal: toNumber(data.receitaMensal ?? data.faturamentoMensal),
+    assistenciaFuneral: toNumber(data.assistenciaFuneral ?? data.assistencia),
+    auxilioCemiterio: toNullableNumber(
+      data.auxilioCemiterio ?? data.auxilioCemiterioValor,
+    ),
+    taxaInclusaCemiterioPublico: Boolean(
+      data.taxaInclusaCemiterioPublico ?? data.incluiTaxaCemiterioPublico,
+    ),
+    beneficios: Array.isArray(data.beneficios)
+      ? data.beneficios.filter(isPlanoBeneficio)
+      : [],
+    coberturas: Array.isArray(data.coberturas)
+      ? data.coberturas.filter(isPlanoCobertura)
+      : [],
+    beneficiarios: Array.isArray(data.beneficiarios)
+      ? data.beneficiarios.filter(isPlanoBeneficiario)
+      : [],
+  };
+};
+
+export const sanitizePlanoArray = (payload: unknown): Plano[] => {
+  const tryArrays: unknown[] = [];
+
+  if (Array.isArray(payload)) {
+    tryArrays.push(payload);
+  } else if (payload && typeof payload === "object") {
+    const record = payload as Record<string, unknown>;
+    const candidates = [
+      record.data,
+      record.planos,
+      record.items,
+      record.lista,
+      record.result,
+    ];
+    candidates.forEach((candidate) => {
+      if (Array.isArray(candidate)) tryArrays.push(candidate);
+    });
+  } else if (payload != null) {
+    tryArrays.push([payload]);
+  }
+
+  const rawArray =
+    tryArrays.find((arr): arr is unknown[] => Array.isArray(arr)) ?? [];
+
+  return rawArray
+    .map((item) => sanitizePlano(item))
+    .filter((plano): plano is Plano => plano !== null);
+};
+
 /**
  * Tipo mínimo esperado para um participante (titular ou dependente).
  * Mantemos index signature para aceitar outras propriedades do seu objeto.

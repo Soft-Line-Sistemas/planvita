@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Shield,
   Plus,
@@ -14,298 +14,170 @@ import {
   Download,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { Plano } from "@/types/PlanType";
+import api from "@/utils/api";
+import { sanitizePlanoArray } from "@/utils/planos";
+
+const formatCurrency = (value?: number | null) =>
+  `R$ ${Number(value ?? 0).toFixed(2)}`;
+
+const getBeneficiariosNomes = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => {
+      if (typeof item === "string") return item;
+      if (item && typeof item === "object") {
+        const nome = (item as Record<string, unknown>).nome;
+        if (typeof nome === "string") return nome;
+      }
+      return null;
+    })
+    .filter(
+      (nome): nome is string => typeof nome === "string" && nome.length > 0,
+    );
+};
+
+type CoberturasDetalhadas = {
+  servicosPadrao: string[];
+  coberturaTranslado: string[];
+  servicosEspecificos: string[];
+  outros: string[];
+};
+
+const mapCoberturasDetalhadas = (value: unknown): CoberturasDetalhadas => {
+  const base: CoberturasDetalhadas = {
+    servicosPadrao: [],
+    coberturaTranslado: [],
+    servicosEspecificos: [],
+    outros: [],
+  };
+
+  if (!value) return base;
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => {
+      if (!item || typeof item !== "object") return;
+      const registro = item as Record<string, unknown>;
+      const descricao =
+        typeof registro.descricao === "string" ? registro.descricao : "";
+      if (!descricao) return;
+      const tipoRaw =
+        typeof registro.tipo === "string"
+          ? registro.tipo
+          : typeof registro.nome === "string"
+            ? registro.nome
+            : "";
+      const tipo = tipoRaw.toLowerCase();
+      if (tipo.includes("padrao")) {
+        base.servicosPadrao.push(descricao);
+      } else if (tipo.includes("translado")) {
+        base.coberturaTranslado.push(descricao);
+      } else if (tipo.includes("especific") || tipo.includes("adicional")) {
+        base.servicosEspecificos.push(descricao);
+      } else {
+        base.outros.push(descricao);
+      }
+    });
+    return base;
+  }
+
+  if (typeof value === "object") {
+    const registro = value as Record<string, unknown>;
+    const pushStrings = (
+      key: keyof CoberturasDetalhadas,
+      maybeArray: unknown,
+    ) => {
+      if (!Array.isArray(maybeArray)) return;
+      maybeArray.forEach((item) => {
+        if (typeof item === "string" && item.trim() !== "") {
+          base[key].push(item);
+        }
+      });
+    };
+
+    pushStrings("servicosPadrao", registro.servicosPadrao);
+    pushStrings("coberturaTranslado", registro.coberturaTranslado);
+    pushStrings("servicosEspecificos", registro.servicosEspecificos);
+
+    Object.entries(registro).forEach(([key, maybeArray]) => {
+      if (
+        key === "servicosPadrao" ||
+        key === "coberturaTranslado" ||
+        key === "servicosEspecificos"
+      )
+        return;
+      if (Array.isArray(maybeArray)) {
+        maybeArray.forEach((item) => {
+          if (typeof item === "string" && item.trim() !== "") {
+            base.outros.push(item);
+          }
+        });
+      }
+    });
+  }
+
+  return base;
+};
 
 const GestaoPlanos = () => {
-  const [planos, setPlanos] = useState<Plano[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [modalAberto, setModalAberto] = useState(false);
   const [planoSelecionado, setPlanoSelecionado] = useState<Plano | null>(null);
   const [modoEdicao, setModoEdicao] = useState(false);
   const router = useRouter();
+  const {
+    data: planosData,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery<Plano[], Error>({
+    queryKey: ["planos", "lista"],
+    queryFn: async () => {
+      const response = await api.get("/plano");
+      const sanitized = sanitizePlanoArray(response.data);
+      sanitized.sort((a, b) => a.nome.localeCompare(b.nome));
+      return sanitized;
+    },
+    staleTime: 60_000,
+  });
+
+  const planos = useMemo(() => planosData ?? [], [planosData]);
 
   const onVoltar = () => {
     router.push("/painel/dashboard");
   };
 
-  useEffect(() => {
-    // Simular dados dos planos baseado no documento fornecido
-    const planosSimulados: Plano[] = [
-      {
-        id: "1",
-        nome: "Bosque Social",
-        valorMensal: 49.99,
-        idadeMaxima: 55,
-        coberturaMaxima: 10,
-        carenciaDias: 180,
-        vigenciaMeses: 60,
-        ativo: true,
-        totalClientes: 156,
-        receitaMensal: 7798.44,
-        assistenciaFuneral: 2500.0,
-        auxilioCemiterio: null,
-        taxaInclusaCemiterioPublico: true,
-        beneficiarios: ["Titular", "Cônjuge (até 55 anos)", "Filhos", "Netos"],
-        coberturas: {
-          servicosPadrao: [
-            "Auxílio funeral de até R$ 2.500",
-            "Urna padrão",
-            "Ornamentação de flores",
-            "Coroa de flores",
-            "Atendimento 24h",
-            "Club de benefícios, descontos de até 40%",
-            "Orientação Documental",
-            "Vestimento padrão social",
-          ],
-          coberturaTranslado: [],
-          servicosEspecificos: [],
-        },
-      },
-      {
-        id: "2",
-        nome: "Bosque Essencial",
-        valorMensal: 69.9,
-        idadeMaxima: 60,
-        coberturaMaxima: 10,
-        carenciaDias: 180,
-        vigenciaMeses: 60,
-        ativo: true,
-        totalClientes: 234,
-        receitaMensal: 16357.66,
-        assistenciaFuneral: 2500.0,
-        auxilioCemiterio: 3500.0,
-        taxaInclusaCemiterioPublico: false,
-        beneficiarios: [
-          "Titular",
-          "Cônjuge",
-          "Pai",
-          "Mãe",
-          "Filhos",
-          "Sogro(a)",
-          "Netos",
-          "Bisnetos",
-          "Irmãos",
-          "Sobrinhos (até 50 anos)",
-        ],
-        coberturas: {
-          servicosPadrao: [
-            "Auxílio funeral de até R$ 2.500",
-            "Urna padrão",
-            "Ornamentação de flores",
-            "Coroa de flores",
-            "Atendimento 24h",
-            "Club de benefícios, descontos de até 40%",
-            "Orientação Documental",
-            "Vestimento padrão social",
-          ],
-          coberturaTranslado: [
-            "Translado: Até 1000 km",
-            "Auxílio Cemitério até R$ 3.500",
-            "Cobertura de Serviço Funerário ate R$ 2.500,00",
-          ],
-          servicosEspecificos: [],
-        },
-      },
-      {
-        id: "3",
-        nome: "Bosque Plus",
-        valorMensal: 79.9,
-        idadeMaxima: 70,
-        coberturaMaxima: 10,
-        carenciaDias: 180,
-        vigenciaMeses: 60,
-        ativo: true,
-        totalClientes: 189,
-        receitaMensal: 15100.11,
-        assistenciaFuneral: 2500.0,
-        auxilioCemiterio: 3500.0,
-        taxaInclusaCemiterioPublico: false,
-        beneficiarios: [
-          "Titular",
-          "Cônjuge",
-          "Pai",
-          "Mãe",
-          "Filhos",
-          "Sogro(a)",
-          "Netos",
-          "Bisnetos",
-          "Irmãos",
-          "Sobrinhos (até 50 anos)",
-        ],
-        coberturas: {
-          servicosPadrao: [
-            "Auxílio funeral de até R$ 2.500",
-            "Urna padrão",
-            "Ornamentação de flores",
-            "Coroa de flores",
-            "Atendimento 24h",
-            "Club de benefícios, descontos de até 40%",
-            "Orientação Documental",
-            "Vestimento padrão social",
-          ],
-          coberturaTranslado: [
-            "Translado: Até 1000 km",
-            "Auxílio Cemitério até R$ 3.500",
-            "Cobertura de Serviço Funerário ate R$ 2.500,00",
-          ],
-          servicosEspecificos: ["Telemedicina"],
-        },
-      },
-      {
-        id: "4",
-        nome: "Bosque Família",
-        valorMensal: 89.9,
-        idadeMaxima: 80,
-        coberturaMaxima: 10,
-        carenciaDias: 180,
-        vigenciaMeses: 60,
-        ativo: true,
-        totalClientes: 145,
-        receitaMensal: 13035.5,
-        assistenciaFuneral: 2500.0,
-        auxilioCemiterio: 3500.0,
-        taxaInclusaCemiterioPublico: false,
-        beneficiarios: [
-          "Titular",
-          "Cônjuge",
-          "Pai",
-          "Mãe",
-          "Filhos",
-          "Sogro(a)",
-          "Netos",
-          "Bisnetos",
-          "Irmãos",
-          "Sobrinhos (até 50 anos)",
-        ],
-        coberturas: {
-          servicosPadrao: [
-            "Auxílio funeral de até R$ 2.500",
-            "Urna padrão",
-            "Ornamentação de flores",
-            "Coroa de flores",
-            "Atendimento 24h",
-            "Club de benefícios, descontos de até 40%",
-            "Orientação Documental",
-            "Vestimento padrão social",
-          ],
-          coberturaTranslado: [
-            "Translado: Até 1000 km",
-            "Auxílio Cemitério até R$ 3.500",
-            "Cobertura de Serviço Funerário ate R$ 2.500,00",
-          ],
-          servicosEspecificos: ["Telemedicina"],
-        },
-      },
-      {
-        id: "5",
-        nome: "Bosque Sênior",
-        valorMensal: 109.9,
-        idadeMaxima: 85,
-        coberturaMaxima: 10,
-        carenciaDias: 180,
-        vigenciaMeses: 60,
-        ativo: true,
-        totalClientes: 98,
-        receitaMensal: 10770.2,
-        assistenciaFuneral: 2500.0,
-        auxilioCemiterio: 3500.0,
-        taxaInclusaCemiterioPublico: false,
-        beneficiarios: [
-          "Titular",
-          "Cônjuge",
-          "Pai",
-          "Mãe",
-          "Filhos",
-          "Sogro(a)",
-          "Netos",
-          "Bisnetos",
-          "Irmãos",
-          "Sobrinhos (até 50 anos)",
-        ],
-        coberturas: {
-          servicosPadrao: [
-            "Auxílio funeral de até R$ 2.500",
-            "Urna padrão",
-            "Ornamentação de flores",
-            "Coroa de flores",
-            "Atendimento 24h",
-            "Club de benefícios, descontos de até 40%",
-            "Orientação Documental",
-            "Vestimento padrão social",
-          ],
-          coberturaTranslado: [
-            "Translado: Até 1000 km",
-            "Auxílio Cemitério até R$ 3.500",
-            "Cobertura de Serviço Funerário ate R$ 2.500,00",
-          ],
-          servicosEspecificos: ["Telemedicina", "Auxílio taxa cemitério"],
-        },
-      },
-      {
-        id: "6",
-        nome: "Bosque Premium",
-        valorMensal: 129.9,
-        idadeMaxima: null,
-        coberturaMaxima: 10,
-        carenciaDias: 180,
-        vigenciaMeses: 60,
-        ativo: true,
-        totalClientes: 67,
-        receitaMensal: 8703.3,
-        assistenciaFuneral: 2500.0,
-        auxilioCemiterio: 3500.0,
-        taxaInclusaCemiterioPublico: false,
-        beneficiarios: [
-          "Titular",
-          "Cônjuge",
-          "Pai",
-          "Mãe",
-          "Filhos",
-          "Sogro(a)",
-          "Netos",
-          "Bisnetos",
-          "Irmãos",
-          "Sobrinhos (até 50 anos)",
-        ],
-        coberturas: {
-          servicosPadrao: [
-            "Auxílio funeral de até R$ 2.500",
-            "Urna padrão",
-            "Ornamentação de flores",
-            "Coroa de flores",
-            "Atendimento 24h",
-            "Club de benefícios, descontos de até 40%",
-            "Orientação Documental",
-            "Vestimento padrão social",
-          ],
-          coberturaTranslado: [
-            "Translado: Até 1000 km",
-            "Auxílio Cemitério até R$ 3.500",
-            "Cobertura de Serviço Funerário ate R$ 2.500,00",
-          ],
-          servicosEspecificos: ["Telemedicina", "Auxílio taxa cemitério"],
-        },
-      },
-    ];
+  const planosFiltrados = useMemo(() => {
+    return planos.filter((plano) => {
+      const matchSearch = plano.nome
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      const matchStatus =
+        filtroStatus === "todos" ||
+        (filtroStatus === "ativo" && plano.ativo) ||
+        (filtroStatus === "inativo" && !plano.ativo);
+      return matchSearch && matchStatus;
+    });
+  }, [planos, searchTerm, filtroStatus]);
 
-    setTimeout(() => {
-      setPlanos(planosSimulados);
-      setLoading(false);
-    }, 1000);
-  }, []);
+  const totalClientes = useMemo(
+    () => planos.reduce((sum, plano) => sum + (plano.totalClientes ?? 0), 0),
+    [planos],
+  );
 
-  const planosFiltrados = planos.filter((plano) => {
-    const matchSearch = plano.nome
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchStatus =
-      filtroStatus === "todos" ||
-      (filtroStatus === "ativo" && plano.ativo) ||
-      (filtroStatus === "inativo" && !plano.ativo);
-    return matchSearch && matchStatus;
-  });
+  const receitaMensalTotal = useMemo(
+    () => planos.reduce((sum, plano) => sum + (plano.receitaMensal ?? 0), 0),
+    [planos],
+  );
+
+  const planosAtivos = useMemo(
+    () => planos.filter((p) => p.ativo).length,
+    [planos],
+  );
 
   const handleEditarPlano = (plano: Plano) => {
     setPlanoSelecionado(plano);
@@ -329,10 +201,45 @@ const GestaoPlanos = () => {
     return ativo ? "text-green-600 bg-green-100" : "text-red-600 bg-red-100";
   };
 
-  if (loading) {
+  const beneficiariosSelecionados = planoSelecionado
+    ? getBeneficiariosNomes(planoSelecionado.beneficiarios)
+    : [];
+
+  const coberturasSelecionadas = planoSelecionado
+    ? mapCoberturasDetalhadas(planoSelecionado.coberturas)
+    : mapCoberturasDetalhadas(undefined);
+
+  const possuiCoberturas =
+    coberturasSelecionadas.servicosPadrao.length > 0 ||
+    coberturasSelecionadas.coberturaTranslado.length > 0 ||
+    coberturasSelecionadas.servicosEspecificos.length > 0 ||
+    coberturasSelecionadas.outros.length > 0;
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="bg-white rounded-lg shadow-md p-6 max-w-md text-center space-y-4">
+          <div className="text-red-600 font-semibold text-lg">
+            Não foi possível carregar os planos.
+          </div>
+          <p className="text-sm text-gray-600">
+            {error?.message || "Tente novamente em instantes."}
+          </p>
+          <button
+            onClick={() => refetch()}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+          >
+            Tentar novamente
+          </button>
+        </div>
       </div>
     );
   }
@@ -434,7 +341,7 @@ const GestaoPlanos = () => {
               <div>
                 <p className="text-sm text-gray-600">Total de Clientes</p>
                 <p className="text-2xl font-bold text-blue-600">
-                  {planos.reduce((sum, plano) => sum + plano.totalClientes, 0)}
+                  {totalClientes}
                 </p>
               </div>
             </div>
@@ -448,10 +355,7 @@ const GestaoPlanos = () => {
               <div>
                 <p className="text-sm text-gray-600">Receita Mensal</p>
                 <p className="text-2xl font-bold text-purple-600">
-                  R${" "}
-                  {planos
-                    .reduce((sum, plano) => sum + plano.receitaMensal, 0)
-                    .toFixed(2)}
+                  {formatCurrency(receitaMensalTotal)}
                 </p>
               </div>
             </div>
@@ -465,7 +369,7 @@ const GestaoPlanos = () => {
               <div>
                 <p className="text-sm text-gray-600">Planos Ativos</p>
                 <p className="text-2xl font-bold text-yellow-600">
-                  {planos.filter((p) => p.ativo).length}
+                  {planosAtivos}
                 </p>
               </div>
             </div>
@@ -527,7 +431,7 @@ const GestaoPlanos = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        R$ {plano.valorMensal.toFixed(2)}
+                        {formatCurrency(plano.valorMensal)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -539,12 +443,12 @@ const GestaoPlanos = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {plano.totalClientes}
+                        {plano.totalClientes ?? 0}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        R$ {plano.receitaMensal.toFixed(2)}
+                        {formatCurrency(plano.receitaMensal)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -624,7 +528,7 @@ const GestaoPlanos = () => {
                         Valor Mensal
                       </label>
                       <p className="font-medium">
-                        R$ {planoSelecionado.valorMensal.toFixed(2)}
+                        {formatCurrency(planoSelecionado.valorMensal)}
                       </p>
                     </div>
                     <div>
@@ -666,7 +570,7 @@ const GestaoPlanos = () => {
                         Receita Mensal
                       </label>
                       <p className="font-medium">
-                        R$ {planoSelecionado.receitaMensal.toFixed(2)}
+                        {formatCurrency(planoSelecionado.receitaMensal)}
                       </p>
                     </div>
                     <div>
@@ -690,17 +594,23 @@ const GestaoPlanos = () => {
                 <h4 className="font-semibold text-gray-900 mb-4">
                   Beneficiários Cobertos
                 </h4>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {planoSelecionado.beneficiarios.map((beneficiario, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center space-x-2 p-2 bg-green-50 rounded-lg"
-                    >
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                      <span className="text-sm">{beneficiario}</span>
-                    </div>
-                  ))}
-                </div>
+                {beneficiariosSelecionados.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {beneficiariosSelecionados.map((beneficiario, index) => (
+                      <div
+                        key={`${beneficiario}-${index}`}
+                        className="flex items-center space-x-2 p-2 bg-green-50 rounded-lg"
+                      >
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <span className="text-sm">{beneficiario}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    Nenhum beneficiário cadastrado para este plano.
+                  </p>
+                )}
               </div>
 
               {/* Coberturas */}
@@ -709,37 +619,37 @@ const GestaoPlanos = () => {
                   Coberturas Incluídas
                 </h4>
 
-                {/* Serviços Padrão */}
-                <div>
-                  <h5 className="font-medium text-gray-800 mb-2">
-                    Serviços Padrão Inclusos
-                  </h5>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {planoSelecionado.coberturas.servicosPadrao.map(
-                      (servico, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center space-x-2 p-2 bg-blue-50 rounded-lg"
-                        >
-                          <CheckCircle className="w-4 h-4 text-blue-600" />
-                          <span className="text-sm">{servico}</span>
-                        </div>
-                      ),
-                    )}
+                {coberturasSelecionadas.servicosPadrao.length > 0 && (
+                  <div>
+                    <h5 className="font-medium text-gray-800 mb-2">
+                      Serviços Padrão Inclusos
+                    </h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {coberturasSelecionadas.servicosPadrao.map(
+                        (servico, index) => (
+                          <div
+                            key={`padrao-${index}`}
+                            className="flex items-center space-x-2 p-2 bg-blue-50 rounded-lg"
+                          >
+                            <CheckCircle className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm">{servico}</span>
+                          </div>
+                        ),
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Cobertura e Translado */}
-                {planoSelecionado.coberturas.coberturaTranslado.length > 0 && (
+                {coberturasSelecionadas.coberturaTranslado.length > 0 && (
                   <div>
                     <h5 className="font-medium text-gray-800 mb-2">
                       Cobertura e Translado
                     </h5>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {planoSelecionado.coberturas.coberturaTranslado.map(
+                      {coberturasSelecionadas.coberturaTranslado.map(
                         (cobertura, index) => (
                           <div
-                            key={index}
+                            key={`translado-${index}`}
                             className="flex items-center space-x-2 p-2 bg-purple-50 rounded-lg"
                           >
                             <Shield className="w-4 h-4 text-purple-600" />
@@ -751,26 +661,50 @@ const GestaoPlanos = () => {
                   </div>
                 )}
 
-                {/* Serviços Específicos */}
-                {planoSelecionado.coberturas.servicosEspecificos.length > 0 && (
+                {coberturasSelecionadas.servicosEspecificos.length > 0 && (
                   <div>
                     <h5 className="font-medium text-gray-800 mb-2">
                       Serviços Específicos do Plano
                     </h5>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {planoSelecionado.coberturas.servicosEspecificos.map(
+                      {coberturasSelecionadas.servicosEspecificos.map(
                         (servico, index) => (
                           <div
-                            key={index}
-                            className="flex items-center space-x-2 p-2 bg-yellow-50 rounded-lg"
+                            key={`especifico-${index}`}
+                            className="flex items-center space-x-2 p-2 bg-emerald-50 rounded-lg"
                           >
-                            <CheckCircle className="w-4 h-4 text-yellow-600" />
+                            <Shield className="w-4 h-4 text-emerald-600" />
                             <span className="text-sm">{servico}</span>
                           </div>
                         ),
                       )}
                     </div>
                   </div>
+                )}
+
+                {coberturasSelecionadas.outros.length > 0 && (
+                  <div>
+                    <h5 className="font-medium text-gray-800 mb-2">
+                      Outras Coberturas
+                    </h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {coberturasSelecionadas.outros.map((descricao, index) => (
+                        <div
+                          key={`outros-${index}`}
+                          className="flex items-center space-x-2 p-2 bg-gray-100 rounded-lg"
+                        >
+                          <Shield className="w-4 h-4 text-gray-600" />
+                          <span className="text-sm">{descricao}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {!possuiCoberturas && (
+                  <p className="text-sm text-gray-500">
+                    Nenhuma cobertura cadastrada para este plano.
+                  </p>
                 )}
               </div>
             </div>
