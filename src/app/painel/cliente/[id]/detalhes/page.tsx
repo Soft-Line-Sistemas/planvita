@@ -710,7 +710,7 @@ const DetalhesCliente = () => {
                 Club de Benefícios
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="text-center p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg">
+                <div className="text-center p-6 bg-linear-to-br from-purple-50 to-pink-50 rounded-lg">
                   <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Gift className="w-8 h-8 text-purple-600" />
                   </div>
@@ -725,7 +725,7 @@ const DetalhesCliente = () => {
                   </button>
                 </div>
 
-                <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg">
+                <div className="text-center p-6 bg-linear-to-br from-blue-50 to-cyan-50 rounded-lg">
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Phone className="w-8 h-8 text-blue-600" />
                   </div>
@@ -740,7 +740,7 @@ const DetalhesCliente = () => {
                   </button>
                 </div>
 
-                <div className="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg">
+                <div className="text-center p-6 bg-linear-to-br from-green-50 to-emerald-50 rounded-lg">
                   <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Shield className="w-8 h-8 text-green-600" />
                   </div>
