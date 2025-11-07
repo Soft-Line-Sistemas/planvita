@@ -255,7 +255,7 @@ export default function Dashboard({ userEmail }: DashboardProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.push("/clientes")}
+              onClick={() => router.push("/painel/cliente")}
             >
               Ver Todos
             </Button>

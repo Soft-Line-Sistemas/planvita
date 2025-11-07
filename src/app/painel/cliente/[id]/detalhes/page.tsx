@@ -433,7 +433,7 @@ const DetalhesCliente = () => {
                       key={index}
                       className="flex items-start space-x-3 p-4 bg-green-50 rounded-lg"
                     >
-                      <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
                       <div>
                         <p className="font-medium text-gray-900">
                           {servico.nome}
@@ -460,7 +460,7 @@ const DetalhesCliente = () => {
                       key={index}
                       className="flex items-start space-x-3 p-4 bg-blue-50 rounded-lg"
                     >
-                      <Shield className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <Shield className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
                       <div className="flex-1">
                         <p className="font-medium text-gray-900">
                           {cobertura.nome}
@@ -492,7 +492,7 @@ const DetalhesCliente = () => {
                       key={index}
                       className="flex items-start space-x-3 p-4 bg-purple-50 rounded-lg"
                     >
-                      <Gift className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
+                      <Gift className="w-5 h-5 text-purple-600 mt-0.5 shrink-0" />
                       <div>
                         <p className="font-medium text-gray-900">
                           {servico.nome}

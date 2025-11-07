@@ -78,7 +78,7 @@ export default function ConsultaClientePage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-100 pb-16">
+    <main className="min-h-screen bg-linear-to-br from-slate-100 via-white to-slate-100 pb-16">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 pt-16">
         <header className="space-y-3 text-center">
           <p className="text-sm uppercase tracking-[0.4em] text-[#22c55e]">

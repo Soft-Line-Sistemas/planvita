@@ -21,6 +21,9 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Pagamento, StatusPagamento } from "@/types/PaymentType";
+import CadastroFinanceiro from "@/components/Financeiro/cadastroFinanceiro";
+import ContasFinanceiro from "@/components/Financeiro/contasFinanceiro";
+import RelatorioFinanceiro from "@/components/Financeiro/relatorioFinanceiro";
 
 const GestaoFinanceira = () => {
   const router = useRouter();
@@ -238,6 +241,13 @@ const GestaoFinanceira = () => {
     { id: "pagamentos", nome: "Pagamentos", icon: CreditCard },
     { id: "inadimplencia", nome: "Inadimplência", icon: AlertCircle },
     { id: "relatorios", nome: "Relatórios", icon: FileText },
+    { id: "cadastros", nome: "Cadastros", icon: TrendingUp },
+    { id: "contas", nome: "Contas Financeiras", icon: DollarSign },
+    {
+      id: "relatoriosFinanceiro",
+      nome: "Relatórios Financeiros",
+      icon: FileText,
+    },
   ];
 
   if (loading) {
@@ -255,12 +265,12 @@ const GestaoFinanceira = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
-              <button
+              {/* <button
                 onClick={() => router.back()}
                 className="text-gray-600 hover:text-gray-900 transition-colors"
               >
                 ← Voltar
-              </button>
+              </button> */}
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">
                   Gestão Financeira
@@ -726,6 +736,9 @@ const GestaoFinanceira = () => {
             </div>
           </div>
         )}
+        {abaAtiva === "cadastros" && <CadastroFinanceiro />}
+        {abaAtiva === "contas" && <ContasFinanceiro />}
+        {abaAtiva === "relatoriosFinanceiro" && <RelatorioFinanceiro />}
       </div>
 
       {/* Modal de Detalhes do Pagamento */}
