@@ -2,6 +2,12 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Pagamento } from "@/types/PaymentType";
 
+type JsPDFWithAutoTable = jsPDF & {
+  lastAutoTable?: {
+    finalY: number;
+  };
+};
+
 const formatCurrency = (valor: number) =>
   Number(valor || 0).toLocaleString("pt-BR", {
     style: "currency",
@@ -15,7 +21,7 @@ const formatDate = (valor: string | null) =>
     : new Date().toLocaleDateString("pt-BR");
 
 export const gerarBoletoPDF = (pagamento: Pagamento) => {
-  const doc = new jsPDF();
+  const doc = new jsPDF() as JsPDFWithAutoTable;
   const referencia = pagamento.referencia || `PG-${pagamento.id}`;
 
   doc.setFontSize(16);
@@ -32,8 +38,10 @@ export const gerarBoletoPDF = (pagamento: Pagamento) => {
     body: [["Valor do Boleto", formatCurrency(pagamento.valor)]],
   });
 
+  const firstTableEnd = doc.lastAutoTable?.finalY ?? 90;
+
   autoTable(doc, {
-    startY: doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 6 : 90,
+    startY: firstTableEnd + 6,
     head: [["Campo", "Informação"]],
     body: [
       ["Data de Vencimento", formatDate(pagamento.dataVencimento)],
@@ -46,7 +54,7 @@ export const gerarBoletoPDF = (pagamento: Pagamento) => {
   doc.text(
     "Documento gerado automaticamente para fins de cobrança.",
     14,
-    (doc.lastAutoTable?.finalY ?? 120) + 10,
+    (doc.lastAutoTable?.finalY ?? firstTableEnd + 20) + 10,
   );
 
   doc.save(`boleto-${referencia}.pdf`);
