@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 
 interface Cliente {
-  id: number;
+  id: string;
   nome: string;
   email: string;
   telefone: string;

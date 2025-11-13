@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   CreditCard,
   DollarSign,
@@ -15,20 +15,97 @@ import {
   TrendingUp,
   FileText,
   Send,
-  Phone,
+  MessageCircle,
   Mail,
   User,
+  Loader2,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { Pagamento, StatusPagamento } from "@/types/PaymentType";
 import CadastroFinanceiro from "@/components/Financeiro/cadastroFinanceiro";
 import ContasFinanceiro from "@/components/Financeiro/contasFinanceiro";
 import RelatorioFinanceiro from "@/components/Financeiro/relatorioFinanceiro";
+import { usePagamentos } from "@/hooks/queries/usePagamentos";
+import { useAtualizarStatusPagamento } from "@/hooks/mutations/useAtualizarStatusPagamento";
+import getTenantFromHost from "@/utils/getTenantFromHost";
+import AsaasPaymentsPanel from "@/components/Financeiro/AsaasPaymentsPanel";
+import { useContasFinanceiras } from "@/hooks/queries/useContasFinanceiras";
+import { getDiasAtraso } from "@/types/Financeiro";
+import { useRelatorioFinanceiro } from "@/hooks/queries/useRelatorioFinanceiro";
+import { gerarBoletoPDF } from "@/utils/boleto";
 
 const GestaoFinanceira = () => {
-  const router = useRouter();
-  const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: pagamentosData,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = usePagamentos();
+  const pagamentos = useMemo(() => pagamentosData ?? [], [pagamentosData]);
+  const atualizarStatusPagamento = useAtualizarStatusPagamento();
+  const {
+    data: contasFinanceiras,
+    isLoading: isLoadingContas,
+    isError: isErrorContas,
+    error: contasError,
+  } = useContasFinanceiras();
+  const contasReceber = useMemo(
+    () => (contasFinanceiras ?? []).filter((conta) => conta.tipo === "Receber"),
+    [contasFinanceiras],
+  );
+  const inadimplentes = useMemo(() => {
+    const hoje = new Date();
+    return contasReceber
+      .filter((conta) => {
+        const vencimento = new Date(conta.dataVencimento);
+        return (
+          vencimento < hoje &&
+          (conta.status === "PENDENTE" || conta.status === "ATRASADO")
+        );
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.dataVencimento).getTime() -
+          new Date(a.dataVencimento).getTime(),
+      );
+  }, [contasReceber]);
+  const totalValorInadimplente = useMemo(
+    () => inadimplentes.reduce((acc, conta) => acc + conta.valor, 0),
+    [inadimplentes],
+  );
+  const taxaInadimplencia = useMemo(() => {
+    if (!contasReceber.length) return 0;
+    return (inadimplentes.length / contasReceber.length) * 100;
+  }, [contasReceber, inadimplentes]);
+  const resumoCards = useMemo(() => {
+    const lista = contasFinanceiras ?? [];
+    const sum = (items: typeof lista) =>
+      items.reduce((acc, conta) => acc + conta.valor, 0);
+
+    const pagos = lista.filter(
+      (conta) => conta.status === "PAGO" || conta.status === "RECEBIDO",
+    );
+    const pendentes = lista.filter((conta) => conta.status === "PENDENTE");
+    const vencidos = lista.filter((conta) => conta.status === "ATRASADO");
+
+    return {
+      pagos: { quantidade: pagos.length, valor: sum(pagos) },
+      pendentes: { quantidade: pendentes.length, valor: sum(pendentes) },
+      vencidos: { quantidade: vencidos.length, valor: sum(vencidos) },
+      total: { quantidade: lista.length, valor: sum(lista) },
+    };
+  }, [contasFinanceiras]);
+  const { data: relatorioFinanceiro, isLoading: isLoadingRelatorio } =
+    useRelatorioFinanceiro();
+  const formatCurrency = (valor: number) =>
+    `R$ ${valor.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  const receitaMensalHighlights = useMemo(() => {
+    const mensal = relatorioFinanceiro?.mensal ?? [];
+    return [...mensal].reverse().slice(0, 4);
+  }, [relatorioFinanceiro]);
   const [abaAtiva, setAbaAtiva] = useState("pagamentos");
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
@@ -36,111 +113,14 @@ const GestaoFinanceira = () => {
   const [modalAberto, setModalAberto] = useState(false);
   const [pagamentoSelecionado, setPagamentoSelecionado] =
     useState<Pagamento | null>(null);
+  const [tenant, setTenant] = useState<string | null>(null);
 
   useEffect(() => {
-    const pagamentosSimulados: Pagamento[] = [
-      {
-        id: "1",
-        cliente: {
-          id: "1",
-          nome: "Leonardo De Queiroz Silva",
-          email: "leonardo@email.com",
-          telefone: "(71) 99999-1234",
-          cpf: "025.775.565-94",
-          plano: "Bosque Plus",
-        },
-        valor: 79.9,
-        dataVencimento: "2024-10-30",
-        dataPagamento: null,
-        status: "PENDENTE",
-        metodoPagamento: "Boleto",
-        referencia: "BOL202410001",
-        diasAtraso: 0,
-        observacoes: "Mensalidade de outubro/2024",
-      },
-      {
-        id: "2",
-        cliente: {
-          id: "1",
-          nome: "Leonardo De Queiroz Silva",
-          email: "leonardo@email.com",
-          telefone: "(71) 99999-1234",
-          cpf: "025.775.565-94",
-          plano: "Bosque Plus",
-        },
-        valor: 79.9,
-        dataVencimento: "2024-09-30",
-        dataPagamento: "2024-09-28",
-        status: "PAGO",
-        metodoPagamento: "PIX",
-        referencia: "PIX202409001",
-        diasAtraso: 0,
-        observacoes: "Mensalidade de setembro/2024",
-      },
-      {
-        id: "3",
-        cliente: {
-          id: "2",
-          nome: "Maria Silva Santos",
-          email: "maria.silva@email.com",
-          telefone: "(71) 98888-5678",
-          cpf: "123.456.789-00",
-          plano: "Bosque Família",
-        },
-        valor: 89.9,
-        dataVencimento: "2024-10-15",
-        dataPagamento: null,
-        status: "VENCIDO",
-        metodoPagamento: "Boleto",
-        referencia: "BOL202410002",
-        diasAtraso: 15,
-        observacoes: "Mensalidade de outubro/2024 - VENCIDA",
-      },
-      {
-        id: "4",
-        cliente: {
-          id: "3",
-          nome: "João Carlos Oliveira",
-          email: "joao.carlos@email.com",
-          telefone: "(71) 97777-9999",
-          cpf: "987.654.321-11",
-          plano: "Bosque Premium",
-        },
-        valor: 129.9,
-        dataVencimento: "2024-11-05",
-        dataPagamento: null,
-        status: "PENDENTE",
-        metodoPagamento: "Cartão de Crédito",
-        referencia: "CC202411001",
-        diasAtraso: 0,
-        observacoes: "Mensalidade de novembro/2024",
-      },
-      {
-        id: "5",
-        cliente: {
-          id: "4",
-          nome: "Ana Paula Costa",
-          email: "ana.paula@email.com",
-          telefone: "(71) 96666-8888",
-          cpf: "456.789.123-22",
-          plano: "Bosque Social",
-        },
-        valor: 49.99,
-        dataVencimento: "2024-10-20",
-        dataPagamento: null,
-        status: "VENCIDO",
-        metodoPagamento: "Boleto",
-        referencia: "BOL202410003",
-        diasAtraso: 10,
-        observacoes: "Mensalidade de outubro/2024 - VENCIDA",
-      },
-    ];
-
-    setTimeout(() => {
-      setPagamentos(pagamentosSimulados);
-      setLoading(false);
-    }, 1000);
+    setTenant(getTenantFromHost());
   }, []);
+
+  const isBosqueTenant =
+    typeof tenant === "string" && tenant.trim().toLowerCase() === "bosque";
 
   const getStatusColor = (status: StatusPagamento) => {
     switch (status) {
@@ -201,59 +181,78 @@ const GestaoFinanceira = () => {
     return matchSearch && matchStatus && matchData;
   });
 
-  const estatisticas = {
-    totalPagamentos: pagamentos.length,
-    pagamentosPendentes: pagamentos.filter((p) => p.status === "PENDENTE")
-      .length,
-    pagamentosVencidos: pagamentos.filter((p) => p.status === "VENCIDO").length,
-    pagamentosPagos: pagamentos.filter((p) => p.status === "PAGO").length,
-    valorTotalPendente: pagamentos
-      .filter((p) => p.status === "PENDENTE")
-      .reduce((sum, p) => sum + p.valor, 0),
-    valorTotalVencido: pagamentos
-      .filter((p) => p.status === "VENCIDO")
-      .reduce((sum, p) => sum + p.valor, 0),
-    valorTotalRecebido: pagamentos
-      .filter((p) => p.status === "PAGO")
-      .reduce((sum, p) => sum + p.valor, 0),
-  };
-
   const handleVisualizarPagamento = (pagamento: Pagamento) => {
     setPagamentoSelecionado(pagamento);
     setModalAberto(true);
   };
 
-  const handleConfirmarPagamento = (pagamentoId: string) => {
-    setPagamentos((prev) =>
-      prev.map((p) =>
-        p.id === pagamentoId
-          ? {
-              ...p,
-              status: "PAGO",
-              dataPagamento: new Date().toISOString().split("T")[0],
-            }
-          : p,
-      ),
-    );
+  const handleConfirmarPagamento = (pagamento: Pagamento) => {
+    if (pagamento.status === "PAGO") return;
+
+    const numeroId = Number(pagamento.id);
+    const payloadId = Number.isNaN(numeroId) ? pagamento.id : numeroId;
+
+    atualizarStatusPagamento.mutate({
+      id: payloadId,
+      status: "PAGO",
+      dataPagamento: new Date().toISOString(),
+    });
   };
 
-  const abas = [
-    { id: "pagamentos", nome: "Pagamentos", icon: CreditCard },
-    { id: "inadimplencia", nome: "Inadimplência", icon: AlertCircle },
-    { id: "relatorios", nome: "Relatórios", icon: FileText },
-    { id: "cadastros", nome: "Cadastros", icon: TrendingUp },
-    { id: "contas", nome: "Contas Financeiras", icon: DollarSign },
-    {
-      id: "relatoriosFinanceiro",
-      nome: "Relatórios Financeiros",
-      icon: FileText,
-    },
-  ];
+  const handleBaixarBoleto = (pagamento: Pagamento) => {
+    gerarBoletoPDF(pagamento);
+  };
 
-  if (loading) {
+  const abas = useMemo(() => {
+    const base = [
+      { id: "pagamentos", nome: "Pagamentos", icon: CreditCard },
+      { id: "inadimplencia", nome: "Inadimplência", icon: AlertCircle },
+      { id: "relatorios", nome: "Relatórios", icon: FileText },
+      { id: "cadastros", nome: "Cadastros", icon: TrendingUp },
+      { id: "contas", nome: "Contas Financeiras", icon: DollarSign },
+      {
+        id: "relatoriosFinanceiro",
+        nome: "Relatórios Financeiros",
+        icon: FileText,
+      },
+    ];
+
+    if (isBosqueTenant) {
+      base.push({
+        id: "asaas",
+        nome: "Integração Asaas",
+        icon: CreditCard,
+      });
+    }
+
+    return base;
+  }, [isBosqueTenant]);
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4 text-center px-4">
+        <p className="text-gray-700 text-lg font-medium">
+          Não foi possível carregar os pagamentos.
+        </p>
+        {error instanceof Error && (
+          <p className="text-sm text-gray-500 max-w-md">
+            Detalhes: {error.message}
+          </p>
+        )}
+        <button
+          onClick={() => refetch()}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+        >
+          Tentar novamente
+        </button>
       </div>
     );
   }
@@ -266,7 +265,6 @@ const GestaoFinanceira = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               {/* <button
-                onClick={() => router.back()}
                 className="text-gray-600 hover:text-gray-900 transition-colors"
               >
                 ← Voltar
@@ -331,10 +329,16 @@ const GestaoFinanceira = () => {
               <div>
                 <p className="text-sm text-gray-600">Pagos</p>
                 <p className="text-2xl font-bold text-green-600">
-                  {estatisticas.pagamentosPagos}
+                  {isLoadingContas ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-green-500" />
+                  ) : (
+                    resumoCards.pagos.quantidade
+                  )}
                 </p>
                 <p className="text-sm text-gray-500">
-                  R$ {estatisticas.valorTotalRecebido.toFixed(2)}
+                  {isLoadingContas
+                    ? "Carregando..."
+                    : formatCurrency(resumoCards.pagos.valor)}
                 </p>
               </div>
             </div>
@@ -348,10 +352,16 @@ const GestaoFinanceira = () => {
               <div>
                 <p className="text-sm text-gray-600">Pendentes</p>
                 <p className="text-2xl font-bold text-yellow-600">
-                  {estatisticas.pagamentosPendentes}
+                  {isLoadingContas ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-yellow-500" />
+                  ) : (
+                    resumoCards.pendentes.quantidade
+                  )}
                 </p>
                 <p className="text-sm text-gray-500">
-                  R$ {estatisticas.valorTotalPendente.toFixed(2)}
+                  {isLoadingContas
+                    ? "Carregando..."
+                    : formatCurrency(resumoCards.pendentes.valor)}
                 </p>
               </div>
             </div>
@@ -365,10 +375,16 @@ const GestaoFinanceira = () => {
               <div>
                 <p className="text-sm text-gray-600">Vencidos</p>
                 <p className="text-2xl font-bold text-red-600">
-                  {estatisticas.pagamentosVencidos}
+                  {isLoadingContas ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-red-500" />
+                  ) : (
+                    resumoCards.vencidos.quantidade
+                  )}
                 </p>
                 <p className="text-sm text-gray-500">
-                  R$ {estatisticas.valorTotalVencido.toFixed(2)}
+                  {isLoadingContas
+                    ? "Carregando..."
+                    : formatCurrency(resumoCards.vencidos.valor)}
                 </p>
               </div>
             </div>
@@ -382,15 +398,16 @@ const GestaoFinanceira = () => {
               <div>
                 <p className="text-sm text-gray-600">Total</p>
                 <p className="text-2xl font-bold text-blue-600">
-                  {estatisticas.totalPagamentos}
+                  {isLoadingContas ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                  ) : (
+                    resumoCards.total.quantidade
+                  )}
                 </p>
                 <p className="text-sm text-gray-500">
-                  R${" "}
-                  {(
-                    estatisticas.valorTotalRecebido +
-                    estatisticas.valorTotalPendente +
-                    estatisticas.valorTotalVencido
-                  ).toFixed(2)}
+                  {isLoadingContas
+                    ? "Carregando..."
+                    : formatCurrency(resumoCards.total.valor)}
                 </p>
               </div>
             </div>
@@ -546,15 +563,30 @@ const GestaoFinanceira = () => {
                               {pagamento.status === "PENDENTE" && (
                                 <button
                                   onClick={() =>
-                                    handleConfirmarPagamento(pagamento.id)
+                                    handleConfirmarPagamento(pagamento)
                                   }
-                                  className="text-green-600 hover:text-green-800"
+                                  className="text-green-600 hover:text-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={
+                                    atualizarStatusPagamento.isPending &&
+                                    (
+                                      atualizarStatusPagamento.variables?.id ??
+                                      ""
+                                    ).toString() === pagamento.id
+                                  }
                                   title="Confirmar Pagamento"
                                 >
-                                  <CheckCircle className="w-4 h-4" />
+                                  {atualizarStatusPagamento.isPending &&
+                                  (
+                                    atualizarStatusPagamento.variables?.id ?? ""
+                                  ).toString() === pagamento.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <CheckCircle className="w-4 h-4" />
+                                  )}
                                 </button>
                               )}
                               <button
+                                onClick={() => handleBaixarBoleto(pagamento)}
                                 className="text-gray-600 hover:text-gray-800"
                                 title="Baixar Boleto"
                               >
@@ -574,67 +606,126 @@ const GestaoFinanceira = () => {
 
         {abaAtiva === "inadimplencia" && (
           <div className="space-y-6">
-            {/* Clientes Inadimplentes */}
             <div className="bg-white rounded-lg shadow-sm">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Clientes Inadimplentes
-                </h3>
+              <div className="p-6 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Clientes inadimplentes
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Dados consolidados diretamente das contas a receber
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-500">Total em atraso</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    R$ {totalValorInadimplente.toLocaleString("pt-BR")}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {inadimplentes.length}{" "}
+                    {inadimplentes.length === 1 ? "registro" : "registros"}
+                  </p>
+                </div>
               </div>
               <div className="p-6">
-                <div className="space-y-4">
-                  {pagamentos
-                    .filter((p) => p.status === "VENCIDO")
-                    .map((pagamento) => (
-                      <div
-                        key={pagamento.id}
-                        className="border border-red-200 rounded-lg p-4 bg-red-50"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                              <AlertCircle className="w-6 h-6 text-red-600" />
+                {isLoadingContas ? (
+                  <div className="flex items-center justify-center gap-2 text-gray-500">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Carregando contas a receber...
+                  </div>
+                ) : isErrorContas ? (
+                  <div className="text-center text-red-600 space-y-2">
+                    <p>Não foi possível carregar os dados financeiros.</p>
+                    {contasError instanceof Error && (
+                      <p className="text-sm text-red-500">
+                        {contasError.message}
+                      </p>
+                    )}
+                  </div>
+                ) : inadimplentes.length === 0 ? (
+                  <p className="text-center text-gray-500">
+                    Nenhum cliente em atraso no momento.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {inadimplentes.map((conta) => {
+                      const diasAtraso = getDiasAtraso(conta);
+                      const nomeCliente =
+                        conta.cliente?.nome ?? conta.parceiro ?? "Cliente";
+                      const email = conta.cliente?.email ?? conta.contato ?? "";
+                      const telefone = conta.cliente?.telefone ?? "";
+                      return (
+                        <div
+                          key={`${conta.id}-${conta.dataVencimento}`}
+                          className="border border-red-200 rounded-lg p-4 bg-red-50"
+                        >
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                            <div className="flex items-center space-x-4">
+                              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                <AlertCircle className="w-6 h-6 text-red-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">
+                                  {nomeCliente}
+                                </h4>
+                                {conta.cliente?.cpf && (
+                                  <p className="text-xs text-gray-600">
+                                    CPF: {conta.cliente.cpf}
+                                  </p>
+                                )}
+                                <p className="text-sm text-gray-600">
+                                  {email || "Sem e-mail informado"}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  {telefone || "Sem telefone informado"}
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <h4 className="font-semibold text-gray-900">
-                                {pagamento.cliente.nome}
-                              </h4>
-                              <p className="text-sm text-gray-600">
-                                {pagamento.cliente.email}
+                            <div className="text-right">
+                              <p className="font-semibold text-red-600">
+                                R$ {conta.valor.toFixed(2)}
                               </p>
                               <p className="text-sm text-gray-600">
-                                {pagamento.cliente.telefone}
+                                Venceu em{" "}
+                                {new Date(
+                                  conta.dataVencimento,
+                                ).toLocaleDateString("pt-BR")}
+                              </p>
+                              <p className="text-sm text-red-600 font-medium">
+                                {diasAtraso} {diasAtraso === 1 ? "dia" : "dias"}{" "}
+                                de atraso
                               </p>
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-red-600">
-                              R$ {pagamento.valor.toFixed(2)}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              Venceu em{" "}
-                              {new Date(
-                                pagamento.dataVencimento,
-                              ).toLocaleDateString("pt-BR")}
-                            </p>
-                            <p className="text-sm text-red-600 font-medium">
-                              {pagamento.diasAtraso} dias de atraso
-                            </p>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <button className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 flex items-center space-x-1">
-                              <Phone className="w-3 h-3" />
-                              <span>Ligar</span>
-                            </button>
-                            <button className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 flex items-center space-x-1">
-                              <Mail className="w-3 h-3" />
-                              <span>Email</span>
-                            </button>
+                            <div className="flex items-center space-x-2">
+                              <button
+                                disabled={!telefone}
+                                className={`px-3 py-1 rounded text-sm flex items-center space-x-1 ${
+                                  telefone
+                                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                                    : "bg-gray-300 text-gray-600 cursor-not-allowed"
+                                }`}
+                              >
+                                <MessageCircle className="w-3 h-3" />
+                                <span>WhatsApp</span>
+                              </button>
+                              <button
+                                disabled={!email}
+                                className={`px-3 py-1 rounded text-sm flex items-center space-x-1 ${
+                                  email
+                                    ? "bg-green-600 text-white hover:bg-green-700"
+                                    : "bg-gray-300 text-gray-600 cursor-not-allowed"
+                                }`}
+                              >
+                                <Mail className="w-3 h-3" />
+                                <span>Email</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -642,36 +733,49 @@ const GestaoFinanceira = () => {
 
         {abaAtiva === "relatorios" && (
           <div className="space-y-6">
-            {/* Relatórios Financeiros */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Receita Mensal
                 </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Outubro 2024</span>
-                    <span className="font-semibold text-green-600">
-                      R$ 15.847,20
-                    </span>
+                {isLoadingRelatorio ? (
+                  <div className="flex items-center justify-center text-gray-500 gap-2 h-32">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Consolidando dados do relatório...
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Setembro 2024</span>
-                    <span className="font-semibold">R$ 14.523,80</span>
+                ) : (
+                  <div className="space-y-4">
+                    {receitaMensalHighlights.map((item) => (
+                      <div
+                        key={item.mes}
+                        className="flex items-center justify-between"
+                      >
+                        <span className="text-gray-600">{item.mes}</span>
+                        <span className="font-semibold text-green-600">
+                          Entradas: R$ {item.entradas.toLocaleString("pt-BR")}
+                        </span>
+                        <span className="font-semibold text-red-500">
+                          Saídas: R$ {item.saidas.toLocaleString("pt-BR")}
+                        </span>
+                      </div>
+                    ))}
+                    {relatorioFinanceiro?.totais && (
+                      <div className="pt-4 border-t">
+                        <div className="flex items-center space-x-2 text-green-600">
+                          <TrendingUp className="w-4 h-4" />
+                          <span className="text-sm font-medium">
+                            Lucro acumulado: R${" "}
+                            {relatorioFinanceiro.totais.lucro.toLocaleString(
+                              "pt-BR",
+                            )}{" "}
+                            ({relatorioFinanceiro.totais.margem.toFixed(1)}%
+                            margem)
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Agosto 2024</span>
-                    <span className="font-semibold">R$ 13.892,40</span>
-                  </div>
-                  <div className="pt-4 border-t">
-                    <div className="flex items-center space-x-2 text-green-600">
-                      <TrendingUp className="w-4 h-4" />
-                      <span className="text-sm font-medium">
-                        +9.1% vs mês anterior
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
 
               <div className="bg-white rounded-lg shadow-sm p-6">
@@ -679,31 +783,43 @@ const GestaoFinanceira = () => {
                   Taxa de Inadimplência
                 </h3>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Outubro 2024</span>
-                    <span className="font-semibold text-red-600">8.5%</span>
+                  <div>
+                    <p className="text-4xl font-bold text-red-600">
+                      {taxaInadimplencia.toFixed(1)}%
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {inadimplentes.length} clientes com {contasReceber.length}{" "}
+                      contas abertas
+                    </p>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Setembro 2024</span>
-                    <span className="font-semibold">7.2%</span>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Valor em aberto</span>
+                    <span className="font-semibold text-gray-900">
+                      R$ {totalValorInadimplente.toLocaleString("pt-BR")}
+                    </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Agosto 2024</span>
-                    <span className="font-semibold">6.8%</span>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">
+                      Recebíveis monitorados
+                    </span>
+                    <span className="font-semibold text-gray-900">
+                      R${" "}
+                      {contasReceber
+                        .reduce((acc, conta) => acc + conta.valor, 0)
+                        .toLocaleString("pt-BR")}
+                    </span>
                   </div>
-                  <div className="pt-4 border-t">
-                    <div className="flex items-center space-x-2 text-red-600">
-                      <TrendingUp className="w-4 h-4" />
-                      <span className="text-sm font-medium">
-                        +1.3% vs mês anterior
-                      </span>
-                    </div>
+                  <div className="pt-4 border-t text-xs text-gray-500">
+                    Última atualização:{" "}
+                    {new Date().toLocaleString("pt-BR", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Ações de Relatório */}
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Gerar Relatórios
@@ -713,7 +829,7 @@ const GestaoFinanceira = () => {
                   <FileText className="w-6 h-6 text-blue-600 mb-2" />
                   <h4 className="font-medium">Relatório de Pagamentos</h4>
                   <p className="text-sm text-gray-600">
-                    Exportar lista completa de pagamentos
+                    {pagamentos.length} pagamentos sincronizados com o backend
                   </p>
                 </button>
 
@@ -721,7 +837,7 @@ const GestaoFinanceira = () => {
                   <AlertCircle className="w-6 h-6 text-red-600 mb-2" />
                   <h4 className="font-medium">Relatório de Inadimplência</h4>
                   <p className="text-sm text-gray-600">
-                    Lista de clientes em atraso
+                    {inadimplentes.length} clientes com contas em atraso
                   </p>
                 </button>
 
@@ -729,7 +845,11 @@ const GestaoFinanceira = () => {
                   <DollarSign className="w-6 h-6 text-green-600 mb-2" />
                   <h4 className="font-medium">Relatório Financeiro</h4>
                   <p className="text-sm text-gray-600">
-                    Resumo financeiro mensal
+                    {relatorioFinanceiro?.totais
+                      ? `Entradas: R$ ${relatorioFinanceiro.totais.entradas.toLocaleString(
+                          "pt-BR",
+                        )}`
+                      : "Sincronizando..."}
                   </p>
                 </button>
               </div>
@@ -739,6 +859,7 @@ const GestaoFinanceira = () => {
         {abaAtiva === "cadastros" && <CadastroFinanceiro />}
         {abaAtiva === "contas" && <ContasFinanceiro />}
         {abaAtiva === "relatoriosFinanceiro" && <RelatorioFinanceiro />}
+        {abaAtiva === "asaas" && isBosqueTenant && <AsaasPaymentsPanel />}
       </div>
 
       {/* Modal de Detalhes do Pagamento */}
@@ -880,7 +1001,10 @@ const GestaoFinanceira = () => {
               >
                 Fechar
               </button>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
+              <button
+                onClick={() => handleBaixarBoleto(pagamentoSelecionado)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+              >
                 <Download className="w-4 h-4" />
                 <span>Baixar Boleto</span>
               </button>

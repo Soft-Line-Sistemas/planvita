@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   User,
   Phone,
@@ -19,156 +19,22 @@ import {
   Download,
   Eye,
 } from "lucide-react";
-import { useParams } from "next/navigation";
-import { useRouter } from "next/router";
-import { Cliente } from "@/types/ClientType";
+import { useParams, useRouter } from "next/navigation";
 import { StatusPagamento } from "@/types/PaymentType";
+import { useClienteDetalhes } from "@/hooks/queries/useClienteDetalhes";
 
 const DetalhesCliente = () => {
   const params = useParams();
-  const clienteId = params?.id as string;
-  const [cliente, setCliente] = useState<Cliente | null>(null);
+  const clienteId = params?.id as string | undefined;
   const [abaAtiva, setAbaAtiva] = useState("geral");
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
-
-  useEffect(() => {
-    // Simular dados do cliente baseado nas imagens fornecidas
-    const clienteSimulado: Cliente = {
-      id: clienteId || "1",
-      nome: "Leonardo De Queiroz Silva",
-      cpf: "025.775.565-94",
-      email: "leonardo@email.com",
-      telefone: "(71) 99999-1234",
-      whatsapp: "(71) 99999-1234",
-      dataNascimento: "1980-05-15",
-      idade: 44,
-      endereco: {
-        cep: "40000-000",
-        uf: "BA",
-        cidade: "Salvador",
-        bairro: "Centro",
-        logradouro: "Rua das Flores",
-        numero: "123",
-        complemento: "Apt 101",
-      },
-      statusPlano: "ATIVO",
-      dataContratacao: "2024-09-01",
-      dataCarencia: "2025-02-28",
-      carenciaRestante: 140,
-      diaVencimento: 30,
-      plano: {
-        id: "1",
-        nome: "Bosque Plus",
-        valorMensal: 79.9,
-        coberturas: {
-          servicosPadrao: [
-            {
-              nome: "Auxílio funeral de até R$ 2.500",
-              descricao:
-                "Valor máximo para cobrir os custos do serviço funerário",
-            },
-            {
-              nome: "Urna padrão",
-              descricao: "Urna funerária padrão inclusa no serviço",
-            },
-            {
-              nome: "Ornamentação de flores",
-              descricao: "Ornamentação floral para o velório",
-            },
-            {
-              nome: "Coroa de flores",
-              descricao: "Coroa de flores para homenagem",
-            },
-            {
-              nome: "Atendimento 24h",
-              descricao: "Atendimento disponível 24 horas por dia",
-            },
-            {
-              nome: "Club de benefícios, descontos de até 40%",
-              descricao: "Acesso ao clube de benefícios",
-            },
-            {
-              nome: "Orientação Documental",
-              descricao: "Auxílio na documentação necessária",
-            },
-            {
-              nome: "Vestimento padrão social",
-              descricao: "Vestimenta adequada para o velório",
-            },
-          ],
-          coberturaTranslado: [
-            {
-              nome: "Translado: Até 1000 km",
-              descricao: "Translado do corpo até 1000km de distância",
-            },
-            {
-              nome: "Auxílio Cemitério até R$ 3.500",
-              descricao:
-                "Valor destinado a cobrir custos relacionados ao sepultamento/cremação",
-            },
-            {
-              nome: "Cobertura de Serviço Funerário ate R$ 2.500,00",
-              descricao: "Após 72h da adesão, uso com 50% do valor",
-              observacoes: "Após 72h da adesão, uso com 50% do valor",
-            },
-          ],
-          servicosEspecificos: [
-            { nome: "Telemedicina", descricao: "Consultas médicas online" },
-          ],
-        },
-      },
-      consultor: {
-        nome: "João Silva Consultor",
-        codigo: "CONS001",
-        email: "consultor@campodobosque.com.br",
-        telefone: "(71) 99999-0001",
-      },
-      dependentes: [
-        {
-          id: "1",
-          nome: "Jaene Pinh Cerq",
-          cpf: "123.456.789-01",
-          dataNascimento: "1983-05-16",
-          idade: 41,
-          parentesco: "Cônjuge",
-          carenciaRestante: 140,
-        },
-        {
-          id: "2",
-          nome: "Maria Rita Melo de Queiroz Silva",
-          cpf: "987.654.321-02",
-          dataNascimento: "2013-05-14",
-          idade: 11,
-          parentesco: "Filha",
-          carenciaRestante: 140,
-        },
-      ],
-      pagamentos: [
-        {
-          id: "1",
-          valor: 79.9,
-          dataVencimento: "2024-10-30",
-          status: "PENDENTE",
-          metodoPagamento: "Boleto",
-          diasAtraso: 0,
-        },
-        {
-          id: "2",
-          valor: 79.9,
-          dataVencimento: "2024-09-30",
-          dataPagamento: "2024-09-28",
-          status: "PAGO",
-          metodoPagamento: "PIX",
-        },
-      ],
-    };
-
-    setTimeout(() => {
-      setCliente(clienteSimulado);
-      setLoading(false);
-    }, 1000);
-  }, [clienteId]);
+  const {
+    data: cliente,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useClienteDetalhes(clienteId);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -202,10 +68,31 @@ const DetalhesCliente = () => {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4 text-center px-4">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Não foi possível carregar o cliente
+          </h2>
+          {error instanceof Error && (
+            <p className="text-gray-500">{error.message}</p>
+          )}
+        </div>
+        <button
+          onClick={() => refetch()}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+        >
+          Tentar novamente
+        </button>
       </div>
     );
   }

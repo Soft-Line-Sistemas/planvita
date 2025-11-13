@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   FileText,
   BarChart3,
@@ -11,9 +11,9 @@ import {
   Calendar,
   RefreshCcw,
   Mail,
-  PieChart as PieIcon,
   TrendingUp,
   TrendingDown,
+  Loader2,
 } from "lucide-react";
 import {
   LineChart,
@@ -30,51 +30,52 @@ import {
   BarChart,
   Bar,
 } from "recharts";
+import { Button } from "@/components/ui/button";
+
+import { useRelatorioFinanceiro } from "@/hooks/queries/useRelatorioFinanceiro";
+import {
+  exportRelatorioFinanceiroExcel,
+  exportRelatorioFinanceiroPdf,
+} from "@/utils/exporters";
+
+const cores = ["#16a34a", "#0ea5e9", "#f97316", "#9333ea"];
 
 const RelatoriosFinanceiro = () => {
   const [relatorio, setRelatorio] = useState("analitico");
   const [filtro, setFiltro] = useState({ periodo: "30dias", tipo: "todos" });
-  const [loading, setLoading] = useState(false);
+  const [processingAction, setProcessingAction] = useState(false);
+  const { data, isLoading, isError, error, refetch } = useRelatorioFinanceiro();
 
-  // =========================
-  // 🔹 MOCK DE DADOS
-  // =========================
-  const dadosMensais = [
-    { mes: "Jan", entradas: 18000, saidas: 12500 },
-    { mes: "Fev", entradas: 20500, saidas: 15700 },
-    { mes: "Mar", entradas: 19200, saidas: 14800 },
-    { mes: "Abr", entradas: 23100, saidas: 16500 },
-    { mes: "Mai", entradas: 25800, saidas: 18400 },
-    { mes: "Jun", entradas: 27400, saidas: 19100 },
-  ];
-
-  const distribuicaoCategorias = [
-    { nome: "Vendas", valor: 42000 },
-    { nome: "Serviços", valor: 18000 },
-    { nome: "Investimentos", valor: 9800 },
-    { nome: "Outros", valor: 4500 },
-  ];
-
-  const comissoesVendedores = [
-    { nome: "Carlos", vendas: 12000, comissao: 1200 },
-    { nome: "Mariana", vendas: 15800, comissao: 1580 },
-    { nome: "Roberto", vendas: 9800, comissao: 980 },
-    { nome: "Amanda", vendas: 20400, comissao: 2040 },
-  ];
-
-  const recibos = [
-    { tipo: "Pagamentos", total: 187 },
-    { tipo: "Recebimentos", total: 142 },
-  ];
-
-  const cores = ["#16a34a", "#0ea5e9", "#f97316", "#9333ea"];
-
-  const totais = {
-    entradas: 162000,
-    saidas: 107000,
-    lucro: 55000,
-    margem: 33.9,
+  const totais = data?.totais ?? {
+    entradas: 0,
+    saidas: 0,
+    lucro: 0,
+    margem: 0,
   };
+
+  const dadosMensais = data?.mensal ?? [];
+  const distribuicaoCategorias = data?.distribuicao ?? [];
+  const comissoesVendedores = data?.comissoes ?? [];
+  const recibos = data?.recibos ?? [];
+
+  const tendencia = useMemo(() => {
+    if (totais.entradas > totais.saidas) {
+      return {
+        texto: "Lucro crescente",
+        icone: <TrendingUp className="text-green-600 w-4 h-4 inline" />,
+      };
+    }
+    if (totais.entradas === 0 && totais.saidas === 0) {
+      return {
+        texto: "Sem movimentação recente",
+        icone: <TrendingDown className="text-gray-400 w-4 h-4 inline" />,
+      };
+    }
+    return {
+      texto: "Atenção: despesas acima das receitas",
+      icone: <TrendingDown className="text-red-600 w-4 h-4 inline" />,
+    };
+  }, [totais]);
 
   const opcoes = [
     { id: "analitico", nome: "Relatório Analítico", icon: ClipboardList },
@@ -88,40 +89,68 @@ const RelatoriosFinanceiro = () => {
   // 🔹 FUNÇÕES
   // =========================
 
-  const exportar = (tipo: string) => {
-    setLoading(true);
-    setTimeout(() => {
-      alert(`Exportando relatório em formato: ${tipo.toUpperCase()}`);
-      setLoading(false);
-    }, 800);
+  const exportar = async (tipo: "pdf" | "excel") => {
+    if (!data) return;
+    setProcessingAction(true);
+    try {
+      const suffix = relatorio.charAt(0).toUpperCase() + relatorio.slice(1);
+      if (tipo === "pdf") {
+        exportRelatorioFinanceiroPdf(
+          data,
+          `relatorio-${suffix}-${Date.now()}.pdf`,
+        );
+      } else {
+        exportRelatorioFinanceiroExcel(
+          data,
+          `relatorio-${suffix}-${Date.now()}.xlsx`,
+        );
+      }
+    } finally {
+      setProcessingAction(false);
+    }
   };
 
   const enviarEmail = () => {
-    setLoading(true);
+    setProcessingAction(true);
     setTimeout(() => {
       alert("Relatório enviado por e-mail para a diretoria!");
-      setLoading(false);
+      setProcessingAction(false);
     }, 1000);
   };
 
-  const recarregar = () => {
-    setLoading(true);
-    setTimeout(() => {
-      alert("Dados atualizados com sucesso!");
-      setLoading(false);
-    }, 1000);
+  const recarregar = async () => {
+    setProcessingAction(true);
+    try {
+      await refetch();
+    } finally {
+      setProcessingAction(false);
+    }
   };
 
-  const tendencia =
-    totais.entradas > totais.saidas
-      ? {
-          texto: "Lucro crescente",
-          icone: <TrendingUp className="text-green-600 w-4 h-4 inline" />,
-        }
-      : {
-          texto: "Atenção: prejuízo detectado",
-          icone: <TrendingDown className="text-red-600 w-4 h-4 inline" />,
-        };
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200 text-center">
+        <div className="flex items-center justify-center py-10 text-gray-500">
+          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+          Carregando relatórios financeiros...
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200 text-center space-y-4">
+        <p className="text-gray-700">
+          Não foi possível carregar os relatórios financeiros.
+        </p>
+        {error instanceof Error && (
+          <p className="text-sm text-gray-500">{error.message}</p>
+        )}
+        <Button onClick={() => refetch()}>Tentar novamente</Button>
+      </div>
+    );
+  }
 
   // =========================
   // 🔹 COMPONENTE
@@ -207,7 +236,7 @@ const RelatoriosFinanceiro = () => {
 
       {/* Painel Principal */}
       <div className="border-t pt-6">
-        {loading ? (
+        {processingAction ? (
           <div className="py-8 text-center text-gray-500">
             Processando informações...
           </div>
@@ -216,7 +245,6 @@ const RelatoriosFinanceiro = () => {
             {relatorio === "analitico" && (
               <Analitico
                 dadosMensais={dadosMensais}
-                totais={totais}
                 distribuicaoCategorias={distribuicaoCategorias}
                 tendencia={tendencia}
                 exportar={exportar}
@@ -254,201 +282,252 @@ const RelatoriosFinanceiro = () => {
   );
 };
 
-// =========================
-// 🔹 Subcomponentes
-// =========================
+type DadosMensais = { mes: string; entradas: number; saidas: number };
+type DistribuicaoItem = { nome: string; valor: number };
+type TotaisResumo = {
+  entradas: number;
+  saidas: number;
+  lucro: number;
+  margem: number;
+};
+type ComissaoResumo = { nome: string; vendas: number; comissao: number };
+type ReciboResumo = { tipo: string; total: number };
+type TendenciaInfo = { texto: string; icone: React.ReactNode };
 
-const Analitico = ({
-  dadosMensais,
-  totais,
-  distribuicaoCategorias,
-  tendencia,
-  exportar,
-  cores,
-}) => (
-  <div>
-    <h3 className="font-semibold mb-3 text-gray-700">Relatório Analítico</h3>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="h-72">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={dadosMensais}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="mes" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey="entradas"
-              stroke="#16a34a"
-              strokeWidth={2}
-            />
-            <Line
-              type="monotone"
-              dataKey="saidas"
-              stroke="#dc2626"
-              strokeWidth={2}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+interface AnaliticoProps {
+  dadosMensais: DadosMensais[];
+  distribuicaoCategorias: DistribuicaoItem[];
+  tendencia: TendenciaInfo;
+  exportar: (tipo: "pdf" | "excel") => void;
+  cores: string[];
+}
+
+interface BalancoProps {
+  dadosMensais: DadosMensais[];
+  totais: TotaisResumo;
+  exportar: (tipo: "pdf" | "excel") => void;
+}
+
+interface SinteticoProps {
+  totais: TotaisResumo;
+  distribuicaoCategorias: DistribuicaoItem[];
+  exportar: (tipo: "pdf" | "excel") => void;
+  cores: string[];
+}
+
+interface ReciboProps {
+  recibos: ReciboResumo[];
+  exportar: (tipo: "pdf" | "excel") => void;
+}
+
+interface ComissaoProps {
+  comissoesVendedores: ComissaoResumo[];
+  exportar: (tipo: "pdf" | "excel") => void;
+}
+
+const Analitico: React.FC<AnaliticoProps> = (props) => {
+  const { dadosMensais, distribuicaoCategorias, tendencia, exportar, cores } =
+    props;
+  return (
+    <div>
+      <h3 className="font-semibold mb-3 text-gray-700">Relatório Analítico</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={dadosMensais}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="mes" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="entradas"
+                stroke="#16a34a"
+                strokeWidth={2}
+              />
+              <Line
+                type="monotone"
+                dataKey="saidas"
+                stroke="#dc2626"
+                strokeWidth={2}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={distribuicaoCategorias}
+                dataKey="valor"
+                nameKey="nome"
+                outerRadius={100}
+                label
+              >
+                {distribuicaoCategorias.map((_, i) => (
+                  <Cell key={i} fill={cores[i % cores.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
       </div>
-      <div className="h-72">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={distribuicaoCategorias}
-              dataKey="valor"
-              nameKey="nome"
-              outerRadius={100}
-              label
-            >
-              {distribuicaoCategorias.map((_, i) => (
-                <Cell key={i} fill={cores[i % cores.length]} />
-              ))}
-            </Pie>
-            <Tooltip />
-          </PieChart>
-        </ResponsiveContainer>
+      <p className="mt-4 text-sm text-gray-700 flex items-center gap-2">
+        {tendencia.icone} {tendencia.texto}
+      </p>
+      <div className="flex gap-2 mt-4">
+        <button
+          onClick={() => exportar("pdf")}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
+        >
+          <Download className="w-4 h-4" /> Exportar PDF
+        </button>
+        <button
+          onClick={() => exportar("excel")}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700"
+        >
+          <Download className="w-4 h-4" /> Exportar Excel
+        </button>
       </div>
     </div>
-    <p className="mt-4 text-sm text-gray-700 flex items-center gap-2">
-      {tendencia.icone} {tendencia.texto}
-    </p>
-    <div className="flex gap-2 mt-4">
+  );
+};
+
+const Balanco: React.FC<BalancoProps> = (props) => {
+  const { dadosMensais, totais, exportar } = props;
+  return (
+    <div>
+      <h3 className="font-semibold mb-3 text-gray-700">
+        Balanço Financeiro Consolidado
+      </h3>
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={dadosMensais}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="mes" />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          <Bar dataKey="entradas" fill="#16a34a" />
+          <Bar dataKey="saidas" fill="#dc2626" />
+        </BarChart>
+      </ResponsiveContainer>
+      <p className="mt-3 text-gray-700">
+        Lucro Total: <strong>R$ {totais.lucro.toLocaleString("pt-BR")}</strong>{" "}
+        ({totais.margem}% de margem)
+      </p>
       <button
         onClick={() => exportar("pdf")}
-        className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
+        className="mt-3 bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
       >
         <Download className="w-4 h-4" /> Exportar PDF
       </button>
+    </div>
+  );
+};
+
+const Sintetico: React.FC<SinteticoProps> = (props) => {
+  const { totais, distribuicaoCategorias, exportar, cores } = props;
+  return (
+    <div>
+      <h3 className="font-semibold mb-3 text-gray-700">Relatório Sintético</h3>
+      <ResponsiveContainer width="100%" height={300}>
+        <PieChart>
+          <Pie
+            data={distribuicaoCategorias}
+            dataKey="valor"
+            nameKey="nome"
+            label
+            outerRadius={120}
+          >
+            {distribuicaoCategorias.map((_, i) => (
+              <Cell key={i} fill={cores[i % cores.length]} />
+            ))}
+          </Pie>
+          <Tooltip />
+        </PieChart>
+      </ResponsiveContainer>
+      <p className="mt-3 text-gray-700">
+        Total Receitas:{" "}
+        <strong>R$ {totais.entradas.toLocaleString("pt-BR")}</strong> | Total
+        Despesas: <strong>R$ {totais.saidas.toLocaleString("pt-BR")}</strong>
+      </p>
       <button
         onClick={() => exportar("excel")}
-        className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700"
+        className="mt-3 bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700"
       >
         <Download className="w-4 h-4" /> Exportar Excel
       </button>
     </div>
-  </div>
-);
+  );
+};
 
-const Balanco = ({ dadosMensais, totais, exportar }) => (
-  <div>
-    <h3 className="font-semibold mb-3 text-gray-700">
-      Balanço Financeiro Consolidado
-    </h3>
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={dadosMensais}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="mes" />
-        <YAxis />
-        <Tooltip />
-        <Legend />
-        <Bar dataKey="entradas" fill="#16a34a" />
-        <Bar dataKey="saidas" fill="#dc2626" />
-      </BarChart>
-    </ResponsiveContainer>
-    <p className="mt-3 text-gray-700">
-      Lucro Total: <strong>R$ {totais.lucro.toLocaleString("pt-BR")}</strong> (
-      {totais.margem}% de margem)
-    </p>
-    <button
-      onClick={() => exportar("pdf")}
-      className="mt-3 bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
-    >
-      <Download className="w-4 h-4" /> Exportar PDF
-    </button>
-  </div>
-);
+const Recibo: React.FC<ReciboProps> = (props) => {
+  const { recibos, exportar } = props;
+  const totalRecibos = recibos.reduce((acc, item) => acc + item.total, 0);
+  return (
+    <div>
+      <h3 className="font-semibold mb-3 text-gray-700">Relatório de Recibos</h3>
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={recibos}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="tipo" />
+          <YAxis />
+          <Tooltip />
+          <Bar dataKey="total" fill="#0ea5e9" />
+        </BarChart>
+      </ResponsiveContainer>
+      <p className="mt-3 text-gray-700">
+        Total de recibos emitidos: <strong>{totalRecibos}</strong>
+      </p>
+      <button
+        onClick={() => exportar("pdf")}
+        className="mt-3 bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
+      >
+        <Download className="w-4 h-4" /> Exportar PDF
+      </button>
+    </div>
+  );
+};
 
-const Sintetico = ({ totais, distribuicaoCategorias, exportar, cores }) => (
-  <div>
-    <h3 className="font-semibold mb-3 text-gray-700">Relatório Sintético</h3>
-    <ResponsiveContainer width="100%" height={300}>
-      <PieChart>
-        <Pie
-          data={distribuicaoCategorias}
-          dataKey="valor"
-          nameKey="nome"
-          label
-          outerRadius={120}
-        >
-          {distribuicaoCategorias.map((_, i) => (
-            <Cell key={i} fill={cores[i % cores.length]} />
-          ))}
-        </Pie>
-        <Tooltip />
-      </PieChart>
-    </ResponsiveContainer>
-    <p className="mt-3 text-gray-700">
-      Total Receitas:{" "}
-      <strong>R$ {totais.entradas.toLocaleString("pt-BR")}</strong> | Total
-      Despesas: <strong>R$ {totais.saidas.toLocaleString("pt-BR")}</strong>
-    </p>
-    <button
-      onClick={() => exportar("excel")}
-      className="mt-3 bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700"
-    >
-      <Download className="w-4 h-4" /> Exportar Excel
-    </button>
-  </div>
-);
-
-const Recibo = ({ recibos, exportar }) => (
-  <div>
-    <h3 className="font-semibold mb-3 text-gray-700">Relatório de Recibos</h3>
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={recibos}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="tipo" />
-        <YAxis />
-        <Tooltip />
-        <Bar dataKey="total" fill="#0ea5e9" />
-      </BarChart>
-    </ResponsiveContainer>
-    <p className="mt-3 text-gray-700">
-      Total de recibos emitidos:{" "}
-      <strong>{recibos.reduce((a, b) => a + b.total, 0)}</strong>
-    </p>
-    <button
-      onClick={() => exportar("pdf")}
-      className="mt-3 bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
-    >
-      <Download className="w-4 h-4" /> Exportar PDF
-    </button>
-  </div>
-);
-
-const Comissao = ({ comissoesVendedores, exportar }) => (
-  <div>
-    <h3 className="font-semibold mb-3 text-gray-700">Relatório de Comissão</h3>
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={comissoesVendedores}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="nome" />
-        <YAxis />
-        <Tooltip />
-        <Legend />
-        <Bar dataKey="vendas" fill="#16a34a" />
-        <Bar dataKey="comissao" fill="#f97316" />
-      </BarChart>
-    </ResponsiveContainer>
-    <p className="mt-3 text-gray-700">
-      Comissão média:{" "}
-      <strong>
-        R$
-        {(
-          comissoesVendedores.reduce((a, b) => a + b.comissao, 0) /
-          comissoesVendedores.length
-        ).toFixed(2)}
-      </strong>
-    </p>
-    <button
-      onClick={() => exportar("excel")}
-      className="mt-3 bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700"
-    >
-      <Download className="w-4 h-4" /> Exportar Excel
-    </button>
-  </div>
-);
+const Comissao: React.FC<ComissaoProps> = (props) => {
+  const { comissoesVendedores, exportar } = props;
+  const totalComissao = comissoesVendedores.reduce(
+    (acc, item) => acc + item.comissao,
+    0,
+  );
+  const media =
+    comissoesVendedores.length > 0
+      ? totalComissao / comissoesVendedores.length
+      : 0;
+  return (
+    <div>
+      <h3 className="font-semibold mb-3 text-gray-700">
+        Relatório de Comissão
+      </h3>
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={comissoesVendedores}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="nome" />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          <Bar dataKey="vendas" fill="#16a34a" />
+          <Bar dataKey="comissao" fill="#f97316" />
+        </BarChart>
+      </ResponsiveContainer>
+      <p className="mt-3 text-gray-700">
+        Comissão média: <strong>R$ {media.toFixed(2)}</strong>
+      </p>
+      <button
+        onClick={() => exportar("excel")}
+        className="mt-3 bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700"
+      >
+        <Download className="w-4 h-4" /> Exportar Excel
+      </button>
+    </div>
+  );
+};
 
 export default RelatoriosFinanceiro;

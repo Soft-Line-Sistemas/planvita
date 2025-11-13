@@ -1,6 +1,5 @@
 "use client";
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,55 +14,24 @@ import {
 import { Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
-import { Cliente } from "@/types/ClientType";
-import { StatusPagamento, MetodoPagamento } from "@/types/PaymentType"; // Corrigir importação
+import { StatusPagamento, Pagamento } from "@/types/PaymentType";
 
-// Tipo seguro para Relatórios
-interface PagamentoComCliente {
-  id: string;
-  valor: number;
-  dataVencimento: string;
-  dataPagamento: string | null;
-  status: StatusPagamento; // Usar o tipo importado diretamente
-  metodoPagamento: MetodoPagamento; // Usar o tipo importado diretamente
-  diasAtraso?: number;
-  cliente: Cliente;
-  referencia?: string;
-  observacoes?: string;
-}
-
-// Props do componente
 interface RelatoriosProps {
-  clientes: Cliente[];
+  pagamentos: Pagamento[];
+  isLoading?: boolean;
 }
 
 export const RelatoriosComponent: React.FC<RelatoriosProps> = ({
-  clientes,
+  pagamentos,
+  isLoading = false,
 }) => {
-  const [pagamentos, setPagamentos] = useState<PagamentoComCliente[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusPagamento | "todos">(
     "todos",
   );
 
-  // Carregar pagamentos e garantir tipos corretos
-  useEffect(() => {
-    const allPagamentos: PagamentoComCliente[] = clientes.flatMap((cliente) =>
-      cliente.pagamentos.map((p) => ({
-        ...p,
-        cliente,
-        // Preenchendo campos opcionais de forma segura
-        dataPagamento: p.dataPagamento ?? null,
-        referencia: "referencia" in p ? (p as any).referencia : "",
-        observacoes: "observacoes" in p ? (p as any).observacoes : "",
-      })),
-    );
-    setPagamentos(allPagamentos);
-  }, [clientes]);
-
-  // Filtragem
   const filteredPagamentos = pagamentos.filter((p) => {
     const matchTerm =
       p.cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -113,7 +81,7 @@ export const RelatoriosComponent: React.FC<RelatoriosProps> = ({
       p.referencia,
       p.observacoes,
     ]);
-    (doc as any).autoTable({
+    autoTable(doc, {
       head: [
         [
           "Cliente",
@@ -175,6 +143,11 @@ export const RelatoriosComponent: React.FC<RelatoriosProps> = ({
 
           {/* Tabela */}
           <div className="overflow-x-auto">
+            {isLoading && (
+              <p className="text-center text-gray-500 my-6">
+                Carregando pagamentos...
+              </p>
+            )}
             <Table>
               <TableHeader>
                 <TableRow>
@@ -223,17 +196,3 @@ export const RelatoriosComponent: React.FC<RelatoriosProps> = ({
     </div>
   );
 };
-
-// Página que chama o componente
-export default function RelatoriosPage() {
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-
-  useEffect(() => {
-    const savedClientes = localStorage.getItem("planvita_clientes");
-    if (savedClientes) {
-      setClientes(JSON.parse(savedClientes));
-    }
-  }, []);
-
-  return <RelatoriosComponent clientes={clientes} />;
-}

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,10 +18,13 @@ import {
   Activity,
 } from "lucide-react";
 import ModalCliente from "@/components/ui/ModalCliente";
+import { Cliente as ClienteType } from "@/types/ClientType";
+import { Pagamento } from "@/types/PaymentType";
+import { useClientes } from "@/hooks/queries/useClientes";
+import { usePagamentos } from "@/hooks/queries/usePagamentos";
 
-// Tipagem
-interface Cliente {
-  id: number;
+type DashboardCliente = {
+  id: string;
   nome: string;
   email: string;
   telefone: string;
@@ -29,71 +32,83 @@ interface Cliente {
   status: "Ativo" | "Pendente" | "Inativo";
   dataContrato: string;
   valor: number;
-}
-
-interface Stats {
-  totalClientes: number;
-  novosClientesMes: number;
-  receitaMensal: number;
-  crescimentoMensal: number;
-}
-
-interface MockData {
-  stats: Stats;
-  clientesRecentes: Cliente[];
-}
-
-interface DashboardProps {
-  userEmail: string;
-  onViewClient?: (id: number) => void;
-}
-
-// Mock data
-const mockData: MockData = {
-  stats: {
-    totalClientes: 1247,
-    novosClientesMes: 89,
-    receitaMensal: 156780.5,
-    crescimentoMensal: 12.5,
-  },
-  clientesRecentes: [
-    {
-      id: 1,
-      nome: "Maria Silva Santos",
-      email: "maria.silva@email.com",
-      telefone: "(71) 99999-1234",
-      plano: "Familiar Premium",
-      status: "Ativo",
-      dataContrato: "2024-10-05",
-      valor: 299.9,
-    },
-    {
-      id: 2,
-      nome: "João Carlos Oliveira",
-      email: "joao.carlos@email.com",
-      telefone: "(71) 98888-5678",
-      plano: "Individual Plus",
-      status: "Pendente",
-      dataContrato: "2024-10-04",
-      valor: 189.9,
-    },
-    {
-      id: 3,
-      nome: "Ana Paula Ferreira",
-      email: "ana.paula@email.com",
-      telefone: "(71) 97777-9012",
-      plano: "Familiar Básico",
-      status: "Ativo",
-      dataContrato: "2024-10-03",
-      valor: 199.9,
-    },
-  ],
 };
 
-export default function Dashboard({ userEmail }: DashboardProps) {
+interface DashboardProps {
+  userEmail?: string;
+  onViewClient?: (id: string) => void;
+}
+
+const statusPlanoToDashboard = (
+  status?: string | null,
+): DashboardCliente["status"] => {
+  const normalized = (status ?? "").toUpperCase();
+  if (normalized.includes("PEND")) return "Pendente";
+  if (normalized.includes("INAT")) return "Inativo";
+  return "Ativo";
+};
+
+const mapClienteToDashboard = (cliente: ClienteType): DashboardCliente => ({
+  id: String(cliente.id),
+  nome: cliente.nome,
+  email: cliente.email,
+  telefone: cliente.telefone,
+  plano: cliente.plano?.nome ?? "Plano não informado",
+  status: statusPlanoToDashboard(cliente.statusPlano),
+  dataContrato: cliente.dataContratacao ?? "",
+  valor: Number(cliente.plano?.valorMensal ?? 0),
+});
+
+const countClientesByMonth = (
+  clientes: ClienteType[],
+  year: number,
+  month: number,
+) => {
+  return clientes.filter((cliente) => {
+    if (!cliente.dataContratacao) return false;
+    const data = new Date(cliente.dataContratacao);
+    return (
+      data.getFullYear() === year &&
+      data.getMonth() === month &&
+      !Number.isNaN(data.getTime())
+    );
+  }).length;
+};
+
+const calcularReceitaMensal = (
+  pagamentos: Pagamento[],
+  month: number,
+  year: number,
+) => {
+  return pagamentos
+    .filter((pagamento) => {
+      if (pagamento.status !== "PAGO" || !pagamento.dataPagamento) return false;
+      const data = new Date(pagamento.dataPagamento);
+      return (
+        data.getMonth() === month &&
+        data.getFullYear() === year &&
+        !Number.isNaN(data.getTime())
+      );
+    })
+    .reduce((total, pagamento) => total + pagamento.valor, 0);
+};
+
+export default function Dashboard({ userEmail = "Operador" }: DashboardProps) {
   const router = useRouter();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [mounted, setMounted] = useState(false);
+  const { data: clientesData, isLoading: isLoadingClientes } = useClientes({
+    page: 1,
+    limit: 100,
+    search: "",
+    status: "todos",
+    plano: "todos",
+  });
+  const { data: pagamentosData, isLoading: isLoadingPagamentos } =
+    usePagamentos();
+  const clientes = useMemo(() => clientesData?.data ?? [], [clientesData]);
+  const totalClientes = clientesData?.total ?? clientes.length;
+  const pagamentos = useMemo(() => pagamentosData ?? [], [pagamentosData]);
 
   useEffect(() => {
     setMounted(true);
@@ -101,10 +116,69 @@ export default function Dashboard({ userEmail }: DashboardProps) {
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const dashboardClientes = useMemo(
+    () => clientes.map(mapClienteToDashboard),
+    [clientes],
+  );
+
+  const recentClientes = useMemo(() => {
+    return [...dashboardClientes]
+      .sort(
+        (a, b) =>
+          new Date(b.dataContrato).getTime() -
+          new Date(a.dataContrato).getTime(),
+      )
+      .slice(0, 5);
+  }, [dashboardClientes]);
+
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const previousMonth = currentMonth === 0 ? 11 : (currentMonth - 1 + 12) % 12;
+  const previousYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+  const novosClientesMes = useMemo(
+    () => countClientesByMonth(clientes, currentYear, currentMonth),
+    [clientes, currentMonth, currentYear],
+  );
+
+  const novosClientesMesAnterior = useMemo(
+    () => countClientesByMonth(clientes, previousYear, previousMonth),
+    [clientes, previousMonth, previousYear],
+  );
+
+  const crescimentoMensal =
+    novosClientesMesAnterior === 0
+      ? novosClientesMes > 0
+        ? 100
+        : 0
+      : Number(
+          (
+            ((novosClientesMes - novosClientesMesAnterior) /
+              novosClientesMesAnterior) *
+            100
+          ).toFixed(1),
+        );
+
+  const receitaMensal = useMemo(
+    () => calcularReceitaMensal(pagamentos, currentMonth, currentYear),
+    [pagamentos, currentMonth, currentYear],
+  );
+
+  const totalAtivos = useMemo(
+    () =>
+      clientes.filter(
+        (cliente) => (cliente.statusPlano ?? "").toUpperCase() === "ATIVO",
+      ).length,
+    [clientes],
+  );
+
+  const taxaConversao =
+    totalClientes > 0
+      ? Number(((totalAtivos / totalClientes) * 100).toFixed(1))
+      : 0;
+
+  const isLoadingData = isLoadingClientes || isLoadingPagamentos;
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("pt-BR", {
@@ -115,7 +189,7 @@ export default function Dashboard({ userEmail }: DashboardProps) {
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString("pt-BR");
 
-  const getStatusColor = (status: Cliente["status"]) => {
+  const getStatusColor = (status: DashboardCliente["status"]) => {
     switch (status) {
       case "Ativo":
         return "bg-green-100 text-green-800 border-green-200";
@@ -127,11 +201,12 @@ export default function Dashboard({ userEmail }: DashboardProps) {
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
-  const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
+  const [selectedCliente, setSelectedCliente] =
+    useState<DashboardCliente | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const handleViewClient = (id: number) => {
-    const cliente = mockData.clientesRecentes.find((c) => c.id === id) || null;
+  const handleViewClient = (id: string) => {
+    const cliente = recentClientes.find((item) => item.id === id) ?? null;
     if (cliente) {
       setSelectedCliente(cliente);
       setModalOpen(true);
@@ -176,7 +251,7 @@ export default function Dashboard({ userEmail }: DashboardProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">
-              {mockData.stats.totalClientes.toLocaleString("pt-BR")}
+              {isLoadingData ? "—" : totalClientes.toLocaleString("pt-BR")}
             </div>
             <p className="text-xs text-gray-500 mt-1">Base ativa de clientes</p>
           </CardContent>
@@ -194,11 +269,11 @@ export default function Dashboard({ userEmail }: DashboardProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">
-              {mockData.stats.novosClientesMes}
+              {isLoadingData ? "—" : novosClientesMes}
             </div>
             <p className="text-xs text-green-600 mt-1 flex items-center">
-              <TrendingUp className="w-3 h-3 mr-1" />+
-              {mockData.stats.crescimentoMensal}% vs mês anterior
+              <TrendingUp className="w-3 h-3 mr-1" />
+              {isLoadingData ? "—" : `${crescimentoMensal}% vs mês anterior`}
             </p>
           </CardContent>
         </Card>
@@ -215,11 +290,11 @@ export default function Dashboard({ userEmail }: DashboardProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">
-              {formatCurrency(mockData.stats.receitaMensal)}
+              {isLoadingData ? "—" : formatCurrency(receitaMensal)}
             </div>
             <p className="text-xs text-green-600 mt-1 flex items-center">
-              <TrendingUp className="w-3 h-3 mr-1" />+
-              {mockData.stats.crescimentoMensal}% vs mês anterior
+              <TrendingUp className="w-3 h-3 mr-1" />
+              {isLoadingData ? "—" : `${crescimentoMensal}% vs mês anterior`}
             </p>
           </CardContent>
         </Card>
@@ -235,10 +310,13 @@ export default function Dashboard({ userEmail }: DashboardProps) {
             <Activity className="h-5 w-5 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">87.3%</div>
-            <p className="text-xs text-green-600 mt-1 flex items-center">
-              <TrendingUp className="w-3 h-3 mr-1" />
-              +2.1% vs mês anterior
+            <div className="text-2xl font-bold text-gray-900">
+              {isLoadingData ? "—" : `${taxaConversao}%`}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {isLoadingData
+                ? "Calculando clientes ativos..."
+                : `${totalAtivos} clientes ativos`}
             </p>
           </CardContent>
         </Card>
@@ -263,77 +341,91 @@ export default function Dashboard({ userEmail }: DashboardProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {mockData.clientesRecentes.map((cliente, index) => (
-              <div
-                key={cliente.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors animate-fade-in"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <div className="flex-1 flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <Users className="w-6 h-6 text-green-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-900">
-                      {cliente.nome}
-                    </h4>
-                    <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
-                      <div className="flex items-center">
-                        <Mail className="w-3 h-3 mr-1" />
-                        {cliente.email}
-                      </div>
-                      <div className="flex items-center">
-                        <Phone className="w-3 h-3 mr-1" />
-                        {cliente.telefone}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            {isLoadingData && (
+              <p className="text-sm text-gray-500">Carregando clientes...</p>
+            )}
 
-                <div className="flex items-center space-x-4">
-                  <div className="text-right">
-                    <div className="font-medium text-gray-900">
-                      {cliente.plano}
+            {!isLoadingData && recentClientes.length === 0 && (
+              <p className="text-sm text-gray-500">
+                Nenhum cliente cadastrado recentemente.
+              </p>
+            )}
+
+            {!isLoadingData &&
+              recentClientes.map((cliente, index) => (
+                <div
+                  key={cliente.id}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors animate-fade-in"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  <div className="flex-1 flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                      <Users className="w-6 h-6 text-green-600" />
                     </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">
+                        {cliente.nome}
+                      </h4>
+                      <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
+                        <div className="flex items-center">
+                          <Mail className="w-3 h-3 mr-1" />
+                          {cliente.email}
+                        </div>
+                        <div className="flex items-center">
+                          <Phone className="w-3 h-3 mr-1" />
+                          {cliente.telefone}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-4">
+                    <div className="text-right">
+                      <div className="font-medium text-gray-900">
+                        {cliente.plano}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {formatCurrency(cliente.valor)}
+                      </div>
+                    </div>
+
+                    <Badge className={getStatusColor(cliente.status)}>
+                      {cliente.status === "Ativo" && (
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                      )}
+                      {cliente.status === "Pendente" && (
+                        <AlertCircle className="w-3 h-3 mr-1" />
+                      )}
+                      {cliente.status}
+                    </Badge>
+
                     <div className="text-sm text-gray-500">
-                      {formatCurrency(cliente.valor)}
+                      <Calendar className="w-3 h-3 inline mr-1" />
+                      {cliente.dataContrato
+                        ? formatDate(cliente.dataContrato)
+                        : "—"}
                     </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewClient(cliente.id)}
+                      className="ml-2"
+                    >
+                      Ver Detalhes
+                    </Button>
                   </div>
-
-                  <Badge className={getStatusColor(cliente.status)}>
-                    {cliente.status === "Ativo" && (
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                    )}
-                    {cliente.status === "Pendente" && (
-                      <AlertCircle className="w-3 h-3 mr-1" />
-                    )}
-                    {cliente.status}
-                  </Badge>
-
-                  <div className="text-sm text-gray-500">
-                    <Calendar className="w-3 h-3 inline mr-1" />
-                    {formatDate(cliente.dataContrato)}
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleViewClient(cliente.id)}
-                    className="ml-2"
-                  >
-                    Ver Detalhes
-                  </Button>
-                  <ModalCliente
-                    cliente={selectedCliente}
-                    open={modalOpen}
-                    onClose={() => setModalOpen(false)}
-                  />
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </CardContent>
       </Card>
+
+      <ModalCliente
+        cliente={selectedCliente}
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+      />
     </div>
   );
 }
