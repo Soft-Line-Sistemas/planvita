@@ -298,40 +298,40 @@ interface AnaliticoProps {
   dadosMensais: DadosMensais[];
   distribuicaoCategorias: DistribuicaoItem[];
   tendencia: TendenciaInfo;
-  exportar: (tipo: string) => void;
+  exportar: (tipo: "pdf" | "excel") => void;
   cores: string[];
 }
 
 interface BalancoProps {
   dadosMensais: DadosMensais[];
   totais: TotaisResumo;
-  exportar: (tipo: string) => void;
+  exportar: (tipo: "pdf" | "excel") => void;
 }
 
 interface SinteticoProps {
   totais: TotaisResumo;
   distribuicaoCategorias: DistribuicaoItem[];
-  exportar: (tipo: string) => void;
+  exportar: (tipo: "pdf" | "excel") => void;
   cores: string[];
 }
 
 interface ReciboProps {
   recibos: ReciboResumo[];
-  exportar: (tipo: string) => void;
+  exportar: (tipo: "pdf" | "excel") => void;
 }
 
 interface ComissaoProps {
   comissoesVendedores: ComissaoResumo[];
-  exportar: (tipo: string) => void;
+  exportar: (tipo: "pdf" | "excel") => void;
 }
 
-const Analitico = ({
+const Analitico: React.FC<AnaliticoProps> = ({
   dadosMensais,
   distribuicaoCategorias,
   tendencia,
   exportar,
   cores,
-}: AnaliticoProps) => (
+}) => (
   <div>
     <h3 className="font-semibold mb-3 text-gray-700">Relatório Analítico</h3>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
