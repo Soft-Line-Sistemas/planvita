@@ -325,150 +325,146 @@ interface ComissaoProps {
   exportar: (tipo: "pdf" | "excel") => void;
 }
 
-const Analitico: React.FC<AnaliticoProps> = ({
-  dadosMensais,
-  distribuicaoCategorias,
-  tendencia,
-  exportar,
-  cores,
-}) => (
-  <div>
-    <h3 className="font-semibold mb-3 text-gray-700">Relatório Analítico</h3>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="h-72">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={dadosMensais}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="mes" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey="entradas"
-              stroke="#16a34a"
-              strokeWidth={2}
-            />
-            <Line
-              type="monotone"
-              dataKey="saidas"
-              stroke="#dc2626"
-              strokeWidth={2}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+const Analitico: React.FC<AnaliticoProps> = (props) => {
+  const { dadosMensais, distribuicaoCategorias, tendencia, exportar, cores } =
+    props;
+  return (
+    <div>
+      <h3 className="font-semibold mb-3 text-gray-700">Relatório Analítico</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={dadosMensais}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="mes" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="entradas"
+                stroke="#16a34a"
+                strokeWidth={2}
+              />
+              <Line
+                type="monotone"
+                dataKey="saidas"
+                stroke="#dc2626"
+                strokeWidth={2}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={distribuicaoCategorias}
+                dataKey="valor"
+                nameKey="nome"
+                outerRadius={100}
+                label
+              >
+                {distribuicaoCategorias.map((_, i) => (
+                  <Cell key={i} fill={cores[i % cores.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
       </div>
-      <div className="h-72">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={distribuicaoCategorias}
-              dataKey="valor"
-              nameKey="nome"
-              outerRadius={100}
-              label
-            >
-              {distribuicaoCategorias.map((_, i) => (
-                <Cell key={i} fill={cores[i % cores.length]} />
-              ))}
-            </Pie>
-            <Tooltip />
-          </PieChart>
-        </ResponsiveContainer>
+      <p className="mt-4 text-sm text-gray-700 flex items-center gap-2">
+        {tendencia.icone} {tendencia.texto}
+      </p>
+      <div className="flex gap-2 mt-4">
+        <button
+          onClick={() => exportar("pdf")}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
+        >
+          <Download className="w-4 h-4" /> Exportar PDF
+        </button>
+        <button
+          onClick={() => exportar("excel")}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700"
+        >
+          <Download className="w-4 h-4" /> Exportar Excel
+        </button>
       </div>
     </div>
-    <p className="mt-4 text-sm text-gray-700 flex items-center gap-2">
-      {tendencia.icone} {tendencia.texto}
-    </p>
-    <div className="flex gap-2 mt-4">
+  );
+};
+
+const Balanco: React.FC<BalancoProps> = (props) => {
+  const { dadosMensais, totais, exportar } = props;
+  return (
+    <div>
+      <h3 className="font-semibold mb-3 text-gray-700">
+        Balanço Financeiro Consolidado
+      </h3>
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={dadosMensais}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="mes" />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          <Bar dataKey="entradas" fill="#16a34a" />
+          <Bar dataKey="saidas" fill="#dc2626" />
+        </BarChart>
+      </ResponsiveContainer>
+      <p className="mt-3 text-gray-700">
+        Lucro Total: <strong>R$ {totais.lucro.toLocaleString("pt-BR")}</strong>{" "}
+        ({totais.margem}% de margem)
+      </p>
       <button
         onClick={() => exportar("pdf")}
-        className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
+        className="mt-3 bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
       >
         <Download className="w-4 h-4" /> Exportar PDF
       </button>
+    </div>
+  );
+};
+
+const Sintetico: React.FC<SinteticoProps> = (props) => {
+  const { totais, distribuicaoCategorias, exportar, cores } = props;
+  return (
+    <div>
+      <h3 className="font-semibold mb-3 text-gray-700">Relatório Sintético</h3>
+      <ResponsiveContainer width="100%" height={300}>
+        <PieChart>
+          <Pie
+            data={distribuicaoCategorias}
+            dataKey="valor"
+            nameKey="nome"
+            label
+            outerRadius={120}
+          >
+            {distribuicaoCategorias.map((_, i) => (
+              <Cell key={i} fill={cores[i % cores.length]} />
+            ))}
+          </Pie>
+          <Tooltip />
+        </PieChart>
+      </ResponsiveContainer>
+      <p className="mt-3 text-gray-700">
+        Total Receitas:{" "}
+        <strong>R$ {totais.entradas.toLocaleString("pt-BR")}</strong> | Total
+        Despesas: <strong>R$ {totais.saidas.toLocaleString("pt-BR")}</strong>
+      </p>
       <button
         onClick={() => exportar("excel")}
-        className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700"
+        className="mt-3 bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700"
       >
         <Download className="w-4 h-4" /> Exportar Excel
       </button>
     </div>
-  </div>
-);
+  );
+};
 
-const Balanco: React.FC<BalancoProps> = ({
-  dadosMensais,
-  totais,
-  exportar,
-}) => (
-  <div>
-    <h3 className="font-semibold mb-3 text-gray-700">
-      Balanço Financeiro Consolidado
-    </h3>
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={dadosMensais}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="mes" />
-        <YAxis />
-        <Tooltip />
-        <Legend />
-        <Bar dataKey="entradas" fill="#16a34a" />
-        <Bar dataKey="saidas" fill="#dc2626" />
-      </BarChart>
-    </ResponsiveContainer>
-    <p className="mt-3 text-gray-700">
-      Lucro Total: <strong>R$ {totais.lucro.toLocaleString("pt-BR")}</strong> (
-      {totais.margem}% de margem)
-    </p>
-    <button
-      onClick={() => exportar("pdf")}
-      className="mt-3 bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
-    >
-      <Download className="w-4 h-4" /> Exportar PDF
-    </button>
-  </div>
-);
-
-const Sintetico: React.FC<SinteticoProps> = ({
-  totais,
-  distribuicaoCategorias,
-  exportar,
-  cores,
-}) => (
-  <div>
-    <h3 className="font-semibold mb-3 text-gray-700">Relatório Sintético</h3>
-    <ResponsiveContainer width="100%" height={300}>
-      <PieChart>
-        <Pie
-          data={distribuicaoCategorias}
-          dataKey="valor"
-          nameKey="nome"
-          label
-          outerRadius={120}
-        >
-          {distribuicaoCategorias.map((_, i) => (
-            <Cell key={i} fill={cores[i % cores.length]} />
-          ))}
-        </Pie>
-        <Tooltip />
-      </PieChart>
-    </ResponsiveContainer>
-    <p className="mt-3 text-gray-700">
-      Total Receitas:{" "}
-      <strong>R$ {totais.entradas.toLocaleString("pt-BR")}</strong> | Total
-      Despesas: <strong>R$ {totais.saidas.toLocaleString("pt-BR")}</strong>
-    </p>
-    <button
-      onClick={() => exportar("excel")}
-      className="mt-3 bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700"
-    >
-      <Download className="w-4 h-4" /> Exportar Excel
-    </button>
-  </div>
-);
-
-const Recibo: React.FC<ReciboProps> = ({ recibos, exportar }) => {
+const Recibo: React.FC<ReciboProps> = (props) => {
+  const { recibos, exportar } = props;
   const totalRecibos = recibos.reduce((acc, item) => acc + item.total, 0);
   return (
     <div>
@@ -495,10 +491,8 @@ const Recibo: React.FC<ReciboProps> = ({ recibos, exportar }) => {
   );
 };
 
-const Comissao: React.FC<ComissaoProps> = ({
-  comissoesVendedores,
-  exportar,
-}) => {
+const Comissao: React.FC<ComissaoProps> = (props) => {
+  const { comissoesVendedores, exportar } = props;
   const totalComissao = comissoesVendedores.reduce(
     (acc, item) => acc + item.comissao,
     0,
