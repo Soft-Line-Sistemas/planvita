@@ -4,6 +4,11 @@ import autoTable from "jspdf-autotable";
 import { RelatorioFinanceiroResponse } from "@/services/financeiro/relatorio.service";
 
 type WorkbookJson = Record<string, string | number | null | undefined>;
+type JsPDFWithAutoTable = jsPDF & {
+  lastAutoTable?: {
+    finalY: number;
+  };
+};
 
 const formatCurrency = (value: number) =>
   Number(value || 0).toLocaleString("pt-BR", {
@@ -79,7 +84,7 @@ export const exportRelatorioFinanceiroPdf = (
   relatorio: RelatorioFinanceiroResponse,
   filename = `relatorio-financeiro-${new Date().toISOString().slice(0, 10)}.pdf`,
 ) => {
-  const doc = new jsPDF({ orientation: "landscape" });
+  const doc = new jsPDF({ orientation: "landscape" }) as JsPDFWithAutoTable;
   doc.setFontSize(16);
   doc.text("Relatório Financeiro", 14, 20);
   doc.setFontSize(10);
@@ -96,8 +101,9 @@ export const exportRelatorioFinanceiroPdf = (
     ],
   });
 
+  const afterTotais = doc.lastAutoTable?.finalY ?? 50;
   autoTable(doc, {
-    startY: doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 10 : 60,
+    startY: afterTotais + 10,
     head: [["Mês", "Entradas", "Saídas"]],
     body: relatorio.mensal.map((item) => [
       item.mes,
@@ -106,8 +112,9 @@ export const exportRelatorioFinanceiroPdf = (
     ]),
   });
 
+  const afterMensal = doc.lastAutoTable?.finalY ?? afterTotais + 40;
   autoTable(doc, {
-    startY: doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 10 : 90,
+    startY: afterMensal + 10,
     head: [["Categoria", "Valor"]],
     body: relatorio.distribuicao.map((item) => [
       item.nome,
