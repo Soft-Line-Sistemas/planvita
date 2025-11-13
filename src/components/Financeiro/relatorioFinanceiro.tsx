@@ -325,13 +325,13 @@ interface ComissaoProps {
   exportar: (tipo: "pdf" | "excel") => void;
 }
 
-const Analitico = ({
+const Analitico: React.FC<AnaliticoProps> = ({
   dadosMensais,
   distribuicaoCategorias,
   tendencia,
   exportar,
   cores,
-}: AnaliticoProps) => (
+}) => (
   <div>
     <h3 className="font-semibold mb-3 text-gray-700">Relatório Analítico</h3>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -397,7 +397,11 @@ const Analitico = ({
   </div>
 );
 
-const Balanco = ({ dadosMensais, totais, exportar }: BalancoProps) => (
+const Balanco: React.FC<BalancoProps> = ({
+  dadosMensais,
+  totais,
+  exportar,
+}) => (
   <div>
     <h3 className="font-semibold mb-3 text-gray-700">
       Balanço Financeiro Consolidado
@@ -426,12 +430,12 @@ const Balanco = ({ dadosMensais, totais, exportar }: BalancoProps) => (
   </div>
 );
 
-const Sintetico = ({
+const Sintetico: React.FC<SinteticoProps> = ({
   totais,
   distribuicaoCategorias,
   exportar,
   cores,
-}: SinteticoProps) => (
+}) => (
   <div>
     <h3 className="font-semibold mb-3 text-gray-700">Relatório Sintético</h3>
     <ResponsiveContainer width="100%" height={300}>
@@ -464,7 +468,7 @@ const Sintetico = ({
   </div>
 );
 
-const Recibo = ({ recibos, exportar }: ReciboProps) => {
+const Recibo: React.FC<ReciboProps> = ({ recibos, exportar }) => {
   const totalRecibos = recibos.reduce((acc, item) => acc + item.total, 0);
   return (
     <div>
@@ -491,7 +495,10 @@ const Recibo = ({ recibos, exportar }: ReciboProps) => {
   );
 };
 
-const Comissao = ({ comissoesVendedores, exportar }: ComissaoProps) => {
+const Comissao: React.FC<ComissaoProps> = ({
+  comissoesVendedores,
+  exportar,
+}) => {
   const totalComissao = comissoesVendedores.reduce(
     (acc, item) => acc + item.comissao,
     0,
