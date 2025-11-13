@@ -325,13 +325,13 @@ interface ComissaoProps {
   exportar: (tipo: "pdf" | "excel") => void;
 }
 
-const Analitico: React.FC<AnaliticoProps> = ({
+const Analitico = ({
   dadosMensais,
   distribuicaoCategorias,
   tendencia,
   exportar,
   cores,
-}) => (
+}: AnaliticoProps) => (
   <div>
     <h3 className="font-semibold mb-3 text-gray-700">Relatório Analítico</h3>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
