@@ -2,24 +2,10 @@
 
 import { useMemo, useCallback, useState, useRef } from "react";
 import { Button } from "./ui/button";
+import type { ClientePlano } from "@/types/ClientePlano";
 
 type Props = {
-  cliente: {
-    nome: string;
-    cpf: string;
-    numeroCarteirinha: string | number;
-    email?: string;
-    telefone?: string;
-    plano: {
-      codigo: string;
-      nome: string;
-      valorMensal: number;
-      status: "ativo" | "suspenso" | string;
-      cobertura: string[];
-      observacoes?: string;
-      vigencia: { inicio: string; fim: string };
-    };
-  };
+  cliente: ClientePlano;
   isFlipped: boolean;
   setIsFlipped: (v: boolean | ((p: boolean) => boolean)) => void;
   formatDate: (d: string) => string;

@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Shield,
   Plus,
@@ -12,6 +12,7 @@ import {
   Search,
   Filter,
   Download,
+  Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -121,12 +122,67 @@ const mapCoberturasDetalhadas = (value: unknown): CoberturasDetalhadas => {
   return base;
 };
 
+type PlanoFormState = {
+  nome: string;
+  valorMensal: string;
+  idadeMaxima: string;
+  coberturaMaxima: string;
+  carenciaDias: string;
+  vigenciaMeses: string;
+  assistenciaFuneral: string;
+  auxilioCemiterio: string;
+  taxaInclusaCemiterioPublico: boolean;
+  ativo: boolean;
+};
+
+const buildFormState = (plano?: Plano | null): PlanoFormState => ({
+  nome: plano?.nome ?? "",
+  valorMensal:
+    plano?.valorMensal !== undefined ? String(plano.valorMensal) : "",
+  idadeMaxima:
+    plano?.idadeMaxima !== null && plano?.idadeMaxima !== undefined
+      ? String(plano.idadeMaxima)
+      : "",
+  coberturaMaxima:
+    plano?.coberturaMaxima !== undefined ? String(plano.coberturaMaxima) : "",
+  carenciaDias:
+    plano?.carenciaDias !== undefined ? String(plano.carenciaDias) : "",
+  vigenciaMeses:
+    plano?.vigenciaMeses !== undefined ? String(plano.vigenciaMeses) : "",
+  assistenciaFuneral:
+    plano?.assistenciaFuneral !== undefined
+      ? String(plano.assistenciaFuneral)
+      : "",
+  auxilioCemiterio:
+    plano?.auxilioCemiterio !== null && plano?.auxilioCemiterio !== undefined
+      ? String(plano.auxilioCemiterio)
+      : "",
+  taxaInclusaCemiterioPublico: Boolean(
+    plano?.taxaInclusaCemiterioPublico ?? false,
+  ),
+  ativo: Boolean(plano?.ativo ?? true),
+});
+
+const toNumber = (value: string, fallback = 0) => {
+  if (value === undefined || value === null) return fallback;
+  const normalized = value.toString().replace(",", ".").trim();
+  if (!normalized) return fallback;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
 const GestaoPlanos = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [modalAberto, setModalAberto] = useState(false);
   const [planoSelecionado, setPlanoSelecionado] = useState<Plano | null>(null);
   const [modoEdicao, setModoEdicao] = useState(false);
+  const [formPlano, setFormPlano] = useState<PlanoFormState>(() =>
+    buildFormState(null),
+  );
+  const [isSavingPlano, setIsSavingPlano] = useState(false);
+  const [planoEmExclusao, setPlanoEmExclusao] = useState<string | null>(null);
+  const [feedbackMensagem, setFeedbackMensagem] = useState<string | null>(null);
   const router = useRouter();
   const {
     data: planosData,
@@ -146,6 +202,11 @@ const GestaoPlanos = () => {
   });
 
   const planos = useMemo(() => planosData ?? [], [planosData]);
+
+  useEffect(() => {
+    setFormPlano(buildFormState(planoSelecionado));
+    setFeedbackMensagem(null);
+  }, [planoSelecionado]);
 
   const onVoltar = () => {
     router.push("/painel/dashboard");
@@ -195,6 +256,109 @@ const GestaoPlanos = () => {
     setPlanoSelecionado(null);
     setModoEdicao(true);
     setModalAberto(true);
+  };
+
+  const handleCampoPlano = (
+    field: keyof PlanoFormState,
+    value: string | boolean,
+  ) => {
+    setFormPlano((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSalvarPlano = async () => {
+    if (!planoSelecionado) return;
+    if (!formPlano.nome.trim()) {
+      setFeedbackMensagem("Informe o nome do plano.");
+      return;
+    }
+
+    setIsSavingPlano(true);
+    setFeedbackMensagem(null);
+    try {
+      const payload = {
+        nome: formPlano.nome.trim(),
+        valorMensal: toNumber(
+          formPlano.valorMensal,
+          planoSelecionado.valorMensal,
+        ),
+        idadeMaxima:
+          formPlano.idadeMaxima.trim() === ""
+            ? null
+            : toNumber(
+                formPlano.idadeMaxima,
+                planoSelecionado.idadeMaxima ?? 0,
+              ),
+        coberturaMaxima: toNumber(
+          formPlano.coberturaMaxima,
+          planoSelecionado.coberturaMaxima,
+        ),
+        carenciaDias: toNumber(
+          formPlano.carenciaDias,
+          planoSelecionado.carenciaDias,
+        ),
+        vigenciaMeses: toNumber(
+          formPlano.vigenciaMeses,
+          planoSelecionado.vigenciaMeses,
+        ),
+        assistenciaFuneral: toNumber(
+          formPlano.assistenciaFuneral,
+          planoSelecionado.assistenciaFuneral,
+        ),
+        auxilioCemiterio:
+          formPlano.auxilioCemiterio.trim() === ""
+            ? null
+            : toNumber(
+                formPlano.auxilioCemiterio,
+                planoSelecionado.auxilioCemiterio ?? 0,
+              ),
+        taxaInclusaCemiterioPublico: formPlano.taxaInclusaCemiterioPublico,
+        ativo: formPlano.ativo,
+      };
+
+      const planoIdNumber = Number(planoSelecionado.id);
+      const endpointId = Number.isNaN(planoIdNumber)
+        ? planoSelecionado.id
+        : planoIdNumber;
+
+      await api.put(`/plano/${endpointId}`, payload);
+      await refetch();
+      setModalAberto(false);
+      setPlanoSelecionado(null);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Não foi possível salvar o plano.";
+      setFeedbackMensagem(message);
+    } finally {
+      setIsSavingPlano(false);
+    }
+  };
+
+  const handleExcluirPlano = async (plano: Plano) => {
+    const confirmacao = window.confirm(
+      `Deseja realmente excluir o plano "${plano.nome}"?`,
+    );
+    if (!confirmacao) return;
+
+    setPlanoEmExclusao(String(plano.id));
+    setFeedbackMensagem(null);
+    try {
+      const planoIdNumber = Number(plano.id);
+      const endpointId = Number.isNaN(planoIdNumber) ? plano.id : planoIdNumber;
+      await api.delete(`/plano/${endpointId}`);
+      await refetch();
+      if (planoSelecionado?.id === plano.id) {
+        setModalAberto(false);
+        setPlanoSelecionado(null);
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível excluir o plano.";
+      setFeedbackMensagem(message);
+    } finally {
+      setPlanoEmExclusao(null);
+    }
   };
 
   const getStatusColor = (ativo: boolean) => {
@@ -475,10 +639,16 @@ const GestaoPlanos = () => {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          className="text-red-600 hover:text-red-800"
-                          title="Desativar"
+                          onClick={() => handleExcluirPlano(plano)}
+                          className="text-red-600 hover:text-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Excluir"
+                          disabled={planoEmExclusao === String(plano.id)}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {planoEmExclusao === String(plano.id) ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
                         </button>
                       </div>
                     </td>
@@ -521,33 +691,81 @@ const GestaoPlanos = () => {
                       <label className="text-sm text-gray-600">
                         Nome do Plano
                       </label>
-                      <p className="font-medium">{planoSelecionado.nome}</p>
+                      {modoEdicao ? (
+                        <input
+                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500"
+                          value={formPlano.nome}
+                          onChange={(e) =>
+                            handleCampoPlano("nome", e.target.value)
+                          }
+                        />
+                      ) : (
+                        <p className="font-medium">{planoSelecionado.nome}</p>
+                      )}
                     </div>
                     <div>
                       <label className="text-sm text-gray-600">
                         Valor Mensal
                       </label>
-                      <p className="font-medium">
-                        {formatCurrency(planoSelecionado.valorMensal)}
-                      </p>
+                      {modoEdicao ? (
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500"
+                          value={formPlano.valorMensal}
+                          onChange={(e) =>
+                            handleCampoPlano("valorMensal", e.target.value)
+                          }
+                        />
+                      ) : (
+                        <p className="font-medium">
+                          {formatCurrency(planoSelecionado.valorMensal)}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="text-sm text-gray-600">
                         Idade Máxima
                       </label>
-                      <p className="font-medium">
-                        {planoSelecionado.idadeMaxima
-                          ? `${planoSelecionado.idadeMaxima} anos`
-                          : "Sem limite"}
-                      </p>
+                      {modoEdicao ? (
+                        <input
+                          type="number"
+                          min="0"
+                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500"
+                          value={formPlano.idadeMaxima}
+                          onChange={(e) =>
+                            handleCampoPlano("idadeMaxima", e.target.value)
+                          }
+                          placeholder="Sem limite"
+                        />
+                      ) : (
+                        <p className="font-medium">
+                          {planoSelecionado.idadeMaxima
+                            ? `${planoSelecionado.idadeMaxima} anos`
+                            : "Sem limite"}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="text-sm text-gray-600">
                         Cobertura Máxima
                       </label>
-                      <p className="font-medium">
-                        {planoSelecionado.coberturaMaxima} pessoas
-                      </p>
+                      {modoEdicao ? (
+                        <input
+                          type="number"
+                          min="0"
+                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500"
+                          value={formPlano.coberturaMaxima}
+                          onChange={(e) =>
+                            handleCampoPlano("coberturaMaxima", e.target.value)
+                          }
+                        />
+                      ) : (
+                        <p className="font-medium">
+                          {planoSelecionado.coberturaMaxima} pessoas
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -575,15 +793,134 @@ const GestaoPlanos = () => {
                     </div>
                     <div>
                       <label className="text-sm text-gray-600">Carência</label>
-                      <p className="font-medium">
-                        {planoSelecionado.carenciaDias} dias
-                      </p>
+                      {modoEdicao ? (
+                        <input
+                          type="number"
+                          min="0"
+                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500"
+                          value={formPlano.carenciaDias}
+                          onChange={(e) =>
+                            handleCampoPlano("carenciaDias", e.target.value)
+                          }
+                        />
+                      ) : (
+                        <p className="font-medium">
+                          {planoSelecionado.carenciaDias} dias
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="text-sm text-gray-600">Vigência</label>
-                      <p className="font-medium">
-                        {planoSelecionado.vigenciaMeses} meses
-                      </p>
+                      {modoEdicao ? (
+                        <input
+                          type="number"
+                          min="1"
+                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500"
+                          value={formPlano.vigenciaMeses}
+                          onChange={(e) =>
+                            handleCampoPlano("vigenciaMeses", e.target.value)
+                          }
+                        />
+                      ) : (
+                        <p className="font-medium">
+                          {planoSelecionado.vigenciaMeses} meses
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">
+                        Assistência Funeral
+                      </label>
+                      {modoEdicao ? (
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500"
+                          value={formPlano.assistenciaFuneral}
+                          onChange={(e) =>
+                            handleCampoPlano(
+                              "assistenciaFuneral",
+                              e.target.value,
+                            )
+                          }
+                        />
+                      ) : (
+                        <p className="font-medium">
+                          {formatCurrency(planoSelecionado.assistenciaFuneral)}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">
+                        Auxílio Cemitério
+                      </label>
+                      {modoEdicao ? (
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500"
+                          value={formPlano.auxilioCemiterio}
+                          onChange={(e) =>
+                            handleCampoPlano("auxilioCemiterio", e.target.value)
+                          }
+                          placeholder="0,00"
+                        />
+                      ) : (
+                        <p className="font-medium">
+                          {planoSelecionado.auxilioCemiterio
+                            ? formatCurrency(planoSelecionado.auxilioCemiterio)
+                            : "Não informado"}
+                        </p>
+                      )}
+                    </div>
+                    <div
+                      className={`flex ${modoEdicao ? "border rounded-lg justify-between items-center py-2 px-3" : "flex-col"}`}
+                    >
+                      <div>
+                        <p className="text-sm text-gray-600">
+                          Taxa Inclusa em Cemitérios Públicos
+                        </p>
+                      </div>
+                      {modoEdicao ? (
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={formPlano.taxaInclusaCemiterioPublico}
+                          onChange={(e) =>
+                            handleCampoPlano(
+                              "taxaInclusaCemiterioPublico",
+                              e.target.checked,
+                            )
+                          }
+                        />
+                      ) : (
+                        <span className="text-sm font-medium">
+                          {planoSelecionado.taxaInclusaCemiterioPublico
+                            ? "Sim"
+                            : "Não"}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Status</label>
+                      {modoEdicao ? (
+                        <select
+                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500"
+                          value={formPlano.ativo ? "true" : "false"}
+                          onChange={(e) =>
+                            handleCampoPlano("ativo", e.target.value === "true")
+                          }
+                        >
+                          <option value="true">Ativo</option>
+                          <option value="false">Inativo</option>
+                        </select>
+                      ) : (
+                        <p className="font-medium">
+                          {planoSelecionado.ativo ? "Ativo" : "Inativo"}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -709,18 +1046,50 @@ const GestaoPlanos = () => {
               </div>
             </div>
 
-            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
-              <button
-                onClick={() => setModalAberto(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Fechar
-              </button>
-              {modoEdicao && (
-                <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                  Salvar Alterações
-                </button>
+            <div className="p-6 border-t border-gray-200 space-y-3">
+              {feedbackMensagem && (
+                <p className="text-sm text-red-600">{feedbackMensagem}</p>
               )}
+              <div className="flex flex-wrap justify-end gap-2">
+                {modoEdicao && planoSelecionado && (
+                  <button
+                    onClick={() => handleExcluirPlano(planoSelecionado)}
+                    className="px-4 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={planoEmExclusao === String(planoSelecionado.id)}
+                  >
+                    {planoEmExclusao === String(planoSelecionado.id) ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Excluindo...
+                      </span>
+                    ) : (
+                      "Excluir Plano"
+                    )}
+                  </button>
+                )}
+                <button
+                  onClick={() => setModalAberto(false)}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Fechar
+                </button>
+                {modoEdicao && (
+                  <button
+                    onClick={handleSalvarPlano}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSavingPlano}
+                  >
+                    {isSavingPlano ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Salvando...
+                      </span>
+                    ) : (
+                      "Salvar Alterações"
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

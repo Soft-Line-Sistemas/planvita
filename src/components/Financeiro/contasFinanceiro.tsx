@@ -148,11 +148,17 @@ const ContasFinanceiro: React.FC = () => {
 
   const handleCriarConta = () => {
     setErroNovaConta(null);
+    const valorNumerico = Number(formNovaConta.valor);
     if (
       !formNovaConta.descricao.trim() ||
       !formNovaConta.valor ||
-      !formNovaConta.vencimento
+      !formNovaConta.vencimento ||
+      Number.isNaN(valorNumerico) ||
+      valorNumerico <= 0
     ) {
+      if (valorNumerico <= 0 || Number.isNaN(valorNumerico)) {
+        setErroNovaConta("Informe um valor positivo.");
+      }
       return;
     }
 
@@ -162,7 +168,7 @@ const ContasFinanceiro: React.FC = () => {
           tipo: "Pagar",
           payload: {
             descricao: formNovaConta.descricao.trim(),
-            valor: Number(formNovaConta.valor),
+            valor: valorNumerico,
             vencimento: formNovaConta.vencimento,
             fornecedor: formNovaConta.fornecedor.trim() || undefined,
           },
@@ -186,7 +192,7 @@ const ContasFinanceiro: React.FC = () => {
           tipo: "Receber",
           payload: {
             descricao: formNovaConta.descricao.trim(),
-            valor: Number(formNovaConta.valor),
+            valor: valorNumerico,
             vencimento: formNovaConta.vencimento,
             clienteId,
           },
@@ -625,6 +631,8 @@ const ModalNovaConta = ({
               <label className="text-sm text-gray-600">Valor</label>
               <Input
                 type="number"
+                min="0"
+                step="0.01"
                 value={form.valor}
                 onChange={(event) => {
                   onClearErro();

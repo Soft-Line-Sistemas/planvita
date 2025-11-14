@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Users } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 import { ClienteHeader } from "@/components/Titular/Cliente/ClienteHeader";
 import { ClienteStats } from "@/components/Titular/Cliente/ClienteStats";
@@ -14,6 +15,9 @@ import { ClienteTable } from "@/components/Titular/Cliente/ClienteTable";
 import { ClienteCards } from "@/components/Titular/Cliente/ClienteCards";
 
 import { useClientes } from "@/hooks/queries/useClientes";
+import api from "@/utils/api";
+import { sanitizePlanoArray } from "@/utils/planos";
+import type { Plano } from "@/types/PlanType";
 
 export default function ClientesPage() {
   const router = useRouter();
@@ -36,6 +40,27 @@ export default function ClientesPage() {
 
   const clientes = data?.data ?? [];
   const totalPages = data?.totalPages ?? 1;
+
+  const {
+    data: planosDetalhados,
+    isLoading: isLoadingPlanos,
+    isError: isErrorPlanos,
+  } = useQuery<Plano[]>({
+    queryKey: ["planos", "clientes"],
+    queryFn: async () => {
+      const response = await api.get("/plano");
+      return sanitizePlanoArray(response.data);
+    },
+    staleTime: 60_000,
+  });
+
+  const planoSelecionadoInfo = useMemo(() => {
+    if (planoFilter === "todos") return null;
+    if (!planosDetalhados || planosDetalhados.length === 0) return null;
+    return planosDetalhados.find(
+      (plano) => plano.nome.toLowerCase() === planoFilter.toLowerCase(),
+    );
+  }, [planoFilter, planosDetalhados]);
 
   const handleNewClient = () => router.push("/painel/cliente/cadastro");
 
@@ -100,6 +125,75 @@ export default function ClientesPage() {
         viewMode={viewMode}
         setViewMode={setViewMode}
       />
+      {planoFilter !== "todos" && (
+        <Card className="border border-emerald-200 shadow-sm">
+          <CardContent className="p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-emerald-700 uppercase tracking-wide">
+                  Plano selecionado
+                </p>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {planoFilter}
+                </h2>
+              </div>
+              {isLoadingPlanos && (
+                <span className="text-sm text-gray-500">
+                  Carregando informações...
+                </span>
+              )}
+            </div>
+            {isErrorPlanos ? (
+              <p className="text-sm text-red-600">
+                Não foi possível carregar os dados do plano.
+              </p>
+            ) : planoSelecionadoInfo ? (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-700">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">
+                    Valor mensal
+                  </p>
+                  <p className="font-medium">
+                    {`R$ ${Number(
+                      planoSelecionadoInfo.valorMensal ?? 0,
+                    ).toFixed(2)}`}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">
+                    Carência (dias)
+                  </p>
+                  <p className="font-medium">
+                    {planoSelecionadoInfo.carenciaDias ?? "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">
+                    Vigência (meses)
+                  </p>
+                  <p className="font-medium">
+                    {planoSelecionadoInfo.vigenciaMeses ?? "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">
+                    Idade máxima
+                  </p>
+                  <p className="font-medium">
+                    {planoSelecionadoInfo.idadeMaxima
+                      ? `${planoSelecionadoInfo.idadeMaxima} anos`
+                      : "Sem limite"}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">
+                Plano não encontrado na lista de planos cadastrados.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {isLoading ? (
         <Card className="border border-gray-200 rounded-lg hover:shadow-md transition">

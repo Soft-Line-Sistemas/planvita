@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2, Users } from "lucide-react";
 import { formatCPF, formatPhone } from "@/helpers/formHelpers";
+import { calcularIdade } from "@/utils/planos";
 
 interface Props {
   dependentes: Dependente[];
@@ -44,104 +45,112 @@ export const DependentesForm = ({
       </div>
     ) : (
       <div className="space-y-4">
-        {dependentes.map((dep, index) => (
-          <Card key={index} className="p-4 border border-gray-200">
-            <div className="flex justify-between items-start mb-4">
-              <h4 className="font-medium text-gray-800">
-                Dependente {index + 1}
-              </h4>
-              <Button
-                onClick={() => handleRemoveDependente(index)}
-                variant="ghost"
-                size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
+        {dependentes.map((dep, index) => {
+          const handleDataNascimentoChange = (value: string) => {
+            const normalized = value || null;
+            const idadeCalculada = normalized
+              ? calcularIdade(normalized)
+              : null;
+            handleDependenteChange(index, "dataNascimento", normalized);
+            handleDependenteChange(index, "idade", idadeCalculada);
+          };
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Nome */}
-              <div>
-                <Label className="inline-flex items-center gap-1">
-                  Nome <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  value={dep.nome}
-                  onChange={(e) =>
-                    handleDependenteChange(index, "nome", e.target.value)
-                  }
-                />
+          return (
+            <Card key={index} className="p-4 border border-gray-200">
+              <div className="flex justify-between items-start mb-4">
+                <h4 className="font-medium text-gray-800">
+                  Dependente {index + 1}
+                </h4>
+                <Button
+                  onClick={() => handleRemoveDependente(index)}
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
               </div>
 
-              {/* Idade */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Nome */}
+                <div>
+                  <Label className="inline-flex items-center gap-1">
+                    Nome <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    value={dep.nome}
+                    onChange={(e) =>
+                      handleDependenteChange(index, "nome", e.target.value)
+                    }
+                  />
+                </div>
 
-              <div>
-                <Label className="inline-flex items-center gap-1">
-                  Idade <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  type="date"
-                  value={String(dep.idade || "")}
-                  onChange={(e) =>
-                    handleDependenteChange(
-                      index,
-                      "idade",
-                      Number(e.target.value),
-                    )
-                  }
-                />
-              </div>
+                {/* Data de Nascimento */}
+                <div>
+                  <Label className="inline-flex items-center gap-1">
+                    Data de Nascimento <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    type="date"
+                    value={dep.dataNascimento ?? ""}
+                    onChange={(e) => handleDataNascimentoChange(e.target.value)}
+                  />
+                </div>
 
-              {/* Parentesco */}
-              <div>
-                <Label className="inline-flex items-center gap-1">
-                  Parentesco <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  value={dep.parentesco}
-                  onChange={(e) =>
-                    handleDependenteChange(index, "parentesco", e.target.value)
-                  }
-                />
-              </div>
+                {/* Parentesco */}
+                <div>
+                  <Label className="inline-flex items-center gap-1">
+                    Parentesco <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    value={dep.parentesco}
+                    onChange={(e) =>
+                      handleDependenteChange(
+                        index,
+                        "parentesco",
+                        e.target.value,
+                      )
+                    }
+                  />
+                </div>
 
-              {/* Telefone */}
-              <div>
-                <Label className="inline-flex items-center gap-1">
-                  Telefone <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  value={dep.telefone}
-                  onChange={(e) =>
-                    handleDependenteChange(
-                      index,
-                      "telefone",
-                      formatPhone(e.target.value),
-                    )
-                  }
-                />
-              </div>
+                {/* Telefone */}
+                <div>
+                  <Label className="inline-flex items-center gap-1">
+                    Telefone <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    value={dep.telefone}
+                    onChange={(e) =>
+                      handleDependenteChange(
+                        index,
+                        "telefone",
+                        formatPhone(e.target.value),
+                      )
+                    }
+                  />
+                </div>
 
-              {/* CPF */}
-              <div className="md:col-span-2">
-                <Label className="inline-flex items-center gap-1">
-                  CPF <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  value={dep.cpf}
-                  onChange={(e) =>
-                    handleDependenteChange(
-                      index,
-                      "cpf",
-                      formatCPF ? formatCPF(e.target.value) : e.target.value,
-                    )
-                  }
-                />
+                {/* CPF */}
+                <div className="md:col-span-2">
+                  <Label className="inline-flex items-center gap-1">
+                    CPF <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    value={dep.cpf}
+                    onChange={(e) =>
+                      handleDependenteChange(
+                        index,
+                        "cpf",
+                        formatCPF ? formatCPF(e.target.value) : e.target.value,
+                      )
+                    }
+                  />
+                </div>
               </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
     )}
   </div>

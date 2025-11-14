@@ -106,7 +106,7 @@ const GestaoFinanceira = () => {
     const mensal = relatorioFinanceiro?.mensal ?? [];
     return [...mensal].reverse().slice(0, 4);
   }, [relatorioFinanceiro]);
-  const [abaAtiva, setAbaAtiva] = useState("pagamentos");
+  const [abaAtiva, setAbaAtiva] = useState("contas");
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [filtroData, setFiltroData] = useState("todos");
@@ -205,7 +205,7 @@ const GestaoFinanceira = () => {
 
   const abas = useMemo(() => {
     const base = [
-      { id: "pagamentos", nome: "Pagamentos", icon: CreditCard },
+      // { id: "pagamentos", nome: "Pagamentos", icon: CreditCard },
       { id: "inadimplencia", nome: "Inadimplência", icon: AlertCircle },
       { id: "relatorios", nome: "Relatórios", icon: FileText },
       { id: "cadastros", nome: "Cadastros", icon: TrendingUp },

@@ -28,7 +28,22 @@ export const useClientes = (params: {
       });
 
       const response = await api.get(`/titular?${queryParams.toString()}`);
-      return response.data as ClientesApiResponse;
+      const payload = response.data as ClientesApiResponse;
+      if (Array.isArray(payload?.data)) {
+        payload.data = payload.data.map((cliente) => {
+          if (cliente.plano?.id) return cliente;
+          const planoBasico =
+            params.plano && params.plano !== "todos"
+              ? { id: params.plano, nome: params.plano, valorMensal: 0 }
+              : cliente.plano;
+
+          return {
+            ...cliente,
+            plano: planoBasico,
+          };
+        });
+      }
+      return payload;
     },
     staleTime: 1000 * 60, // 1 minuto
   });

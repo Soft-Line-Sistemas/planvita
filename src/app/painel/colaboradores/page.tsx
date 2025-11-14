@@ -97,7 +97,7 @@ export default function AcessoPage() {
       });
 
       // 🔗 gera o link pessoal automaticamente
-      const linkCadastro = `${window.location.origin}/painel/cliente/cadastro?consultorId=${res.data.id}`;
+      const linkCadastro = `${window.location.origin}/cliente/cadastro?consultorId=${res.data.id}`;
       const novoUser = { ...res.data, linkCadastro };
 
       setUsers((prev) => [...prev, novoUser]);
@@ -279,7 +279,7 @@ export default function AcessoPage() {
                         onClick={() => {
                           const link =
                             user.linkCadastro ||
-                            `${window.location.origin}/painel/cliente/cadastro?consultorId=${user.id}`;
+                            `${window.location.origin}/cliente/cadastro?consultorId=${user.id}`;
                           setSelectedLink(link);
                           setShareModalOpen(true);
                         }}

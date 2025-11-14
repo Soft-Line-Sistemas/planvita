@@ -68,6 +68,12 @@ export default function SelectTenantPage() {
             >
               Pax
             </Button>
+            <Button
+              onClick={() => handleSelectTenant("bosque")}
+              className="w-full bg-white/20 hover:bg-white/30 text-white py-3 rounded-lg font-semibold transition-all"
+            >
+              Campo do bosque
+            </Button>
             <p className="text-center text-sm text-green-100/90 mt-6">
               Área reservada para funcionários autorizados
             </p>

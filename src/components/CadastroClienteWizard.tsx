@@ -32,7 +32,7 @@ import { DependentesForm } from "@/components/Titular/DependentesForm";
 import { Dependente } from "@/types/DependentesType";
 import { PlanoForm } from "@/components/Titular/PlanoForm";
 import { Confirmacao } from "@/components/Titular/Confirmacao";
-import type { ParticipanteMin } from "@/utils/planos";
+import { calcularIdade, type ParticipanteMin } from "@/utils/planos";
 import {
   useCreateTitular,
   type CreateTitularInput,
@@ -152,7 +152,14 @@ export function CadastroClienteWizard({
   const handleAddDependente = () =>
     setDependentes((prev) => [
       ...prev,
-      { nome: "", idade: null, parentesco: "", telefone: "", cpf: "" },
+      {
+        nome: "",
+        idade: null,
+        dataNascimento: null,
+        parentesco: "",
+        telefone: "",
+        cpf: "",
+      },
     ]);
 
   const handleRemoveDependente = (index: number) =>
@@ -269,7 +276,11 @@ export function CadastroClienteWizard({
           },
           ...dependentes.map<ParticipanteMin>((d) => ({
             nome: d.nome,
-            idade: d.idade,
+            dataNascimento: d.dataNascimento ?? null,
+            idade:
+              typeof d.idade === "number" && !Number.isNaN(d.idade)
+                ? d.idade
+                : calcularIdade(d.dataNascimento ?? null),
           })),
         ];
 
@@ -291,7 +302,11 @@ export function CadastroClienteWizard({
 
         const dependentesResumo: ParticipanteMin[] = dependentes.map((d) => ({
           nome: d.nome,
-          idade: d.idade,
+          dataNascimento: d.dataNascimento ?? null,
+          idade:
+            typeof d.idade === "number" && !Number.isNaN(d.idade)
+              ? d.idade
+              : calcularIdade(d.dataNascimento ?? null),
         }));
 
         return (
