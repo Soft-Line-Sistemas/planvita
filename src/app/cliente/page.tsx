@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatCPF } from "@/helpers/formHelpers";
-import type { ClientePlano } from "@/data/mock-clientes-planos";
+import type { ClientePlano } from "@/types/ClientePlano";
+import { consultarClientePorCpf } from "@/services/clienteCarteirinha.service";
 import CarteirinhaAsImage from "@/components/CarteirinhaAsImage";
+import { useQuery } from "@tanstack/react-query";
+import { listarContasDoCliente } from "@/services/financeiro/contasCliente.service";
 
 const normalizeCpf = (value: string) => value.replace(/\D/g, "");
 
@@ -17,12 +20,17 @@ const formatCurrency = (value: number) =>
     minimumFractionDigits: 2,
   });
 
-const formatDate = (value: string) =>
-  new Date(value + "T00:00:00").toLocaleDateString("pt-BR", {
+const formatDate = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "long",
     year: "numeric",
   });
+};
 
 export default function ConsultaClientePage() {
   const [cpf, setCpf] = useState("");
@@ -30,6 +38,9 @@ export default function ConsultaClientePage() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [abaAtiva, setAbaAtiva] = useState<
+    "carteirinha" | "plano" | "financeiro"
+  >("carteirinha");
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -46,19 +57,9 @@ export default function ConsultaClientePage() {
     setIsFlipped(false);
 
     try {
-      const response = await fetch(
-        `/api/cliente?cpf=${encodeURIComponent(digitsOnly)}`,
-      );
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null);
-        throw new Error(
-          payload?.error ?? "Não foi possível localizar o plano.",
-        );
-      }
-
-      const payload = (await response.json()) as { data: ClientePlano };
-      setCliente(payload.data);
+      const clienteEncontrado = await consultarClientePorCpf(digitsOnly);
+      setCliente(clienteEncontrado);
+      setAbaAtiva("carteirinha");
     } catch (fetchError) {
       setError(
         fetchError instanceof Error
@@ -75,7 +76,25 @@ export default function ConsultaClientePage() {
     setCliente(null);
     setError(null);
     setIsFlipped(false);
+    setAbaAtiva("carteirinha");
   };
+
+  const {
+    data: contasFinanceiras = [],
+    isLoading: isLoadingFinanceiro,
+    refetch: refetchFinanceiro,
+  } = useQuery({
+    queryKey: ["cliente-financeiro", cliente?.titularId],
+    queryFn: () => listarContasDoCliente(cliente!.titularId!),
+    enabled: Boolean(cliente?.titularId),
+    staleTime: 30 * 1000,
+  });
+
+  useEffect(() => {
+    if (cliente?.titularId) {
+      refetchFinanceiro();
+    }
+  }, [cliente?.titularId, refetchFinanceiro]);
 
   return (
     <main className="min-h-screen bg-linear-to-br from-slate-100 via-white to-slate-100 pb-16">
@@ -151,7 +170,7 @@ export default function ConsultaClientePage() {
           </form>
         </section>
 
-        <section className="flex flex-1 items-center justify-center">
+        <section className="flex flex-1 items-center justify-center w-full">
           {isLoading && (
             <div className="flex animate-pulse flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white/60 px-10 py-12 text-slate-500 shadow-inner">
               <Loader2 className="size-10 animate-spin" />
@@ -160,13 +179,192 @@ export default function ConsultaClientePage() {
           )}
 
           {!isLoading && cliente && (
-            <CarteirinhaAsImage
-              cliente={cliente}
-              isFlipped={isFlipped}
-              setIsFlipped={setIsFlipped}
-              formatDate={formatDate}
-              formatCurrency={formatCurrency}
-            />
+            <div className="w-full space-y-6">
+              <div className="flex flex-wrap justify-center gap-2">
+                {[
+                  { id: "carteirinha", label: "Carteirinha" },
+                  { id: "plano", label: "Detalhes do Plano" },
+                  { id: "financeiro", label: "Financeiro" },
+                ].map((aba) => (
+                  <button
+                    key={aba.id}
+                    onClick={() => setAbaAtiva(aba.id as typeof abaAtiva)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium border transition ${
+                      abaAtiva === aba.id
+                        ? "bg-emerald-600 text-white border-emerald-600"
+                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    {aba.label}
+                  </button>
+                ))}
+              </div>
+
+              {abaAtiva === "carteirinha" && (
+                <CarteirinhaAsImage
+                  cliente={cliente}
+                  isFlipped={isFlipped}
+                  setIsFlipped={setIsFlipped}
+                  formatDate={formatDate}
+                  formatCurrency={formatCurrency}
+                />
+              )}
+
+              {abaAtiva === "plano" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm">
+                    <h3 className="text-lg font-semibold text-emerald-700 mb-4">
+                      Informações do Plano
+                    </h3>
+                    <dl className="space-y-3 text-sm text-gray-700">
+                      <div>
+                        <dt className="text-gray-500">Nome</dt>
+                        <dd className="font-medium">{cliente.plano.nome}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-500">Valor mensal</dt>
+                        <dd className="font-medium">
+                          {formatCurrency(cliente.plano.valorMensal)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-500">Código</dt>
+                        <dd className="font-medium">{cliente.plano.codigo}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-500">Status</dt>
+                        <dd
+                          className={`font-medium ${
+                            cliente.plano.status === "ativo"
+                              ? "text-emerald-600"
+                              : cliente.plano.status === "suspenso"
+                                ? "text-amber-600"
+                                : "text-rose-600"
+                          }`}
+                        >
+                          {cliente.plano.status}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-500">Vigência</dt>
+                        <dd className="font-medium">
+                          {formatDate(cliente.plano.vigencia.inicio)} até{" "}
+                          {formatDate(cliente.plano.vigencia.fim)}
+                        </dd>
+                      </div>
+                      {cliente.plano.observacoes && (
+                        <div>
+                          <dt className="text-gray-500">Observações</dt>
+                          <dd>{cliente.plano.observacoes}</dd>
+                        </div>
+                      )}
+                    </dl>
+                  </div>
+
+                  <div className="rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm">
+                    <h3 className="text-lg font-semibold text-emerald-700 mb-4">
+                      Coberturas Incluídas
+                    </h3>
+                    <ul className="space-y-2 text-sm text-gray-700">
+                      {cliente.plano.cobertura.map((item, index) => (
+                        <li
+                          key={`${item}-${index}`}
+                          className="flex items-start gap-2"
+                        >
+                          <span className="mt-1 h-2 w-2 rounded-full bg-emerald-500"></span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                      {cliente.plano.cobertura.length === 0 && (
+                        <li className="text-gray-500">
+                          Nenhuma cobertura detalhada.
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {abaAtiva === "financeiro" && (
+                <div className="rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-emerald-700">
+                        Lançamentos Financeiros
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        Contas a receber vinculadas ao CPF informado.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => cliente?.titularId && refetchFinanceiro()}
+                      disabled={isLoadingFinanceiro || !cliente?.titularId}
+                    >
+                      {isLoadingFinanceiro ? (
+                        <>
+                          <Loader2 className="size-4 animate-spin" />
+                          Atualizando
+                        </>
+                      ) : (
+                        "Atualizar"
+                      )}
+                    </Button>
+                  </div>
+
+                  {isLoadingFinanceiro ? (
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <Loader2 className="size-4 animate-spin" />
+                      Buscando lançamentos...
+                    </div>
+                  ) : contasFinanceiras.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm text-gray-700">
+                        <thead className="bg-gray-100">
+                          <tr>
+                            <th className="px-4 py-2 text-left">Descrição</th>
+                            <th className="px-4 py-2 text-left">Vencimento</th>
+                            <th className="px-4 py-2 text-left">Valor</th>
+                            <th className="px-4 py-2 text-left">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {contasFinanceiras.map((conta) => (
+                            <tr key={conta.id} className="border-b">
+                              <td className="px-4 py-2">{conta.descricao}</td>
+                              <td className="px-4 py-2">
+                                {formatDate(conta.vencimento)}
+                              </td>
+                              <td className="px-4 py-2 font-medium">
+                                {formatCurrency(conta.valor)}
+                              </td>
+                              <td className="px-4 py-2">
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    conta.status === "RECEBIDO" ||
+                                    conta.status === "PAGO"
+                                      ? "bg-emerald-100 text-emerald-700"
+                                      : conta.status === "PENDENTE"
+                                        ? "bg-amber-100 text-amber-700"
+                                        : "bg-rose-100 text-rose-700"
+                                  }`}
+                                >
+                                  {conta.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">
+                      Nenhuma conta encontrada para este cliente.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           {!isLoading && !cliente && !error && (
