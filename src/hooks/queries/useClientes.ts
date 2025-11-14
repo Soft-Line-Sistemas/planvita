@@ -34,8 +34,26 @@ export const useClientes = (params: {
           if (cliente.plano?.id) return cliente;
           const planoBasico =
             params.plano && params.plano !== "todos"
-              ? { id: params.plano, nome: params.plano, valorMensal: 0 }
-              : cliente.plano;
+              ? {
+                  id: params.plano,
+                  nome: params.plano,
+                  valorMensal: 0,
+                  coberturas: {
+                    servicosPadrao: [],
+                    coberturaTranslado: [],
+                    servicosEspecificos: [],
+                  },
+                }
+              : (cliente.plano ?? {
+                  id: "sem-plano",
+                  nome: "Sem plano",
+                  valorMensal: 0,
+                  coberturas: {
+                    servicosPadrao: [],
+                    coberturaTranslado: [],
+                    servicosEspecificos: [],
+                  },
+                });
 
           return {
             ...cliente,
