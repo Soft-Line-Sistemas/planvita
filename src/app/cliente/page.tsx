@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,16 @@ import { consultarClientePorCpf } from "@/services/clienteCarteirinha.service";
 import CarteirinhaAsImage from "@/components/CarteirinhaAsImage";
 import { useQuery } from "@tanstack/react-query";
 import { listarContasDoCliente } from "@/services/financeiro/contasCliente.service";
+import {
+  listarAssinaturas,
+  salvarAssinatura,
+  type AssinaturaDigital,
+} from "@/services/assinaturas-cliente.service";
+import SignaturePad, {
+  type SignaturePadHandle,
+} from "@/components/SignaturePad";
+import getTenantFromHost from "@/utils/getTenantFromHost";
+import Image from "next/image";
 
 const normalizeCpf = (value: string) => value.replace(/\D/g, "");
 
@@ -32,6 +42,21 @@ const formatDate = (value: string) => {
   });
 };
 
+const TIPOS_ASSINATURA = [
+  { id: "TITULAR_ASSINATURA_1", label: "Titular - Assinatura 1" },
+  { id: "TITULAR_ASSINATURA_2", label: "Titular - Assinatura 2" },
+  { id: "CORRESPONSAVEL_ASSINATURA_1", label: "Responsável financeiro - 1" },
+  { id: "CORRESPONSAVEL_ASSINATURA_2", label: "Responsável financeiro - 2" },
+] as const;
+const CONTRATO_URL = "/docs/contrato.docx";
+const assinaturaImageLoader = ({ src }: { src: string }) => src;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
+const API_VERSION =
+  process.env.NEXT_PUBLIC_API_VERSION || process.env.API_VERSION || "v1";
+const ASSINATURA_API_BASE = API_BASE_URL
+  ? `${API_BASE_URL}/${API_VERSION}`
+  : undefined;
+
 export default function ConsultaClientePage() {
   const [cpf, setCpf] = useState("");
   const [cliente, setCliente] = useState<ClientePlano | null>(null);
@@ -39,8 +64,37 @@ export default function ConsultaClientePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [abaAtiva, setAbaAtiva] = useState<
-    "carteirinha" | "plano" | "financeiro"
+    "carteirinha" | "plano" | "financeiro" | "assinaturas"
   >("carteirinha");
+  const [assinaturaEmProgresso, setAssinaturaEmProgresso] = useState<
+    string | null
+  >(null);
+  const [assinaturaMensagem, setAssinaturaMensagem] = useState<string | null>(
+    null,
+  );
+  const tenantFromHost =
+    typeof window !== "undefined" ? getTenantFromHost() : null;
+
+  const buildAssinaturaUrl = useCallback(
+    (
+      assinaturaId?: number,
+      mode: "inline" | "attachment" = "inline",
+    ): string | undefined => {
+      if (!ASSINATURA_API_BASE || !cliente?.titularId || !assinaturaId) {
+        return undefined;
+      }
+      const base = `${ASSINATURA_API_BASE}/titular/${cliente.titularId}/assinaturas/${assinaturaId}/arquivo`;
+      const params = new URLSearchParams();
+      if (mode === "inline") {
+        params.set("mode", "inline");
+      }
+      if (tenantFromHost) {
+        params.set("tenant", tenantFromHost);
+      }
+      return params.toString() ? `${base}?${params.toString()}` : base;
+    },
+    [cliente?.titularId, tenantFromHost],
+  );
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -95,6 +149,67 @@ export default function ConsultaClientePage() {
       refetchFinanceiro();
     }
   }, [cliente?.titularId, refetchFinanceiro]);
+
+  const {
+    data: assinaturas = [],
+    isLoading: isLoadingAssinaturas,
+    refetch: refetchAssinaturas,
+  } = useQuery<AssinaturaDigital[]>({
+    queryKey: ["cliente-assinaturas", cliente?.titularId],
+    queryFn: () => listarAssinaturas(cliente!.titularId!),
+    enabled: Boolean(cliente?.titularId),
+    staleTime: 30 * 1000,
+  });
+
+  const assinaturasMap = useMemo(() => {
+    return assinaturas.reduce<Record<string, AssinaturaDigital>>(
+      (acc, item) => {
+        acc[item.tipo] = item;
+        return acc;
+      },
+      {},
+    );
+  }, [assinaturas]);
+
+  const proximaEtapaIndex = useMemo(() => {
+    for (let i = 0; i < TIPOS_ASSINATURA.length; i += 1) {
+      if (!assinaturasMap[TIPOS_ASSINATURA[i].id]) {
+        return i;
+      }
+    }
+    return TIPOS_ASSINATURA.length;
+  }, [assinaturasMap]);
+
+  useEffect(() => {
+    if (abaAtiva === "assinaturas" && proximaEtapaIndex === 0) {
+      setAssinaturaMensagem(
+        "Leia o contrato e colete a primeira assinatura do titular.",
+      );
+    } else {
+      setAssinaturaMensagem(null);
+    }
+  }, [abaAtiva, proximaEtapaIndex]);
+
+  const handleSalvarAssinatura = async (
+    tipo: string,
+    assinaturaBase64: string,
+  ) => {
+    if (!cliente?.titularId) return;
+    setAssinaturaMensagem(null);
+    setAssinaturaEmProgresso(tipo);
+    try {
+      await salvarAssinatura(cliente.titularId, { tipo, assinaturaBase64 });
+      await refetchAssinaturas();
+    } catch (erro) {
+      setAssinaturaMensagem(
+        erro instanceof Error
+          ? erro.message
+          : "Não foi possível salvar a assinatura.",
+      );
+    } finally {
+      setAssinaturaEmProgresso(null);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-linear-to-br from-slate-100 via-white to-slate-100 pb-16">
@@ -185,6 +300,7 @@ export default function ConsultaClientePage() {
                   { id: "carteirinha", label: "Carteirinha" },
                   { id: "plano", label: "Detalhes do Plano" },
                   { id: "financeiro", label: "Financeiro" },
+                  { id: "assinaturas", label: "Assinaturas" },
                 ].map((aba) => (
                   <button
                     key={aba.id}
@@ -364,6 +480,102 @@ export default function ConsultaClientePage() {
                   )}
                 </div>
               )}
+
+              {abaAtiva === "assinaturas" && (
+                <div className="rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm space-y-4">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                    <div>
+                      <h3 className="text-lg font-semibold text-emerald-700">
+                        Assinaturas digitais
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        Capture as assinaturas do titular e do responsável
+                        financeiro. Cada pessoa deve assinar duas vezes.
+                      </p>
+                    </div>
+                    {assinaturaMensagem && (
+                      <p className="text-sm text-red-600">
+                        {assinaturaMensagem}
+                      </p>
+                    )}
+                  </div>
+
+                  {!cliente.titularId ? (
+                    <p className="text-sm text-gray-500">
+                      Titular não identificado para vincular assinaturas.
+                    </p>
+                  ) : isLoadingAssinaturas && assinaturas.length === 0 ? (
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <Loader2 className="size-4 animate-spin" />
+                      Carregando assinaturas...
+                    </div>
+                  ) : (
+                    <div className="space-y-5">
+                      <div className="rounded-xl border border-dashed border-emerald-200 bg-emerald-50/60 p-4 text-sm text-gray-700">
+                        <h4 className="font-semibold text-emerald-800">
+                          Contrato
+                        </h4>
+                        <p>
+                          Leia o contrato abaixo com o cliente antes de coletar
+                          a assinatura. Ele pode visualizar ou baixar o
+                          documento.
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <a
+                            href={CONTRATO_URL}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-4 py-2 rounded-lg bg-white text-sm font-medium text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition"
+                          >
+                            Abrir contrato
+                          </a>
+                          <a
+                            href={CONTRATO_URL}
+                            download
+                            className="px-4 py-2 rounded-lg bg-emerald-600 text-sm font-medium text-white hover:bg-emerald-700 transition"
+                          >
+                            Baixar contrato
+                          </a>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {TIPOS_ASSINATURA.map((tipo, index) => {
+                          const assinaturaAtual = assinaturasMap[tipo.id];
+                          const previewUrl = buildAssinaturaUrl(
+                            assinaturaAtual?.id,
+                            "inline",
+                          );
+                          const downloadUrl = buildAssinaturaUrl(
+                            assinaturaAtual?.id,
+                            "attachment",
+                          );
+
+                          return (
+                            <AssinaturaCard
+                              key={tipo.id}
+                              tipoId={tipo.id}
+                              titulo={tipo.label}
+                              assinatura={assinaturaAtual}
+                              onSalvar={handleSalvarAssinatura}
+                              salvando={assinaturaEmProgresso === tipo.id}
+                              previewUrl={previewUrl}
+                              downloadUrl={downloadUrl}
+                              estado={
+                                assinaturaAtual
+                                  ? "concluida"
+                                  : index === proximaEtapaIndex
+                                    ? "ativa"
+                                    : "pendente"
+                              }
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -380,3 +592,140 @@ export default function ConsultaClientePage() {
     </main>
   );
 }
+
+type AssinaturaCardProps = {
+  tipoId: string;
+  titulo: string;
+  assinatura?: AssinaturaDigital;
+  onSalvar: (tipo: string, assinaturaBase64: string) => Promise<void>;
+  salvando: boolean;
+  estado: "pendente" | "ativa" | "concluida";
+  previewUrl?: string;
+  downloadUrl?: string;
+};
+
+const AssinaturaCard = ({
+  tipoId,
+  titulo,
+  assinatura,
+  onSalvar,
+  salvando,
+  estado,
+  previewUrl,
+  downloadUrl,
+}: AssinaturaCardProps) => {
+  const padRef = useRef<SignaturePadHandle>(null);
+  const [erroLocal, setErroLocal] = useState<string | null>(null);
+  const [modoSubstituir, setModoSubstituir] = useState(false);
+  const podeDesenhar =
+    estado === "ativa" || (estado === "concluida" && modoSubstituir);
+  const visualizacaoHref = previewUrl ?? assinatura?.arquivoUrl ?? "";
+  const downloadHref = downloadUrl ?? visualizacaoHref;
+
+  const handleSalvar = async () => {
+    if (!padRef.current) return;
+    if (!padRef.current.hasDrawing()) {
+      setErroLocal("Faça a assinatura antes de salvar.");
+      return;
+    }
+    const dataUrl = padRef.current.getDataURL();
+    if (!dataUrl) {
+      setErroLocal("Não foi possível capturar a imagem.");
+      return;
+    }
+    setErroLocal(null);
+    await onSalvar(tipoId, dataUrl);
+    padRef.current.clear();
+    setModoSubstituir(false);
+  };
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className="font-semibold text-gray-900">{titulo}</h4>
+        {assinatura && !modoSubstituir && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setModoSubstituir(true)}
+            disabled={estado !== "concluida"}
+          >
+            Substituir
+          </Button>
+        )}
+      </div>
+
+      {assinatura && !modoSubstituir ? (
+        <div className="space-y-2">
+          {visualizacaoHref ? (
+            <Image
+              loader={assinaturaImageLoader}
+              src={visualizacaoHref}
+              alt={`Assinatura ${titulo}`}
+              width={480}
+              height={180}
+              unoptimized
+              className="w-full rounded border border-gray-200 bg-white object-contain"
+            />
+          ) : (
+            <div className="rounded border border-gray-200 bg-gray-50 p-4 text-sm text-gray-500 text-center">
+              Visualização indisponível.
+            </div>
+          )}
+          <div className="text-xs text-gray-500 flex justify-between">
+            <span>{assinatura.filename}</span>
+            <a
+              href={downloadHref}
+              download={assinatura.filename}
+              target="_blank"
+              rel="noreferrer"
+              className="text-emerald-600 hover:underline"
+            >
+              Download
+            </a>
+          </div>
+        </div>
+      ) : podeDesenhar ? (
+        <>
+          <SignaturePad
+            ref={padRef}
+            width={480}
+            height={180}
+            className="border border-dashed border-gray-300 rounded-lg bg-white touch-none"
+          />
+          {erroLocal && <p className="text-xs text-red-600">{erroLocal}</p>}
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleSalvar}
+              disabled={salvando}
+              className="flex-1"
+            >
+              {salvando ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Salvando
+                </>
+              ) : (
+                "Salvar"
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                padRef.current?.clear();
+                setErroLocal(null);
+              }}
+            >
+              Limpar
+            </Button>
+          </div>
+        </>
+      ) : (
+        <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500">
+          Esta assinatura será liberada após a etapa anterior.
+        </div>
+      )}
+    </div>
+  );
+};

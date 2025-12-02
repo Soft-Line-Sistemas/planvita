@@ -27,6 +27,17 @@ import { motion } from "framer-motion";
 import { UserCog, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LinksRedesSociais from "@/components/LinksRedesSocias";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 type Role = {
   id: number;
@@ -34,7 +45,7 @@ type Role = {
 };
 
 type User = {
-  linkCadastro: string;
+  linkCadastro?: string;
   id: number;
   name: string;
   email: string;
@@ -42,6 +53,7 @@ type User = {
 };
 
 export default function AcessoPage() {
+  const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,6 +62,13 @@ export default function AcessoPage() {
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserRole, setNewUserRole] = useState<number | null>(null);
   const [creating, setCreating] = useState(false);
+  const [passwordModalUser, setPasswordModalUser] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [emailModalUser, setEmailModalUser] = useState<User | null>(null);
+  const [newEmail, setNewEmail] = useState("");
+  const [updatingEmail, setUpdatingEmail] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -113,6 +132,78 @@ export default function AcessoPage() {
     }
   };
 
+  const handleOpenPasswordModal = (target: User) => {
+    setPasswordModalUser(target);
+    setNewPassword("");
+    setConfirmPassword("");
+  };
+
+  const handleOpenEmailModal = (target: User) => {
+    setEmailModalUser(target);
+    setNewEmail(target.email);
+  };
+
+  const handleResetPassword = async () => {
+    if (!passwordModalUser) return;
+
+    if (newPassword.trim().length < 6) {
+      toast.error("A nova senha deve ter pelo menos 6 caracteres");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error("As senhas não coincidem");
+      return;
+    }
+
+    setResettingPassword(true);
+    try {
+      await api.put(`/users/${passwordModalUser.id}/password`, {
+        newPassword,
+      });
+      toast.success(
+        `Senha de ${passwordModalUser.name || "colaborador"} atualizada`,
+      );
+      setPasswordModalUser(null);
+    } catch (err) {
+      console.error(err);
+      toast.error("Não foi possível atualizar a senha");
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
+  const handleUpdateEmail = async () => {
+    if (!emailModalUser) return;
+
+    if (!newEmail.trim()) {
+      toast.error("Informe um e-mail válido");
+      return;
+    }
+
+    setUpdatingEmail(true);
+    try {
+      await api.put(`/users/${emailModalUser.id}/email`, {
+        email: newEmail.trim(),
+      });
+
+      setUsers((prev) =>
+        prev.map((existing) =>
+          existing.id === emailModalUser.id
+            ? { ...existing, email: newEmail.trim() }
+            : existing,
+        ),
+      );
+      toast.success("E-mail atualizado com sucesso");
+      setEmailModalUser(null);
+    } catch (err) {
+      console.error(err);
+      toast.error("Não foi possível atualizar o e-mail");
+    } finally {
+      setUpdatingEmail(false);
+    }
+  };
+
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [selectedLink, setSelectedLink] = useState<string | null>(null);
 
@@ -121,6 +212,7 @@ export default function AcessoPage() {
       u.name?.toLowerCase()?.includes(search.toLowerCase()) ||
       u.email?.toLowerCase()?.includes(search.toLowerCase()),
   );
+  const isAdmin = user?.role?.name === "admin_master";
 
   if (loading) {
     return (
@@ -222,6 +314,9 @@ export default function AcessoPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Cargo Atual</TableHead>
                   <TableHead>Alterar Cargo</TableHead>
+                  {isAdmin && (
+                    <TableHead className="text-right">Alterar Senha</TableHead>
+                  )}
                   <TableHead className="text-right">Enviar Link</TableHead>
                 </TableRow>
               </TableHeader>
@@ -238,6 +333,13 @@ export default function AcessoPage() {
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell className="text-gray-500">
                       {user.email}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleOpenEmailModal(user)}
+                      >
+                        Editar
+                      </Button>
                     </TableCell>
                     <TableCell>
                       {user.roleId ? (
@@ -272,6 +374,17 @@ export default function AcessoPage() {
                         </SelectContent>
                       </Select>
                     </TableCell>
+                    {isAdmin && (
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenPasswordModal(user)}
+                        >
+                          Alterar
+                        </Button>
+                      </TableCell>
+                    )}
                     <TableCell className="text-right">
                       <Button
                         variant="outline"
@@ -294,6 +407,113 @@ export default function AcessoPage() {
           </ScrollArea>
         </CardContent>
       </Card>
+      {isAdmin && (
+        <Dialog
+          open={!!emailModalUser}
+          onOpenChange={(open) => {
+            if (!open) setEmailModalUser(null);
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Alterar e-mail do colaborador</DialogTitle>
+              <DialogDescription>
+                Atualize o e-mail de{" "}
+                <span className="font-semibold">
+                  {emailModalUser?.name || "o colaborador"}
+                </span>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="new-email">Novo e-mail</Label>
+                <Input
+                  id="new-email"
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="colaborador@empresa.com"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEmailModalUser(null)}
+                disabled={updatingEmail}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleUpdateEmail} disabled={updatingEmail}>
+                {updatingEmail ? "Atualizando..." : "Salvar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+      {isAdmin && (
+        <Dialog
+          open={!!passwordModalUser}
+          onOpenChange={(open) => {
+            if (!open) setPasswordModalUser(null);
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Alterar senha do colaborador</DialogTitle>
+              <DialogDescription>
+                Defina uma nova senha para{" "}
+                <span className="font-semibold">
+                  {passwordModalUser?.name || "o colaborador"}
+                </span>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">Nova senha</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="••••••"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirmar senha</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Repita a nova senha"
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                A nova senha deve conter no mínimo 6 caracteres. Compartilhe com
+                o colaborador após salvar.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPasswordModalUser(null)}
+                disabled={resettingPassword}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleResetPassword}
+                disabled={resettingPassword}
+              >
+                {resettingPassword ? "Salvando..." : "Salvar nova senha"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
       {selectedLink && (
         <LinksRedesSociais
           link={selectedLink}
