@@ -17,6 +17,7 @@ import {
   Layers,
   UserCog,
   CreditCard,
+  KeyRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -98,6 +99,12 @@ export function Sidebar() {
       label: "Regras",
       icon: ClipboardCheck,
       href: "/painel/configuracoes",
+    },
+    {
+      id: "conta",
+      label: "Minha Conta",
+      icon: KeyRound,
+      href: "/painel/conta",
     },
   ];
 
