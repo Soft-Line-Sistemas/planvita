@@ -18,6 +18,7 @@ import {
   UserCog,
   CreditCard,
   KeyRound,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -81,6 +82,12 @@ export function Sidebar() {
       label: "Financeiro",
       icon: CreditCard,
       href: "/painel/gestao/financeiro",
+    },
+    {
+      id: "notificacoes",
+      label: "Notificações",
+      icon: Bell,
+      href: "/painel/gestao/notificacoes",
     },
     {
       id: "relatorios",
