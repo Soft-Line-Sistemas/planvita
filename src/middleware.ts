@@ -9,6 +9,11 @@ export function middleware(req: NextRequest) {
 
   const subdomain = getSubdomainFromHost(host);
 
+  if (pathname.startsWith("/api")) {
+    // Desativa qualquer backend do Next (rotas API) e evita surface de ataque.
+    return new NextResponse("Not Found", { status: 404 });
+  }
+
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
