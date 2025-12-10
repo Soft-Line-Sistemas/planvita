@@ -5,6 +5,7 @@ import {
   criarContaFinanceira,
   NovaContaPagarPayload,
   NovaContaReceberPayload,
+  reconsultarContaReceber,
 } from "@/services/financeiro/contas.service";
 import { TipoConta } from "@/types/Financeiro";
 import { toast } from "sonner";
@@ -69,6 +70,27 @@ export const useCriarContaFinanceira = () => {
     },
     onError: () => {
       toast.error("Não foi possível criar a conta");
+    },
+  });
+};
+
+export const useReconsultarContaReceber = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number | string) => reconsultarContaReceber(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["financeiro", "contas"],
+      });
+      toast.success("Status atualizado via Asaas");
+    },
+    onError: (error: unknown) => {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Não foi possível reconsultar o status";
+      toast.error(message);
     },
   });
 };

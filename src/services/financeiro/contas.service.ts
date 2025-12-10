@@ -24,15 +24,24 @@ type ContaFinanceiraApi = {
   dataPagamento?: string | null;
   dataRecebimento?: string | null;
   observacao?: string | null;
+  asaasPaymentId?: string | null;
+  asaasSubscriptionId?: string | null;
+  paymentUrl?: string | null;
+  pixQrCode?: string | null;
+  pixExpiration?: string | null;
+  metodoPagamento?: string | null;
+  dataVencimento?: string | null;
 };
 
 const normalizarStatus = (valor?: string | null): StatusFinanceiro => {
   const upper = (valor ?? "PENDENTE").toUpperCase();
+  if (upper === "OVERDUE") return "VENCIDO";
   const aceitos: StatusFinanceiro[] = [
     "PENDENTE",
     "PAGO",
     "RECEBIDO",
     "ATRASADO",
+    "VENCIDO",
     "CANCELADO",
   ];
   return aceitos.includes(upper as StatusFinanceiro)
@@ -58,9 +67,9 @@ const mapContaFinanceira = (payload: ContaFinanceiraApi): ContaFinanceira => {
   return {
     id: payload.id,
     tipo,
-    descricao: payload.descricao ?? "—",
+    descricao: payload.descricao ?? payload.observacao ?? "—",
     valor: Number(payload.valor ?? 0),
-    dataVencimento: payload.vencimento,
+    dataVencimento: payload.dataVencimento ?? payload.vencimento,
     status: normalizarStatus(payload.status),
     parceiro:
       tipo === "Pagar"
@@ -75,6 +84,12 @@ const mapContaFinanceira = (payload: ContaFinanceiraApi): ContaFinanceira => {
     dataPagamento: payload.dataPagamento ?? null,
     dataRecebimento: payload.dataRecebimento ?? null,
     observacao: payload.observacao ?? null,
+    asaasPaymentId: payload.asaasPaymentId ?? null,
+    asaasSubscriptionId: payload.asaasSubscriptionId ?? null,
+    paymentUrl: payload.paymentUrl ?? null,
+    pixQrCode: payload.pixQrCode ?? null,
+    pixExpiration: payload.pixExpiration ?? null,
+    metodoPagamento: payload.metodoPagamento ?? null,
   };
 };
 
@@ -126,6 +141,13 @@ export const criarContaFinanceira = async (
   const { data } = await api.post<ContaFinanceiraApi>(
     `/financeiro/contas/${endpoint}`,
     payload,
+  );
+  return mapContaFinanceira(data);
+};
+
+export const reconsultarContaReceber = async (id: number | string) => {
+  const { data } = await api.post<ContaFinanceiraApi>(
+    `/financeiro/contas/receber/${id}/reconsulta`,
   );
   return mapContaFinanceira(data);
 };

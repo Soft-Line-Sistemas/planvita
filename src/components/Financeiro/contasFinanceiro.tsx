@@ -11,6 +11,10 @@ import {
   Loader2,
   X,
   PlusCircle,
+  Copy,
+  Link,
+  RefreshCcw,
+  AlertCircle,
 } from "lucide-react";
 import {
   ContaFinanceira,
@@ -23,11 +27,13 @@ import {
   useBaixarContaFinanceira,
   useEstornarContaFinanceira,
   useCriarContaFinanceira,
+  useReconsultarContaReceber,
 } from "@/hooks/mutations/useContaFinanceiraMutations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFinanceiroClientes } from "@/hooks/queries/useFinanceiroClientes";
 import type { ClienteFinanceiroResumo } from "@/services/financeiro/clientes.service";
+import { toast } from "sonner";
 
 type FiltroStatus =
   | "todas"
@@ -42,6 +48,7 @@ const statusConfig: Record<
 > = {
   PENDENTE: { icon: Clock, color: "text-yellow-600", bg: "bg-yellow-50" },
   ATRASADO: { icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50" },
+  VENCIDO: { icon: AlertCircle, color: "text-red-700", bg: "bg-red-50" },
   PAGO: { icon: CheckCircle, color: "text-green-600", bg: "bg-green-50" },
   RECEBIDO: { icon: CheckCircle, color: "text-green-600", bg: "bg-green-50" },
   CANCELADO: { icon: AlertTriangle, color: "text-gray-600", bg: "bg-gray-100" },
@@ -53,6 +60,7 @@ const ContasFinanceiro: React.FC = () => {
   const baixarConta = useBaixarContaFinanceira();
   const estornarConta = useEstornarContaFinanceira();
   const criarConta = useCriarContaFinanceira();
+  const reconsultarConta = useReconsultarContaReceber();
 
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>("todas");
   const [filtroTipo, setFiltroTipo] = useState<TipoConta | "todas">("todas");
@@ -68,6 +76,14 @@ const ContasFinanceiro: React.FC = () => {
     clienteId: "",
     clienteNome: "",
   });
+  const [acaoAsaasConfirmacao, setAcaoAsaasConfirmacao] = useState<{
+    conta: ContaFinanceira;
+    tipo: "baixa" | "estorno";
+  } | null>(null);
+  const [cooldownReconsulta, setCooldownReconsulta] = useState<
+    Record<string, number>
+  >({});
+  const COOLDOWN_RECONSULTA_MS = 4000;
 
   const { data: clientesDisponiveis = [], isLoading: carregandoClientes } =
     useFinanceiroClientes(
@@ -103,7 +119,7 @@ const ContasFinanceiro: React.FC = () => {
         case "pendentes":
           return conta.status === "PENDENTE";
         case "atrasadas":
-          return conta.status === "ATRASADO";
+          return conta.status === "ATRASADO" || conta.status === "VENCIDO";
         case "canceladas":
           return conta.status === "CANCELADO";
         default:
@@ -113,23 +129,41 @@ const ContasFinanceiro: React.FC = () => {
   }, [contas, filtroStatus, filtroTipo]);
 
   const podeBaixar = (conta: ContaFinanceira) =>
-    conta.status === "PENDENTE" || conta.status === "ATRASADO";
+    conta.status === "PENDENTE" ||
+    conta.status === "ATRASADO" ||
+    conta.status === "VENCIDO";
 
   const podeEstornar = (conta: ContaFinanceira) =>
     conta.status === "PAGO" || conta.status === "RECEBIDO";
 
-  const handleBaixa = (conta: ContaFinanceira) => {
+  const executarBaixa = (conta: ContaFinanceira) => {
     baixarConta.mutate({
       tipo: conta.tipo,
       id: conta.id,
     });
   };
 
-  const handleEstorno = (conta: ContaFinanceira) => {
+  const executarEstorno = (conta: ContaFinanceira) => {
     estornarConta.mutate({
       tipo: conta.tipo,
       id: conta.id,
     });
+  };
+
+  const handleBaixa = (conta: ContaFinanceira) => {
+    if (conta.asaasPaymentId && conta.tipo === "Receber") {
+      setAcaoAsaasConfirmacao({ conta, tipo: "baixa" });
+      return;
+    }
+    executarBaixa(conta);
+  };
+
+  const handleEstorno = (conta: ContaFinanceira) => {
+    if (conta.asaasPaymentId && conta.tipo === "Receber") {
+      setAcaoAsaasConfirmacao({ conta, tipo: "estorno" });
+      return;
+    }
+    executarEstorno(conta);
   };
 
   const resetModal = () => {
@@ -203,6 +237,62 @@ const ContasFinanceiro: React.FC = () => {
       );
     }
   };
+
+  const confirmarAcaoAsaas = () => {
+    if (!acaoAsaasConfirmacao) return;
+    const { conta, tipo } = acaoAsaasConfirmacao;
+    if (tipo === "baixa") {
+      executarBaixa(conta);
+    } else {
+      executarEstorno(conta);
+    }
+    setAcaoAsaasConfirmacao(null);
+  };
+
+  const cancelarConfirmacao = () => setAcaoAsaasConfirmacao(null);
+
+  const copiarValor = (valor: string | null | undefined, label: string) => {
+    if (!valor) {
+      toast.error(`${label} indisponível para esta cobrança`);
+      return;
+    }
+    navigator.clipboard
+      .writeText(valor)
+      .then(() =>
+        toast.success(`${label} copiado para a área de transferência`),
+      )
+      .catch(() => toast.error("Não foi possível copiar o valor"));
+  };
+
+  const handleReconsultaStatus = (conta: ContaFinanceira) => {
+    if (conta.tipo !== "Receber") return;
+    const chave = conta.id.toString();
+    const agora = Date.now();
+    const ultimoAcionamento = cooldownReconsulta[chave] ?? 0;
+
+    if (agora - ultimoAcionamento < COOLDOWN_RECONSULTA_MS) {
+      toast.info("Aguarde alguns segundos antes de reconsultar novamente.");
+      return;
+    }
+
+    if (!conta.asaasPaymentId && !conta.asaasSubscriptionId) {
+      toast.error("Conta ainda não sincronizada com o Asaas.");
+      return;
+    }
+
+    reconsultarConta.mutate(conta.id, {
+      onSuccess: () => {
+        setCooldownReconsulta((prev) => ({
+          ...prev,
+          [chave]: agora,
+        }));
+      },
+    });
+  };
+
+  const isReconsultando = (conta: ContaFinanceira) =>
+    reconsultarConta.isPending &&
+    reconsultarConta.variables?.toString() === conta.id.toString();
 
   const isProcessing = (conta: ContaFinanceira) => {
     const targetId = conta.id.toString();
@@ -389,19 +479,38 @@ const ContasFinanceiro: React.FC = () => {
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500">
+                    Cobrança Asaas
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500">
                     Ações
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
                 {contasFiltradas.map((conta) => {
-                  const meta = statusConfig[conta.status];
+                  const meta =
+                    statusConfig[conta.status] ?? statusConfig.PENDENTE;
                   const Icon = meta.icon;
                   const diasAtraso = getDiasAtraso(conta);
                   const atrasada =
                     diasAtraso > 0 &&
                     (conta.status === "PENDENTE" ||
-                      conta.status === "ATRASADO");
+                      conta.status === "ATRASADO" ||
+                      conta.status === "VENCIDO");
+                  const chave = conta.id.toString();
+                  const sincronizada =
+                    !!conta.asaasPaymentId || !!conta.asaasSubscriptionId;
+                  const cooldownAtivo =
+                    (cooldownReconsulta[chave] ?? 0) + COOLDOWN_RECONSULTA_MS >
+                    Date.now();
+                  const staleAsaas =
+                    sincronizada &&
+                    (conta.status === "PENDENTE" ||
+                      conta.status === "VENCIDO") &&
+                    diasAtraso > 0;
+                  const metodoPagamento =
+                    conta.metodoPagamento?.toUpperCase() ||
+                    (sincronizada ? "ASAAS" : "—");
 
                   return (
                     <tr
@@ -460,6 +569,84 @@ const ContasFinanceiro: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm">
+                        {conta.tipo === "Receber" && sincronizada ? (
+                          <div className="space-y-2">
+                            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">
+                              <Link className="w-4 h-4" />
+                              Sincronizado Asaas
+                            </span>
+                            <p className="text-xs text-gray-600">
+                              Método:{" "}
+                              <span className="font-semibold text-gray-800">
+                                {metodoPagamento}
+                              </span>
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                onClick={() =>
+                                  copiarValor(
+                                    conta.paymentUrl,
+                                    "Link de pagamento",
+                                  )
+                                }
+                                className="px-3 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition flex items-center gap-1"
+                              >
+                                <Copy className="w-3 h-3" />
+                                Copiar link
+                              </button>
+                              <button
+                                onClick={() =>
+                                  copiarValor(conta.pixQrCode, "PIX")
+                                }
+                                disabled={!conta.pixQrCode}
+                                className={`px-3 py-1 rounded-md text-xs font-medium flex items-center gap-1 ${
+                                  conta.pixQrCode
+                                    ? "bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                                    : "bg-gray-100 text-gray-500 cursor-not-allowed"
+                                }`}
+                              >
+                                <Copy className="w-3 h-3" />
+                                Copiar PIX
+                              </button>
+                              <button
+                                onClick={() => handleReconsultaStatus(conta)}
+                                disabled={
+                                  isReconsultando(conta) || cooldownAtivo
+                                }
+                                className={`px-3 py-1 rounded-md text-xs font-medium flex items-center gap-1 ${
+                                  isReconsultando(conta) || cooldownAtivo
+                                    ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                                    : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                }`}
+                              >
+                                {isReconsultando(conta) ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <RefreshCcw className="w-3 h-3" />
+                                )}
+                                Atualizar status
+                              </button>
+                            </div>
+                            {staleAsaas && (
+                              <p className="text-[11px] text-amber-700 flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" />
+                                Status pode estar desatualizado; use a
+                                reconsulta.
+                              </p>
+                            )}
+                            {!conta.paymentUrl && !conta.pixQrCode && (
+                              <p className="text-[11px] text-gray-500">
+                                Links/PIX ainda não retornaram do Asaas.
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-500">
+                            {conta.tipo === "Receber" ? "Cobrança manual" : "—"}
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
                         <div className="flex items-center gap-2">
                           {podeBaixar(conta) && (
                             <button
@@ -499,7 +686,7 @@ const ContasFinanceiro: React.FC = () => {
                 {contasFiltradas.length === 0 && (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       className="px-6 py-10 text-center text-sm text-gray-500"
                     >
                       Nenhuma conta encontrada com os filtros selecionados.
@@ -511,6 +698,15 @@ const ContasFinanceiro: React.FC = () => {
           </div>
         </div>
       </div>
+      {acaoAsaasConfirmacao && (
+        <ModalConfirmacaoAsaas
+          conta={acaoAsaasConfirmacao.conta}
+          acao={acaoAsaasConfirmacao.tipo}
+          onCancel={cancelarConfirmacao}
+          onConfirm={confirmarAcaoAsaas}
+          isProcessing={isProcessing(acaoAsaasConfirmacao.conta)}
+        />
+      )}
       {mostrarModalNovaConta && (
         <ModalNovaConta
           tipo={tipoContaNova}
@@ -528,6 +724,75 @@ const ContasFinanceiro: React.FC = () => {
           onClearErro={() => setErroNovaConta(null)}
         />
       )}
+    </div>
+  );
+};
+
+const ModalConfirmacaoAsaas = ({
+  conta,
+  acao,
+  onConfirm,
+  onCancel,
+  isProcessing,
+}: {
+  conta: ContaFinanceira;
+  acao: "baixa" | "estorno";
+  onConfirm: () => void;
+  onCancel: () => void;
+  isProcessing: boolean;
+}) => {
+  const titulo =
+    acao === "baixa" ? "Confirmar baixa manual" : "Confirmar estorno manual";
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+      <div className="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 space-y-4 border border-emerald-100">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900">{titulo}</h3>
+          <button
+            onClick={onCancel}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="space-y-3 text-sm text-gray-700">
+          <p className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5" />
+            <span>
+              Esta conta está sincronizada com o Asaas. Registrar a ação manual
+              aqui não altera o status no provedor. Prefira usar reconsulta
+              antes de confirmar.
+            </span>
+          </p>
+          {conta.asaasPaymentId && (
+            <p className="text-xs text-gray-500">
+              asaasPaymentId: <strong>{conta.asaasPaymentId}</strong>
+            </p>
+          )}
+          {conta.paymentUrl && (
+            <p className="text-xs text-gray-500 break-all">
+              Link atual: {conta.paymentUrl}
+            </p>
+          )}
+          {conta.pixQrCode && (
+            <p className="text-xs text-gray-500">
+              PIX disponível — considere copiar e enviar ao cliente.
+            </p>
+          )}
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="outline" onClick={onCancel} disabled={isProcessing}>
+            Cancelar
+          </Button>
+          <Button onClick={onConfirm} disabled={isProcessing}>
+            {isProcessing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              "Confirmar mesmo assim"
+            )}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };

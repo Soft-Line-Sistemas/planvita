@@ -3,6 +3,7 @@ export type StatusContaReceber =
   | "PENDENTE"
   | "RECEBIDO"
   | "ATRASADO"
+  | "VENCIDO"
   | "CANCELADO";
 
 export type StatusFinanceiro =
@@ -10,6 +11,7 @@ export type StatusFinanceiro =
   | "PAGO"
   | "RECEBIDO"
   | "ATRASADO"
+  | "VENCIDO"
   | "CANCELADO";
 
 export type TipoConta = "Pagar" | "Receber";
@@ -33,6 +35,12 @@ export interface ContaFinanceiraBase {
   contato?: string | null;
   clienteId?: number | null;
   cliente?: ContaClienteRef | null;
+  asaasPaymentId?: string | null;
+  asaasSubscriptionId?: string | null;
+  paymentUrl?: string | null;
+  pixQrCode?: string | null;
+  pixExpiration?: string | null;
+  metodoPagamento?: string | null;
   dataPagamento?: string | null;
   dataRecebimento?: string | null;
   observacao?: string | null;
