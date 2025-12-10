@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bell,
   Send,
@@ -46,7 +46,11 @@ import {
 } from "@/hooks/mutations/useNotificacoesRecorrentesMutations";
 import { useLogsNotificacoes } from "@/hooks/queries/useLogsNotificacoes";
 import { useTemplatesNotificacoes } from "@/hooks/queries/useTemplatesNotificacoes";
-import { NotificationChannel } from "@/types/Notification";
+import {
+  NotificationChannel,
+  NotificationTemplate,
+} from "@/types/Notification";
+import getTenantFromHost from "@/utils/getTenantFromHost";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", {
@@ -76,23 +80,31 @@ export default function NotificacoesRecorrentesPage() {
   const criarTemplate = useCriarTemplate();
   const atualizarTemplate = useAtualizarTemplate();
   const removerTemplate = useRemoverTemplate();
+  const tenantSlug =
+    typeof window !== "undefined" ? getTenantFromHost() : "lider";
 
   const [contadorSegundos, setContadorSegundos] = useState(0);
   const [frequenciaMinutos, setFrequenciaMinutos] = useState(1440);
   const [metodo, setMetodo] = useState<NotificationChannel>("whatsapp");
   const [agendamentoAtivo, setAgendamentoAtivo] = useState(true);
   const [novoTemplate, setNovoTemplate] = useState({
-    nome: "",
+    nome: "Cobrança pendente",
     canal: "email",
-    assunto: "",
+    assunto: "Cobrança pendente",
     htmlBody: "",
     textBody: "",
     isDefault: false,
   });
+  const [templateSelecionadoId, setTemplateSelecionadoId] = useState<
+    number | null
+  >(null);
+  const logsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (data?.agendamento) {
-      setContadorSegundos(data.agendamento.segundosRestantes);
+      setContadorSegundos(
+        data.agendamento.ativo ? data.agendamento.segundosRestantes : 0,
+      );
       setFrequenciaMinutos(data.agendamento.frequenciaMinutos);
       setMetodo(data.agendamento.metodoPreferencial);
       setAgendamentoAtivo(data.agendamento.ativo);
@@ -100,11 +112,18 @@ export default function NotificacoesRecorrentesPage() {
   }, [data]);
 
   useEffect(() => {
+    if (logsRef.current) {
+      logsRef.current.scrollTop = logsRef.current.scrollHeight;
+    }
+  }, [logs]);
+
+  useEffect(() => {
+    if (!agendamentoAtivo) return;
     const timer = setInterval(() => {
       setContadorSegundos((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [agendamentoAtivo]);
 
   const destinatarios = useMemo(
     () => data?.destinatarios ?? [],
@@ -112,7 +131,7 @@ export default function NotificacoesRecorrentesPage() {
   );
 
   const progresso =
-    frequenciaMinutos > 0
+    agendamentoAtivo && frequenciaMinutos > 0
       ? Math.min(
           100,
           Math.max(
@@ -153,8 +172,88 @@ export default function NotificacoesRecorrentesPage() {
 
   const handleDisparar = () => {
     disparar.mutate(undefined, {
-      onSuccess: () => refetch(),
+      onSuccess: () => {
+        refetch();
+        refetchLogs();
+      },
     });
+  };
+
+  const buildDefaultTemplate = (canal: NotificationChannel) => {
+    const tenant = (tenantSlug || "lider").toLowerCase();
+    const nomeEmpresa =
+      tenant === "bosque"
+        ? "PLANO FAMILIAR CAMPO DO BOSQUE LTDA"
+        : tenant === "pax"
+          ? "PAX PLANVITA"
+          : "LIDER PLANVITA";
+    const urlBase = `https://${tenant}.planvita.com.br`;
+    const urlCobranca = `${urlBase}/cliente`;
+
+    if (canal === "whatsapp") {
+      const texto =
+        "Olá, {{nomeCliente}}\n" +
+        `Sua cobrança gerada por ${nomeEmpresa} no valor de {{valor}} vence em {{vencimento}}.\n` +
+        "Descrição: {{descricao}}.\n" +
+        `Visualize/regularize em: ${urlCobranca}`;
+      return { html: texto, text: texto };
+    }
+
+    const html = `
+    <div style="font-family: Arial, sans-serif; background-color: #f4f5f7; padding: 24px;">
+      <div style="max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.06);">
+        <div style="background: linear-gradient(135deg, #16a34a, #0d7a35); color: #ffffff; padding: 18px 24px; display: flex; align-items: center; gap: 12px;">
+          <div>
+            <div style="font-size: 14px; opacity: 0.9;">${nomeEmpresa}</div>
+            <div style="font-size: 12px; opacity: 0.9;">51.121.484/0001-68</div>
+          </div>
+        </div>
+        <div style="padding: 24px; color: #0f172a;">
+          <p style="font-size: 16px; margin: 0 0 12px 0;">Olá, {{nomeCliente}}.</p>
+          <p style="font-size: 14px; margin: 0 0 12px 0;">
+            Lembramos que a sua cobrança gerada por <strong>${nomeEmpresa}</strong>
+            no valor de <strong>{{valor}}</strong> vence em
+            <strong>{{vencimento}}</strong>.
+          </p>
+          <p style="font-size: 14px; margin: 0 0 16px 0;">
+            Descrição da cobrança: {{descricao}}
+          </p>
+          <div style="text-align: center; margin: 24px 0;">
+            <a href="${urlCobranca}" style="background: #16a34a; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">
+              Visualizar cobrança
+            </a>
+          </div>
+          <p style="font-size: 13px; color: #475569;">Clique no botão acima para visualizar a cobrança. Ou acesse: ${urlBase}</p>
+        </div>
+        <div style="background: #0f172a; color: #e2e8f0; padding: 18px 24px; font-size: 12px;">
+          <strong>${nomeEmpresa}</strong><br/>
+          51.121.484/0001-68<br/>
+          <a href="${urlBase}" style="color: #a7f3d0;">${urlBase}</a><br/>
+          <a href="mailto:pfcampodobosque@gmail.com" style="color: #a7f3d0;">pfcampodobosque@gmail.com</a><br/>
+          (71) 3034-7323<br/>
+          Avenida Centenário, 21, LOJA 80, Garcia<br/>
+          CEP: 40100180<br/>
+          Salvador - BA
+        </div>
+      </div>
+    </div>
+    `;
+    const texto =
+      "Olá, {{nomeCliente}}. Lembramos que sua cobrança gerada por {{nomeEmpresa}} no valor de {{valor}} vence em {{vencimento}}. Descrição: {{descricao}}. Acesse: {{linkCobranca}}";
+
+    return { html, text: texto };
+  };
+
+  const aplicarModeloPadrao = () => {
+    const base = buildDefaultTemplate(
+      novoTemplate.canal as NotificationChannel,
+    );
+    setNovoTemplate((prev) => ({
+      ...prev,
+      htmlBody: base.html,
+      textBody: base.text,
+    }));
+    setTemplateSelecionadoId(null);
   };
 
   const handleSalvarTemplate = () => {
@@ -165,14 +264,6 @@ export default function NotificacoesRecorrentesPage() {
     criarTemplate.mutate(payload, {
       onSuccess: () => {
         refetchTemplates();
-        setNovoTemplate({
-          nome: "",
-          canal: "email",
-          assunto: "",
-          htmlBody: "",
-          textBody: "",
-          isDefault: false,
-        });
       },
     });
   };
@@ -186,6 +277,18 @@ export default function NotificacoesRecorrentesPage() {
 
   const handleRemoverTemplate = (id: number) => {
     removerTemplate.mutate(id, { onSuccess: () => refetchTemplates() });
+  };
+
+  const handleVisualizarTemplate = (tpl: NotificationTemplate) => {
+    setTemplateSelecionadoId(tpl.id);
+    setNovoTemplate({
+      nome: tpl.nome,
+      canal: tpl.canal,
+      assunto: tpl.assunto ?? "",
+      htmlBody: tpl.htmlBody ?? "",
+      textBody: tpl.textBody ?? "",
+      isDefault: tpl.isDefault,
+    });
   };
 
   const segundos = contadorSegundos % 60;
@@ -257,10 +360,18 @@ export default function NotificacoesRecorrentesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-bold tracking-tight">
-              {pad(horas)}:{pad(minutos)}:{pad(segundos)}
+              {agendamentoAtivo ? (
+                <>
+                  {pad(horas)}:{pad(minutos)}:{pad(segundos)}
+                </>
+              ) : (
+                "Pausado"
+              )}
             </div>
             <p className="text-sm text-emerald-100">
-              Próximo disparo previsto para{" "}
+              {agendamentoAtivo
+                ? "Próximo disparo previsto para "
+                : "Agendamento pausado. "}
               {data?.agendamento
                 ? new Date(data.agendamento.proximaExecucao).toLocaleString(
                     "pt-BR",
@@ -411,7 +522,10 @@ export default function NotificacoesRecorrentesPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="bg-black text-green-200 font-mono rounded-md p-4 h-80 overflow-y-auto text-sm">
+          <div
+            ref={logsRef}
+            className="bg-black text-green-200 font-mono rounded-md p-4 h-80 overflow-y-auto text-sm"
+          >
             {isLoadingLogs ? (
               <p>Carregando...</p>
             ) : !Array.isArray(logs) || logs.length === 0 ? (
@@ -456,9 +570,17 @@ export default function NotificacoesRecorrentesPage() {
             <Select
               value={novoTemplate.canal}
               onValueChange={(value) =>
-                setNovoTemplate({
-                  ...novoTemplate,
-                  canal: value as NotificationChannel,
+                setNovoTemplate((prev) => {
+                  const base =
+                    value === "whatsapp"
+                      ? buildDefaultTemplate("whatsapp")
+                      : buildDefaultTemplate("email");
+                  return {
+                    ...prev,
+                    canal: value as NotificationChannel,
+                    htmlBody: base.html,
+                    textBody: base.text,
+                  };
                 })
               }
             >
@@ -478,14 +600,14 @@ export default function NotificacoesRecorrentesPage() {
               }
               placeholder="Assunto do e-mail"
             />
-            <Label>HTML</Label>
+            <Label>Texto</Label>
             <textarea
               className="w-full border rounded-md p-2 min-h-[140px]"
               value={novoTemplate.htmlBody}
               onChange={(e) =>
                 setNovoTemplate({ ...novoTemplate, htmlBody: e.target.value })
               }
-              placeholder="<p>Seu texto aqui</p>"
+              placeholder="Escreva o texto do template"
             />
             <Label>Texto (fallback)</Label>
             <textarea
@@ -494,8 +616,17 @@ export default function NotificacoesRecorrentesPage() {
               onChange={(e) =>
                 setNovoTemplate({ ...novoTemplate, textBody: e.target.value })
               }
-              placeholder="Texto simples"
+              placeholder="Texto simples (opcional)"
             />
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={aplicarModeloPadrao}
+              >
+                Usar modelo padrão ({novoTemplate.canal})
+              </Button>
+            </div>
             <div className="flex items-center gap-2">
               <Switch
                 id="tpl-default"
@@ -542,6 +673,17 @@ export default function NotificacoesRecorrentesPage() {
                       </p>
                     </div>
                     <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant={
+                          templateSelecionadoId === tpl.id
+                            ? "default"
+                            : "outline"
+                        }
+                        onClick={() => handleVisualizarTemplate(tpl)}
+                      >
+                        Visualizar
+                      </Button>
                       {!tpl.isDefault && (
                         <Button
                           size="sm"
@@ -566,13 +708,40 @@ export default function NotificacoesRecorrentesPage() {
                   <p className="text-sm line-clamp-2">
                     {tpl.assunto ?? "Sem assunto"}
                   </p>
-                  {tpl.isDefault && (
-                    <Badge variant="outline" className="w-fit">
-                      Padrão
-                    </Badge>
-                  )}
+                  <div className="flex gap-2">
+                    {tpl.isDefault && (
+                      <Badge variant="outline" className="w-fit">
+                        Padrão
+                      </Badge>
+                    )}
+                    {templateSelecionadoId === tpl.id && (
+                      <Badge className="w-fit bg-emerald-600 text-white">
+                        Selecionado
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               ))}
+            </div>
+            <div className="mt-4">
+              <h4 className="font-semibold mb-2">Pré-visualização</h4>
+              {novoTemplate.canal === "whatsapp" ? (
+                <pre className="bg-gray-900 text-green-100 p-3 rounded-md text-sm whitespace-pre-wrap">
+                  {novoTemplate.htmlBody || novoTemplate.textBody}
+                </pre>
+              ) : (
+                <div
+                  className="border rounded-md overflow-hidden"
+                  style={{ maxHeight: 320 }}
+                >
+                  <iframe
+                    title="preview-email"
+                    className="w-full h-80"
+                    sandbox=""
+                    srcDoc={novoTemplate.htmlBody || ""}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
