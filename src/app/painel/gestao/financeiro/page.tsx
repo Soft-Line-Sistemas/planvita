@@ -60,7 +60,9 @@ const GestaoFinanceira = () => {
         const vencimento = new Date(conta.dataVencimento);
         return (
           vencimento < hoje &&
-          (conta.status === "PENDENTE" || conta.status === "ATRASADO")
+          (conta.status === "PENDENTE" ||
+            conta.status === "ATRASADO" ||
+            conta.status === "VENCIDO")
         );
       })
       .sort(
@@ -86,7 +88,9 @@ const GestaoFinanceira = () => {
       (conta) => conta.status === "PAGO" || conta.status === "RECEBIDO",
     );
     const pendentes = lista.filter((conta) => conta.status === "PENDENTE");
-    const vencidos = lista.filter((conta) => conta.status === "ATRASADO");
+    const vencidos = lista.filter(
+      (conta) => conta.status === "ATRASADO" || conta.status === "VENCIDO",
+    );
 
     return {
       pagos: { quantidade: pagos.length, valor: sum(pagos) },
