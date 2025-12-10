@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSubdomainFromHost } from "@/lib/getSubdomain";
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const host =
     req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
