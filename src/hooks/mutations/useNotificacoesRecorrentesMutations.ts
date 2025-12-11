@@ -11,12 +11,14 @@ import {
 import {
   NotificationChannel,
   NotificationTemplate,
+  NotificationFlow,
 } from "@/types/Notification";
 
 export const useDispararNotificacoesRecorrentes = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: dispararNotificacoesRecorrentes,
+    mutationFn: (tipo?: NotificationFlow) =>
+      dispararNotificacoesRecorrentes(tipo ?? "pendencia-periodica"),
     onSuccess: () =>
       queryClient.invalidateQueries({
         queryKey: ["financeiro", "notificacoes", "recorrentes"],
@@ -41,10 +43,12 @@ export const useToggleBloqueioNotificacao = () => {
     mutationFn: ({
       titularId,
       bloqueado,
+      tipo,
     }: {
       titularId: number;
       bloqueado: boolean;
-    }) => toggleBloqueioNotificacao(titularId, bloqueado),
+      tipo?: NotificationFlow;
+    }) => toggleBloqueioNotificacao(titularId, bloqueado, tipo),
     onSuccess: () =>
       queryClient.invalidateQueries({
         queryKey: ["financeiro", "notificacoes", "recorrentes"],
@@ -58,10 +62,12 @@ export const useAtualizarMetodoNotificacao = () => {
     mutationFn: ({
       titularId,
       metodo,
+      tipo,
     }: {
       titularId: number;
       metodo: NotificationChannel;
-    }) => atualizarMetodoNotificacao(titularId, metodo),
+      tipo?: NotificationFlow;
+    }) => atualizarMetodoNotificacao(titularId, metodo, tipo),
     onSuccess: () =>
       queryClient.invalidateQueries({
         queryKey: ["financeiro", "notificacoes", "recorrentes"],

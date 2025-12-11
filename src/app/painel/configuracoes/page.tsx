@@ -176,53 +176,7 @@ export default function ConfiguracoesPage() {
         </CardContent>
       </Card>
 
-      {/* Avisos de Suspensão */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Avisos de Suspensão</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-4">
-          <div>
-            <Label>Texto de aviso - Suspensão Preventiva</Label>
-            <Input
-              type="text"
-              value={
-                config?.textoSuspensaoPreventiva ||
-                "Seu contrato está próximo da suspensão"
-              }
-              onChange={(e) =>
-                handleChange("textoSuspensaoPreventiva", e.target.value)
-              }
-            />
-          </div>
-          <div>
-            <Label>Texto de aviso - Suspensão</Label>
-            <Input
-              type="text"
-              value={
-                config?.textoSuspensao ||
-                "Seu contrato foi suspenso. Regularize para retomar benefícios"
-              }
-              onChange={(e) => handleChange("textoSuspensao", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label>Texto de aviso - Pós-Suspensão</Label>
-            <Input
-              type="text"
-              value={
-                config?.textoPosSuspensao ||
-                "Seu contrato permanece suspenso. Regularize para retomar benefícios"
-              }
-              onChange={(e) =>
-                handleChange("textoPosSuspensao", e.target.value)
-              }
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Estoque e Serviços */}
+      {/* Estoque e Serviços (oculto por enquanto)
       <Card>
         <CardHeader>
           <CardTitle>Estoque e Serviços</CardTitle>
@@ -250,6 +204,7 @@ export default function ConfiguracoesPage() {
           </div>
         </CardContent>
       </Card>
+      */}
 
       {/* Planos e Autorizações */}
       <Card>
@@ -280,7 +235,7 @@ export default function ConfiguracoesPage() {
         </CardContent>
       </Card>
 
-      {/* Frota */}
+      {/* Frota (oculto por enquanto)
       <Card>
         <CardHeader>
           <CardTitle>Frota</CardTitle>
@@ -308,8 +263,9 @@ export default function ConfiguracoesPage() {
           </div>
         </CardContent>
       </Card>
+      */}
 
-      {/* Cemitérios */}
+      {/* Cemitérios (oculto por enquanto)
       <Card>
         <CardHeader>
           <CardTitle>Cemitérios</CardTitle>
@@ -337,6 +293,7 @@ export default function ConfiguracoesPage() {
           </div>
         </CardContent>
       </Card>
+      */}
 
       <Button
         className="cursor-pointer bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"

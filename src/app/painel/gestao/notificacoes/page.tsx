@@ -49,6 +49,7 @@ import { useTemplatesNotificacoes } from "@/hooks/queries/useTemplatesNotificaco
 import {
   NotificationChannel,
   NotificationTemplate,
+  NotificationFlow,
 } from "@/types/Notification";
 import getTenantFromHost from "@/utils/getTenantFromHost";
 
@@ -63,9 +64,41 @@ const formatDate = (value: string | null) =>
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
+const fluxoOptions: Record<
+  NotificationFlow,
+  { titulo: string; descricao: string }
+> = {
+  "pendencia-periodica": {
+    titulo: "Repetição de pendência",
+    descricao:
+      "Reenvia avisos de cobrança enquanto houver pendências, seguindo a regra de repetição.",
+  },
+  "aviso-vencimento": {
+    titulo: "Aviso de vencimento",
+    descricao:
+      'Envio único antes do vencimento conforme a regra "Dias para aviso de vencimento".',
+  },
+  "aviso-pendencia": {
+    titulo: "Primeiro aviso de pendência",
+    descricao:
+      'Envio único após atraso usando a regra "Dias para aviso de pendência".',
+  },
+  "suspensao-preventiva": {
+    titulo: "Suspensão preventiva",
+    descricao:
+      "Aviso único para clientes próximos da suspensão preventiva, seguindo a regra configurada.",
+  },
+};
+
+const flowLabel = (flow?: NotificationFlow | null) =>
+  flow && fluxoOptions[flow] ? fluxoOptions[flow].titulo : "Todos os fluxos";
+
 export default function NotificacoesRecorrentesPage() {
+  const [tipoAviso, setTipoAviso] = useState<NotificationFlow>(
+    "pendencia-periodica",
+  );
   const { data, isLoading, isError, refetch } =
-    usePainelNotificacoesRecorrentes();
+    usePainelNotificacoesRecorrentes(tipoAviso);
   const disparar = useDispararNotificacoesRecorrentes();
   const atualizarAgendamento = useAtualizarAgendamentoNotificacao();
   const toggleBloqueio = useToggleBloqueioNotificacao();
@@ -74,9 +107,9 @@ export default function NotificacoesRecorrentesPage() {
     data: logs,
     isLoading: isLoadingLogs,
     refetch: refetchLogs,
-  } = useLogsNotificacoes(50);
+  } = useLogsNotificacoes(50, tipoAviso);
   const { data: templates, refetch: refetchTemplates } =
-    useTemplatesNotificacoes();
+    useTemplatesNotificacoes(tipoAviso);
   const criarTemplate = useCriarTemplate();
   const atualizarTemplate = useAtualizarTemplate();
   const removerTemplate = useRemoverTemplate();
@@ -94,6 +127,7 @@ export default function NotificacoesRecorrentesPage() {
     htmlBody: "",
     textBody: "",
     isDefault: false,
+    flow: tipoAviso as NotificationFlow,
   });
   const [templateSelecionadoId, setTemplateSelecionadoId] = useState<
     number | null
@@ -101,15 +135,17 @@ export default function NotificacoesRecorrentesPage() {
   const logsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (data?.agendamento) {
+    if (data?.agendamento && tipoAviso === "pendencia-periodica") {
       setContadorSegundos(
         data.agendamento.ativo ? data.agendamento.segundosRestantes : 0,
       );
       setFrequenciaMinutos(data.agendamento.frequenciaMinutos);
       setMetodo(data.agendamento.metodoPreferencial);
       setAgendamentoAtivo(data.agendamento.ativo);
+    } else {
+      setContadorSegundos(0);
     }
-  }, [data]);
+  }, [data, tipoAviso]);
 
   useEffect(() => {
     if (logsRef.current) {
@@ -118,12 +154,25 @@ export default function NotificacoesRecorrentesPage() {
   }, [logs]);
 
   useEffect(() => {
-    if (!agendamentoAtivo) return;
+    if (!agendamentoAtivo || tipoAviso !== "pendencia-periodica") return;
     const timer = setInterval(() => {
       setContadorSegundos((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => clearInterval(timer);
-  }, [agendamentoAtivo]);
+  }, [agendamentoAtivo, tipoAviso]);
+
+  const fluxoSelecionado = useMemo(() => fluxoOptions[tipoAviso], [tipoAviso]);
+  const isPeriodic = tipoAviso === "pendencia-periodica";
+
+  useEffect(() => {
+    setNovoTemplate((prev) => ({
+      ...prev,
+      flow: tipoAviso,
+      assunto:
+        buildDefaultTemplate(prev.canal as NotificationChannel, tipoAviso)
+          .assunto ?? prev.assunto,
+    }));
+  }, [tipoAviso]);
 
   const destinatarios = useMemo(
     () => data?.destinatarios ?? [],
@@ -131,7 +180,9 @@ export default function NotificacoesRecorrentesPage() {
   );
 
   const progresso =
-    agendamentoAtivo && frequenciaMinutos > 0
+    agendamentoAtivo &&
+    tipoAviso === "pendencia-periodica" &&
+    frequenciaMinutos > 0
       ? Math.min(
           100,
           Math.max(
@@ -160,18 +211,18 @@ export default function NotificacoesRecorrentesPage() {
   };
 
   const handleToggleBloqueio = (titularId: number, bloqueado: boolean) => {
-    toggleBloqueio.mutate({ titularId, bloqueado });
+    toggleBloqueio.mutate({ titularId, bloqueado, tipo: tipoAviso });
   };
 
   const handleAlterarMetodo = (
     titularId: number,
     metodo: NotificationChannel,
   ) => {
-    atualizarMetodo.mutate({ titularId, metodo });
+    atualizarMetodo.mutate({ titularId, metodo, tipo: tipoAviso });
   };
 
   const handleDisparar = () => {
-    disparar.mutate(undefined, {
+    disparar.mutate(tipoAviso, {
       onSuccess: () => {
         refetch();
         refetchLogs();
@@ -179,7 +230,10 @@ export default function NotificacoesRecorrentesPage() {
     });
   };
 
-  const buildDefaultTemplate = (canal: NotificationChannel) => {
+  const buildDefaultTemplate = (
+    canal: NotificationChannel,
+    flow: NotificationFlow,
+  ) => {
     const tenant = (tenantSlug || "lider").toLowerCase();
     const nomeEmpresa =
       tenant === "bosque"
@@ -189,14 +243,38 @@ export default function NotificacoesRecorrentesPage() {
           : "LIDER PLANVITA";
     const urlBase = `https://${tenant}.planvita.com.br`;
     const urlCobranca = `${urlBase}/cliente`;
+    const assuntoPorFluxo: Record<NotificationFlow, string> = {
+      "pendencia-periodica": "Cobrança pendente",
+      "aviso-vencimento": "Lembrete de vencimento",
+      "aviso-pendencia": "Aviso de pendência",
+      "suspensao-preventiva": "Aviso de suspensão preventiva",
+    };
 
     if (canal === "whatsapp") {
-      const texto =
-        "Olá, {{nomeCliente}}\n" +
-        `Sua cobrança gerada por ${nomeEmpresa} no valor de {{valor}} vence em {{vencimento}}.\n` +
-        "Descrição: {{descricao}}.\n" +
-        `Visualize/regularize em: ${urlCobranca}`;
-      return { html: texto, text: texto };
+      const textoPorFluxo: Record<NotificationFlow, string> = {
+        "pendencia-periodica":
+          "Olá, {{nomeCliente}}\n" +
+          `Sua cobrança gerada por ${nomeEmpresa} no valor de {{valor}} vence em {{vencimento}}.\n` +
+          "Descrição: {{descricao}}.\n" +
+          `Visualize/regularize em: ${urlCobranca}`,
+        "aviso-vencimento":
+          "Olá, {{nomeCliente}}\n" +
+          `Lembrete: sua cobrança de {{valor}} vence em {{vencimento}}.\n` +
+          "Descrição: {{descricao}}.\n" +
+          `Pague ou consulte em: ${urlCobranca}`,
+        "aviso-pendencia":
+          "Olá, {{nomeCliente}}\n" +
+          `Identificamos uma pendência de {{valor}} vencida em {{vencimento}}.\n` +
+          "Descrição: {{descricao}}.\n" +
+          `Regularize em: ${urlCobranca}`,
+        "suspensao-preventiva":
+          "Olá, {{nomeCliente}}\n" +
+          "Seu plano pode ser suspenso em breve por pendência financeira.\n" +
+          `Cobrança de {{valor}} vencida em {{vencimento}} ({{descricao}}).\n` +
+          `Evite suspensão regularizando em: ${urlCobranca}`,
+      };
+      const texto = textoPorFluxo[flow];
+      return { html: texto, text: texto, assunto: assuntoPorFluxo[flow] };
     }
 
     const html = `
@@ -211,8 +289,19 @@ export default function NotificacoesRecorrentesPage() {
         <div style="padding: 24px; color: #0f172a;">
           <p style="font-size: 16px; margin: 0 0 12px 0;">Olá, {{nomeCliente}}.</p>
           <p style="font-size: 14px; margin: 0 0 12px 0;">
-            Lembramos que a sua cobrança gerada por <strong>${nomeEmpresa}</strong>
-            no valor de <strong>{{valor}}</strong> vence em
+            ${
+              flow === "aviso-vencimento"
+                ? "Lembrete: sua cobrança vence em breve."
+                : flow === "aviso-pendencia"
+                  ? "Identificamos uma pendência em seu cadastro."
+                  : flow === "suspensao-preventiva"
+                    ? "Seu plano pode ser suspenso por pendência financeira."
+                    : "Há cobranças pendentes registradas para você."
+            }
+          </p>
+          <p style="font-size: 14px; margin: 0 0 12px 0;">
+            Gerada por <strong>${nomeEmpresa}</strong> no valor de <strong>{{valor}}</strong>
+            ${flow === "aviso-vencimento" ? " com vencimento em" : " vencida em"}
             <strong>{{vencimento}}</strong>.
           </p>
           <p style="font-size: 14px; margin: 0 0 16px 0;">
@@ -239,19 +328,27 @@ export default function NotificacoesRecorrentesPage() {
     </div>
     `;
     const texto =
-      "Olá, {{nomeCliente}}. Lembramos que sua cobrança gerada por {{nomeEmpresa}} no valor de {{valor}} vence em {{vencimento}}. Descrição: {{descricao}}. Acesse: {{linkCobranca}}";
+      flow === "aviso-vencimento"
+        ? "Olá, {{nomeCliente}}. Lembrete: sua cobrança de {{valor}} vence em {{vencimento}}. Descrição: {{descricao}}. Acesse: {{linkCobranca}}"
+        : flow === "aviso-pendencia"
+          ? "Olá, {{nomeCliente}}. Há uma pendência de {{valor}} vencida em {{vencimento}}. Descrição: {{descricao}}. Regularize em: {{linkCobranca}}"
+          : flow === "suspensao-preventiva"
+            ? "Olá, {{nomeCliente}}. Seu plano pode ser suspenso por pendência de {{valor}} vencida em {{vencimento}}. Descrição: {{descricao}}. Evite a suspensão em: {{linkCobranca}}"
+            : "Olá, {{nomeCliente}}. Lembramos que sua cobrança gerada por {{nomeEmpresa}} no valor de {{valor}} vence em {{vencimento}}. Descrição: {{descricao}}. Acesse: {{linkCobranca}}";
 
-    return { html, text: texto };
+    return { html, text: texto, assunto: assuntoPorFluxo[flow] };
   };
 
   const aplicarModeloPadrao = () => {
     const base = buildDefaultTemplate(
       novoTemplate.canal as NotificationChannel,
+      tipoAviso,
     );
     setNovoTemplate((prev) => ({
       ...prev,
       htmlBody: base.html,
       textBody: base.text,
+      assunto: base.assunto ?? prev.assunto,
     }));
     setTemplateSelecionadoId(null);
   };
@@ -260,6 +357,7 @@ export default function NotificacoesRecorrentesPage() {
     const payload = {
       ...novoTemplate,
       canal: novoTemplate.canal as NotificationChannel,
+      flow: tipoAviso,
     };
     criarTemplate.mutate(payload, {
       onSuccess: () => {
@@ -270,7 +368,7 @@ export default function NotificacoesRecorrentesPage() {
 
   const handleDefinirDefault = (id: number, canal: NotificationChannel) => {
     atualizarTemplate.mutate(
-      { id, payload: { isDefault: true, canal } },
+      { id, payload: { isDefault: true, canal, flow: tipoAviso } },
       { onSuccess: () => refetchTemplates() },
     );
   };
@@ -288,6 +386,7 @@ export default function NotificacoesRecorrentesPage() {
       htmlBody: tpl.htmlBody ?? "",
       textBody: tpl.textBody ?? "",
       isDefault: tpl.isDefault,
+      flow: (tpl.flow as NotificationFlow) ?? tipoAviso,
     });
   };
 
@@ -301,35 +400,63 @@ export default function NotificacoesRecorrentesPage() {
         <div>
           <p className="text-sm text-gray-500 flex items-center gap-2">
             <Bell className="w-4 h-4 text-green-600" />
-            Notificações recorrentes de clientes com cobrança pendente
+            Notificações de clientes com cobrança pendente
           </p>
           <h1 className="text-3xl font-bold text-gray-900">
             Painel de notificações
           </h1>
-          <p className="text-sm text-gray-600">
-            Acompanhe quem será avisado, o canal de envio e controle bloqueios.
-          </p>
+          <p className="text-sm text-gray-600">{fluxoSelecionado.descricao}</p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => refetch()}
-            disabled={isLoading}
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Atualizar
-          </Button>
-          <Button
-            onClick={handleDisparar}
-            disabled={disparar.isPending || isLoading}
-          >
-            {disparar.isPending ? (
-              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4 mr-2" />
-            )}
-            Disparar agora
-          </Button>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-3 border rounded-md px-3 py-2 bg-gray-50">
+            <div>
+              <p className="text-xs text-gray-500">Fluxo de envio</p>
+              <p className="text-sm font-semibold text-gray-800">
+                {fluxoSelecionado.titulo}
+              </p>
+            </div>
+            <Select
+              value={tipoAviso}
+              onValueChange={(value) => setTipoAviso(value as NotificationFlow)}
+            >
+              <SelectTrigger className="w-[230px]">
+                <SelectValue placeholder="Escolha o fluxo" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(fluxoOptions).map(([value, option]) => (
+                  <SelectItem key={value} value={value} className="py-2">
+                    <div className="flex flex-col text-left">
+                      <span className="font-semibold">{option.titulo}</span>
+                      <span className="text-xs text-gray-500">
+                        {option.descricao}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => refetch()}
+              disabled={isLoading}
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Atualizar
+            </Button>
+            <Button
+              onClick={handleDisparar}
+              disabled={disparar.isPending || isLoading}
+            >
+              {disparar.isPending ? (
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
+              Disparar agora
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -347,169 +474,235 @@ export default function NotificacoesRecorrentesPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-br from-emerald-600 to-green-700 text-white">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-lg font-medium flex items-center gap-2">
-              <Clock3 className="w-5 h-5" />
-              Próxima leva
-            </CardTitle>
-            <Badge variant="secondary" className="bg-white/20 text-white">
-              {data?.agendamento?.ativo ? "Ativo" : "Pausado"}
-            </Badge>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold tracking-tight">
-              {agendamentoAtivo ? (
-                <>
-                  {pad(horas)}:{pad(minutos)}:{pad(segundos)}
-                </>
-              ) : (
-                "Pausado"
-              )}
-            </div>
-            <p className="text-sm text-emerald-100">
-              {agendamentoAtivo
-                ? "Próximo disparo previsto para "
-                : "Agendamento pausado. "}
-              {data?.agendamento
-                ? new Date(data.agendamento.proximaExecucao).toLocaleString(
-                    "pt-BR",
-                  )
-                : "—"}
-            </p>
-            <Progress value={progresso} className="mt-4 bg-white/20" />
-            <p className="text-xs text-emerald-100 mt-1">
-              {Math.round(progresso)}% do ciclo percorrido
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PauseCircle className="w-5 h-5 text-amber-500" />
-              Ritmo e canal
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="frequencia">Intervalo (minutos)</Label>
-                <Input
-                  id="frequencia"
-                  type="number"
-                  min={15}
-                  value={frequenciaMinutos}
-                  onChange={(e) =>
-                    setFrequenciaMinutos(Number(e.target.value) || 0)
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Canal preferencial</Label>
-                <Select
-                  value={metodo}
-                  onValueChange={(value) =>
-                    setMetodo(value as NotificationChannel)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="whatsapp">
-                      <div className="flex items-center gap-2">
-                        <Smartphone className="w-4 h-4" />
-                        WhatsApp
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="email">
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4" />
-                        E-mail
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="agendamento-ativo"
-                  checked={agendamentoAtivo}
-                  onCheckedChange={setAgendamentoAtivo}
-                />
-                <Label htmlFor="agendamento-ativo" className="text-sm">
-                  {agendamentoAtivo
-                    ? "Agendamento ativo"
-                    : "Agendamento pausado"}
-                </Label>
-              </div>
-              <Button
-                onClick={handleSalvarAgendamento}
-                disabled={atualizarAgendamento.isPending}
-              >
-                {atualizarAgendamento.isPending ? (
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+      {isPeriodic ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-gradient-to-br from-emerald-600 to-green-700 text-white">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-lg font-medium flex items-center gap-2">
+                <Clock3 className="w-5 h-5" />
+                Próxima leva
+              </CardTitle>
+              <Badge variant="secondary" className="bg-white/20 text-white">
+                {data?.agendamento?.ativo ? "Ativo" : "Pausado"}
+              </Badge>
+            </CardHeader>
+            <CardContent>
+              <div className="text-4xl font-bold tracking-tight">
+                {agendamentoAtivo ? (
+                  <>
+                    {pad(horas)}:{pad(minutos)}:{pad(segundos)}
+                  </>
                 ) : (
-                  <PlayCircle className="w-4 h-4 mr-2" />
+                  "Pausado"
                 )}
-                Salvar ritmo
-              </Button>
-            </div>
-            <div className="flex items-center gap-3 text-sm text-gray-600 bg-gray-50 rounded-md p-3">
-              <Bell className="w-4 h-4 text-green-600" />
-              <p>
-                {resumoContatos.elegiveis} clientes aptos:{" "}
-                {resumoContatos.whatsapp} via WhatsApp, {resumoContatos.email}{" "}
-                via e-mail.
+              </div>
+              <p className="text-sm text-emerald-100">
+                {agendamentoAtivo
+                  ? "Próximo disparo previsto para "
+                  : "Agendamento pausado. "}
+                {data?.agendamento
+                  ? new Date(data.agendamento.proximaExecucao).toLocaleString(
+                      "pt-BR",
+                    )
+                  : "—"}
               </p>
-            </div>
-          </CardContent>
-        </Card>
+              <Progress value={progresso} className="mt-4 bg-white/20" />
+              <p className="text-xs text-emerald-100 mt-1">
+                {Math.round(progresso)}% do ciclo percorrido
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShieldOff className="w-5 h-5 text-red-500" />
-              Status das listas
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-sm text-gray-500">Clientes com pendência</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {data?.totais.pendencias ?? 0}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PauseCircle className="w-5 h-5 text-amber-500" />
+                Ritmo e canal
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="frequencia">Intervalo (minutos)</Label>
+                  <Input
+                    id="frequencia"
+                    type="number"
+                    min={15}
+                    value={frequenciaMinutos}
+                    onChange={(e) =>
+                      setFrequenciaMinutos(Number(e.target.value) || 0)
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Canal preferencial</Label>
+                  <Select
+                    value={metodo}
+                    onValueChange={(value) =>
+                      setMetodo(value as NotificationChannel)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="whatsapp">
+                        <div className="flex items-center gap-2">
+                          <Smartphone className="w-4 h-4" />
+                          WhatsApp
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="email">
+                        <div className="flex items-center gap-2">
+                          <Mail className="w-4 h-4" />
+                          E-mail
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="agendamento-ativo"
+                    checked={agendamentoAtivo}
+                    onCheckedChange={setAgendamentoAtivo}
+                  />
+                  <Label htmlFor="agendamento-ativo" className="text-sm">
+                    {agendamentoAtivo
+                      ? "Agendamento ativo"
+                      : "Agendamento pausado"}
+                  </Label>
+                </div>
+                <Button
+                  onClick={handleSalvarAgendamento}
+                  disabled={atualizarAgendamento.isPending}
+                >
+                  {atualizarAgendamento.isPending ? (
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <PlayCircle className="w-4 h-4 mr-2" />
+                  )}
+                  Salvar ritmo
+                </Button>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-gray-600 bg-gray-50 rounded-md p-3">
+                <Bell className="w-4 h-4 text-green-600" />
+                <p>
+                  {resumoContatos.elegiveis} clientes aptos:{" "}
+                  {resumoContatos.whatsapp} via WhatsApp, {resumoContatos.email}{" "}
+                  via e-mail.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldOff className="w-5 h-5 text-red-500" />
+                Status das listas
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-sm text-gray-500">Clientes com pendência</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {data?.totais.pendencias ?? 0}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Bloqueados</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {data?.totais.bloqueados ?? 0}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Sem contato</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {data?.totais.semContato ?? 0}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Elegíveis</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {data?.totais.elegiveis ?? 0}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="border-emerald-200 bg-emerald-50/70">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock3 className="w-5 h-5 text-emerald-600" />
+                Fluxo de envio único
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-gray-700">
+                {fluxoSelecionado.descricao} Este fluxo não usa countdown nem
+                agendamento contínuo. Utilize templates dedicados para este
+                fluxo antes de disparar.
               </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Bloqueados</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {data?.totais.bloqueados ?? 0}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Sem contato</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {data?.totais.semContato ?? 0}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Elegíveis</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {data?.totais.elegiveis ?? 0}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+              <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                <Badge variant="outline" className="bg-white">
+                  {fluxoSelecionado.titulo}
+                </Badge>
+                <Badge variant="outline" className="bg-white">
+                  Templates exclusivos
+                </Badge>
+                <Badge variant="outline" className="bg-white">
+                  Envio único
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldOff className="w-5 h-5 text-red-500" />
+                Status das listas
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-sm text-gray-500">Clientes com pendência</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {data?.totais.pendencias ?? 0}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Bloqueados</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {data?.totais.bloqueados ?? 0}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Sem contato</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {data?.totais.semContato ?? 0}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Elegíveis</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {data?.totais.elegiveis ?? 0}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
       <Card>
         <CardHeader className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <RefreshCw className="w-4 h-4 text-gray-500" />
             Terminal de envios (logs recentes)
+            <Badge variant="outline">{fluxoSelecionado.titulo}</Badge>
           </CardTitle>
           <Button
             variant="outline"
@@ -553,8 +746,13 @@ export default function NotificacoesRecorrentesPage() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Templates de notificação</CardTitle>
+        <CardHeader className="flex items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-2">
+            Templates de notificação
+            <Badge variant="outline" className="bg-gray-50">
+              {flowLabel(tipoAviso)}
+            </Badge>
+          </CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-3">
@@ -573,13 +771,14 @@ export default function NotificacoesRecorrentesPage() {
                 setNovoTemplate((prev) => {
                   const base =
                     value === "whatsapp"
-                      ? buildDefaultTemplate("whatsapp")
-                      : buildDefaultTemplate("email");
+                      ? buildDefaultTemplate("whatsapp", tipoAviso)
+                      : buildDefaultTemplate("email", tipoAviso);
                   return {
                     ...prev,
                     canal: value as NotificationChannel,
                     htmlBody: base.html,
                     textBody: base.text,
+                    assunto: base.assunto ?? prev.assunto,
                   };
                 })
               }
@@ -592,6 +791,10 @@ export default function NotificacoesRecorrentesPage() {
                 <SelectItem value="whatsapp">WhatsApp</SelectItem>
               </SelectContent>
             </Select>
+            <p className="text-xs text-gray-500">
+              Este template será usado para o fluxo:{" "}
+              <span className="font-semibold">{flowLabel(tipoAviso)}</span>.
+            </p>
             <Label>Assunto</Label>
             <Input
               value={novoTemplate.assunto}
@@ -669,6 +872,7 @@ export default function NotificacoesRecorrentesPage() {
                       <p className="font-semibold">{tpl.nome}</p>
                       <p className="text-xs text-gray-500">
                         {tpl.canal.toUpperCase()} •{" "}
+                        {flowLabel(tpl.flow as NotificationFlow)} •{" "}
                         {new Date(tpl.updatedAt).toLocaleString("pt-BR")}
                       </p>
                     </div>
@@ -709,6 +913,9 @@ export default function NotificacoesRecorrentesPage() {
                     {tpl.assunto ?? "Sem assunto"}
                   </p>
                   <div className="flex gap-2">
+                    <Badge variant="outline" className="w-fit">
+                      {flowLabel(tpl.flow as NotificationFlow)}
+                    </Badge>
                     {tpl.isDefault && (
                       <Badge variant="outline" className="w-fit">
                         Padrão

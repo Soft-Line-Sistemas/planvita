@@ -230,3 +230,37 @@ export const fetchClienteById = async (
   const { data } = await api.get<TitularApi>(`/titular/${id}`);
   return mapClienteFromApi(data);
 };
+
+export type UpdateClientePayload = {
+  nome?: string;
+  email?: string;
+  telefone?: string;
+  cpf?: string;
+  dataNascimento?: string;
+  cep?: string;
+  uf?: string;
+  cidade?: string;
+  bairro?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  statusPlano?: string;
+};
+
+export const atualizarCliente = async (
+  id: string | number,
+  payload: UpdateClientePayload,
+) => {
+  const { data } = await api.put(`/titular/${id}`, payload);
+  return data;
+};
+
+export const atualizarPlanoDoCliente = async (
+  titularId: string | number,
+  planoId: number | null,
+) => {
+  const { data } = await api.patch(`/plano/titulares/${titularId}/plano`, {
+    planoId,
+  });
+  return data;
+};

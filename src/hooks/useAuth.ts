@@ -32,5 +32,13 @@ export function useAuth() {
     checkAuth();
   }, [checkAuth]);
 
-  return { user, loading, checkAuth };
+  const hasPermission = useCallback(
+    (permission: string) => {
+      if (!user || !Array.isArray(user.permissions)) return false;
+      return user.permissions.includes(permission);
+    },
+    [user],
+  );
+
+  return { user, loading, checkAuth, hasPermission };
 }

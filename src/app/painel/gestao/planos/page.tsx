@@ -19,6 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Plano } from "@/types/PlanType";
 import api from "@/utils/api";
 import { sanitizePlanoArray } from "@/utils/planos";
+import { useAuth } from "@/hooks/useAuth";
 
 const formatCurrency = (value?: number | null) =>
   `R$ ${Number(value ?? 0).toFixed(2)}`;
@@ -184,6 +185,11 @@ const GestaoPlanos = () => {
   const [planoEmExclusao, setPlanoEmExclusao] = useState<string | null>(null);
   const [feedbackMensagem, setFeedbackMensagem] = useState<string | null>(null);
   const router = useRouter();
+  const { hasPermission } = useAuth();
+  const canView = hasPermission("plano.view");
+  const canCreate = hasPermission("plano.create");
+  const canUpdate = hasPermission("plano.update");
+  const canDelete = hasPermission("plano.delete");
   const {
     data: planosData,
     isLoading,
@@ -199,6 +205,7 @@ const GestaoPlanos = () => {
       return sanitized;
     },
     staleTime: 60_000,
+    enabled: canView,
   });
 
   const planos = useMemo(() => planosData ?? [], [planosData]);
@@ -240,7 +247,18 @@ const GestaoPlanos = () => {
     [planos],
   );
 
+  if (!canView) {
+    return (
+      <div className="p-8">
+        <div className="text-sm text-gray-700">
+          Você não tem permissão para visualizar planos.
+        </div>
+      </div>
+    );
+  }
+
   const handleEditarPlano = (plano: Plano) => {
+    if (!canUpdate) return;
     setPlanoSelecionado(plano);
     setModoEdicao(true);
     setModalAberto(true);
@@ -253,6 +271,7 @@ const GestaoPlanos = () => {
   };
 
   const handleNovoPlano = () => {
+    if (!canCreate) return;
     setPlanoSelecionado(null);
     setModoEdicao(true);
     setModalAberto(true);
@@ -266,6 +285,7 @@ const GestaoPlanos = () => {
   };
 
   const handleSalvarPlano = async () => {
+    if (!canUpdate) return;
     if (!planoSelecionado) return;
     if (!formPlano.nome.trim()) {
       setFeedbackMensagem("Informe o nome do plano.");
@@ -334,6 +354,7 @@ const GestaoPlanos = () => {
   };
 
   const handleExcluirPlano = async (plano: Plano) => {
+    if (!canDelete) return;
     const confirmacao = window.confirm(
       `Deseja realmente excluir o plano "${plano.nome}"?`,
     );
@@ -437,7 +458,8 @@ const GestaoPlanos = () => {
               </button>
               <button
                 onClick={handleNovoPlano}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+                disabled={!canCreate}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Plus className="w-4 h-4" />
                 <span>Novo Plano</span>
@@ -633,7 +655,8 @@ const GestaoPlanos = () => {
                         </button>
                         <button
                           onClick={() => handleEditarPlano(plano)}
-                          className="text-green-600 hover:text-green-800"
+                          disabled={!canUpdate}
+                          className="text-green-600 hover:text-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Editar"
                         >
                           <Edit className="w-4 h-4" />
@@ -642,7 +665,9 @@ const GestaoPlanos = () => {
                           onClick={() => handleExcluirPlano(plano)}
                           className="text-red-600 hover:text-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Excluir"
-                          disabled={planoEmExclusao === String(plano.id)}
+                          disabled={
+                            planoEmExclusao === String(plano.id) || !canDelete
+                          }
                         >
                           {planoEmExclusao === String(plano.id) ? (
                             <Loader2 className="w-4 h-4 animate-spin" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -13,29 +13,43 @@ import { ClienteStats } from "@/components/Titular/Cliente/ClienteStats";
 import { ClienteFilters } from "@/components/Titular/Cliente/ClienteFilters";
 import { ClienteTable } from "@/components/Titular/Cliente/ClienteTable";
 import { ClienteCards } from "@/components/Titular/Cliente/ClienteCards";
+import { ClienteEditDialog } from "@/components/Titular/Cliente/ClienteEditDialog";
+import { useAuth } from "@/hooks/useAuth";
 
 import { useClientes } from "@/hooks/queries/useClientes";
 import api from "@/utils/api";
 import { sanitizePlanoArray } from "@/utils/planos";
 import type { Plano } from "@/types/PlanType";
+import type { Cliente } from "@/types/ClientType";
 
 export default function ClientesPage() {
   const router = useRouter();
+  const { hasPermission } = useAuth();
+  const canViewClientes = hasPermission("titular.view");
+  const canCreateClient = hasPermission("titular.create");
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
   const [planoFilter, setPlanoFilter] = useState("todos");
-  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+  const viewModeStorageKey = "painel-clientes-view-mode";
+  const [viewMode, setViewMode] = useState<"table" | "cards">(() => {
+    if (typeof window === "undefined") return "table";
+    const stored = window.localStorage.getItem(viewModeStorageKey);
+    return stored === "cards" ? "cards" : "table";
+  });
   const [selectedClientes, setSelectedClientes] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [clienteEmEdicao, setClienteEmEdicao] = useState<Cliente | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
   const itemsPerPage = 10;
 
-  const { data, isLoading } = useClientes({
+  const { data, isLoading, refetch } = useClientes({
     page: currentPage,
     limit: itemsPerPage,
     search: searchTerm,
     status: statusFilter,
     plano: planoFilter,
+    enabled: canViewClientes,
   });
 
   const clientes = data?.data ?? [];
@@ -52,6 +66,7 @@ export default function ClientesPage() {
       return sanitizePlanoArray(response.data);
     },
     staleTime: 60_000,
+    enabled: canViewClientes,
   });
 
   const planoSelecionadoInfo = useMemo(() => {
@@ -63,6 +78,27 @@ export default function ClientesPage() {
   }, [planoFilter, planosDetalhados]);
 
   const handleNewClient = () => router.push("/painel/cliente/cadastro");
+  const handleEditCliente = (cliente: Cliente) => {
+    setClienteEmEdicao(cliente);
+    setEditOpen(true);
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(viewModeStorageKey, viewMode);
+  }, [viewMode, viewModeStorageKey]);
+
+  if (!canViewClientes) {
+    return (
+      <div className="p-8">
+        <Card>
+          <CardContent className="p-6">
+            Você não tem permissão para visualizar clientes.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const handleExportClients = () => {
     const csv = [
@@ -211,12 +247,14 @@ export default function ClientesPage() {
             <p className="text-gray-500 mb-6">
               Tente ajustar os filtros ou cadastre um novo cliente
             </p>
-            <Button
-              onClick={handleNewClient}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              Cadastrar Cliente
-            </Button>
+            {canCreateClient && (
+              <Button
+                onClick={handleNewClient}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Cadastrar Cliente
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -239,9 +277,10 @@ export default function ClientesPage() {
               clientes={clientes}
               selectedClientes={selectedClientes}
               setSelectedClientes={setSelectedClientes}
+              onEdit={handleEditCliente}
             />
           ) : (
-            <ClienteCards clientes={clientes} />
+            <ClienteCards clientes={clientes} onEdit={handleEditCliente} />
           )}
 
           {totalPages > 1 && (
@@ -277,6 +316,21 @@ export default function ClientesPage() {
             </div>
           )}
         </>
+      )}
+      {clienteEmEdicao && (
+        <ClienteEditDialog
+          open={editOpen}
+          onClose={() => {
+            setEditOpen(false);
+            setClienteEmEdicao(null);
+          }}
+          cliente={clienteEmEdicao}
+          onUpdated={() => {
+            void refetch();
+            setEditOpen(false);
+            setClienteEmEdicao(null);
+          }}
+        />
       )}
     </div>
   );

@@ -1,18 +1,32 @@
 "use client";
 
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 interface Props {
   clientes: any[];
   selectedClientes: string[];
   setSelectedClientes: (ids: string[]) => void;
+  onEdit?: (cliente: any) => void;
+  onDetails?: (cliente: any) => void;
 }
 
 export const ClienteTable = ({
   clientes,
   selectedClientes,
   setSelectedClientes,
+  onEdit,
+  onDetails,
 }: Props) => {
+  const router = useRouter();
+
+  const goToDetails = (id: string) =>
+    router.push(`/painel/cliente/${id}/detalhes`);
+
+  const goToEdit = (id: string) =>
+    router.push(`/painel/cliente/${id}/detalhes?editar=1`);
+
   const toggleSelect = (id: string) => {
     setSelectedClientes(
       selectedClientes.includes(id)
@@ -39,6 +53,7 @@ export const ClienteTable = ({
             <th className="p-3 text-left">Status</th>
             <th className="p-3 text-left">Telefone</th>
             <th className="p-3 text-left">Cidade</th>
+            <th className="p-3 text-right">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -67,6 +82,22 @@ export const ClienteTable = ({
               </td>
               <td className="p-3">{c.telefone}</td>
               <td className="p-3">{c.cidade}</td>
+              <td className="p-3 text-right space-x-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => (onDetails ? onDetails(c) : goToDetails(c.id))}
+                >
+                  Detalhes
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => (onEdit ? onEdit(c) : goToEdit(c.id))}
+                >
+                  Editar
+                </Button>
+              </td>
             </tr>
           ))}
         </tbody>

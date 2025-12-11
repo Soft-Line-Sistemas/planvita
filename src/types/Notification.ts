@@ -1,4 +1,9 @@
 export type NotificationChannel = "whatsapp" | "email";
+export type NotificationFlow =
+  | "pendencia-periodica"
+  | "aviso-vencimento"
+  | "aviso-pendencia"
+  | "suspensao-preventiva";
 
 export interface NotificationRecipient {
   titularId: number;
@@ -85,6 +90,7 @@ export interface NotificationTemplate {
   tenantId: string;
   nome: string;
   canal: NotificationChannel;
+  flow?: NotificationFlow | null;
   assunto?: string | null;
   htmlBody?: string | null;
   textBody?: string | null;

@@ -32,13 +32,14 @@ interface MenuItem {
   label: string;
   icon: React.ElementType;
   href: string;
+  requiredPermission?: string;
 }
 
 export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, hasPermission } = useAuth();
 
   useEffect(() => {
     if (!loading && !user && process.env.NODE_ENV === "production") {
@@ -52,60 +53,70 @@ export function Sidebar() {
       label: "Dashboard",
       icon: Home,
       href: "/painel/dashboard",
+      requiredPermission: "dashboard.view",
     },
     {
       id: "cadastro",
       label: "Novo Cadastro",
       icon: UserPlus,
       href: "/painel/cliente/cadastro",
+      requiredPermission: "titular.create",
     },
     {
       id: "clientes",
       label: "Clientes",
       icon: Users,
       href: "/painel/cliente/",
+      requiredPermission: "titular.view",
     },
     {
       id: "colaboradores",
       label: "Colaboradores",
       icon: UserCog,
       href: "/painel/colaboradores",
+      requiredPermission: "user.view",
     },
     {
       id: "planos",
       label: "Gestão de Planos",
       icon: Layers,
       href: "/painel/gestao/planos",
+      requiredPermission: "plano.view",
     },
     {
       id: "financeiro",
       label: "Financeiro",
       icon: CreditCard,
       href: "/painel/gestao/financeiro",
+      requiredPermission: "finance.view",
     },
     {
       id: "notificacoes",
       label: "Notificações",
       icon: Bell,
       href: "/painel/gestao/notificacoes",
+      requiredPermission: "notifications.read",
     },
     {
       id: "relatorios",
       label: "Relatórios",
       icon: FileText,
       href: "/painel/relatorios",
+      requiredPermission: "report.view",
     },
     {
       id: "permissions",
       label: "Permissões",
       icon: Shield,
       href: "/painel/permissoes",
+      requiredPermission: "role.view",
     },
     {
       id: "configuracoes",
       label: "Regras",
       icon: ClipboardCheck,
       href: "/painel/configuracoes",
+      requiredPermission: "layout.view",
     },
     {
       id: "conta",
@@ -170,29 +181,36 @@ export function Sidebar() {
 
           {/* Menu */}
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-            {menuItems.map(({ id, label, icon: Icon, href }) => {
-              let isActive = false;
+            {menuItems
+              .filter(
+                (item) =>
+                  !item.requiredPermission ||
+                  hasPermission(item.requiredPermission) ||
+                  loading,
+              )
+              .map(({ id, label, icon: Icon, href }) => {
+                let isActive = false;
 
-              const exactPaths = ["/painel/cliente/cadastro"];
-              if (exactPaths.includes(pathname) && href === pathname) {
-                isActive = true;
-              } else {
-                if (id === "clientes") {
-                  isActive =
-                    pathname.startsWith("/painel/cliente") &&
-                    pathname !== "/painel/cliente/cadastro";
+                const exactPaths = ["/painel/cliente/cadastro"];
+                if (exactPaths.includes(pathname) && href === pathname) {
+                  isActive = true;
                 } else {
-                  isActive =
-                    pathname === href || pathname.startsWith(href + "/");
+                  if (id === "clientes") {
+                    isActive =
+                      pathname.startsWith("/painel/cliente") &&
+                      pathname !== "/painel/cliente/cadastro";
+                  } else {
+                    isActive =
+                      pathname === href || pathname.startsWith(href + "/");
+                  }
                 }
-              }
 
-              return (
-                <Link key={id} href={href} passHref>
-                  <Button
-                    asChild
-                    variant={isActive ? "default" : "ghost"}
-                    className={`
+                return (
+                  <Link key={id} href={href} passHref>
+                    <Button
+                      asChild
+                      variant={isActive ? "default" : "ghost"}
+                      className={`
           w-full justify-start h-12 transition-all duration-200
           ${
             isActive
@@ -200,16 +218,16 @@ export function Sidebar() {
               : "text-gray-700 hover:bg-green-50 hover:text-green-700"
           }
         `}
-                    onClick={() => setIsCollapsed(true)}
-                  >
-                    <div className="flex items-center w-full">
-                      <Icon className="mr-3 h-5 w-5" />
-                      {label}
-                    </div>
-                  </Button>
-                </Link>
-              );
-            })}
+                      onClick={() => setIsCollapsed(true)}
+                    >
+                      <div className="flex items-center w-full">
+                        <Icon className="mr-3 h-5 w-5" />
+                        {label}
+                      </div>
+                    </Button>
+                  </Link>
+                );
+              })}
           </nav>
 
           {/* Rodapé */}
