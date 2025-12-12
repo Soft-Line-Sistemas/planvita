@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   User,
   Phone,
@@ -7,9 +7,9 @@ import {
   MapPin,
   Calendar,
   Shield,
+  Gift,
   Users,
   CreditCard,
-  Gift,
   Clock,
   CheckCircle,
   AlertCircle,
@@ -19,15 +19,28 @@ import {
   Download,
   Eye,
 } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { StatusPagamento } from "@/types/PaymentType";
 import { useClienteDetalhes } from "@/hooks/queries/useClienteDetalhes";
+import { ClienteEditDialog } from "@/components/Titular/Cliente/ClienteEditDialog";
+import { criarDependente } from "@/services/dependente.service";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const DetalhesCliente = () => {
   const params = useParams();
   const clienteId = params?.id as string | undefined;
   const [abaAtiva, setAbaAtiva] = useState("geral");
+  const [openEdit, setOpenEdit] = useState(false);
+  const [dependenteForm, setDependenteForm] = useState({
+    nome: "",
+    dataNascimento: "",
+    parentesco: "",
+  });
   const router = useRouter();
+  const searchParams = useSearchParams();
   const {
     data: cliente,
     isLoading,
@@ -35,6 +48,28 @@ const DetalhesCliente = () => {
     error,
     refetch,
   } = useClienteDetalhes(clienteId);
+
+  const criarDependenteMutation = useMutation({
+    mutationFn: (payload: {
+      nome: string;
+      dataNascimento: string;
+      parentesco: string;
+    }) =>
+      criarDependente({
+        titularId: Number(clienteId),
+        nome: payload.nome,
+        dataNascimento: payload.dataNascimento,
+        tipoDependente: payload.parentesco,
+      }),
+    onSuccess: async () => {
+      toast.success("Dependente adicionado com sucesso.");
+      setDependenteForm({ nome: "", dataNascimento: "", parentesco: "" });
+      await refetch();
+    },
+    onError: () => {
+      toast.error("Não foi possível adicionar o dependente. Tente novamente.");
+    },
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -66,6 +101,33 @@ const DetalhesCliente = () => {
       default:
         return { icon: XCircle, color: "text-gray-600", bg: "bg-gray-100" };
     }
+  };
+
+  useEffect(() => {
+    if (!searchParams) return;
+    const shouldOpen = searchParams.get("editar");
+    if (shouldOpen) {
+      setOpenEdit(true);
+    }
+  }, [searchParams]);
+
+  const handleAdicionarDependente = (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+    if (!clienteId) {
+      toast.error("Cliente não identificado.");
+      return;
+    }
+    if (!dependenteForm.nome || !dependenteForm.dataNascimento) {
+      toast.error("Informe nome e data de nascimento do dependente.");
+      return;
+    }
+    criarDependenteMutation.mutate({
+      nome: dependenteForm.nome,
+      dataNascimento: dependenteForm.dataNascimento,
+      parentesco: dependenteForm.parentesco || "Outro",
+    });
   };
 
   if (isLoading) {
@@ -120,7 +182,6 @@ const DetalhesCliente = () => {
     { id: "coberturas", nome: "Coberturas", icon: Shield },
     { id: "dependentes", nome: "Dependentes", icon: Users },
     { id: "financeiro", nome: "Financeiro", icon: CreditCard },
-    { id: "beneficios", nome: "Benefícios", icon: Gift },
   ];
 
   return (
@@ -149,7 +210,10 @@ const DetalhesCliente = () => {
               >
                 {cliente.statusPlano}
               </span>
-              <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2">
+              <button
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+                onClick={() => setOpenEdit(true)}
+              >
                 <Edit className="w-4 h-4" />
                 <span>Editar</span>
               </button>
@@ -402,11 +466,72 @@ const DetalhesCliente = () => {
               <h3 className="text-lg font-semibold text-gray-900">
                 Dependentes ({cliente.dependentes.length})
               </h3>
-              <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2">
-                <Plus className="w-4 h-4" />
-                <span>Adicionar Dependente</span>
-              </button>
             </div>
+
+            <form
+              className="bg-white rounded-lg shadow-sm p-6 space-y-4"
+              onSubmit={handleAdicionarDependente}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="dep-nome">Nome completo</Label>
+                  <Input
+                    id="dep-nome"
+                    value={dependenteForm.nome}
+                    onChange={(e) =>
+                      setDependenteForm((prev) => ({
+                        ...prev,
+                        nome: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dep-data">Data de nascimento</Label>
+                  <Input
+                    id="dep-data"
+                    type="date"
+                    value={dependenteForm.dataNascimento}
+                    onChange={(e) =>
+                      setDependenteForm((prev) => ({
+                        ...prev,
+                        dataNascimento: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dep-parentesco">Parentesco</Label>
+                  <Input
+                    id="dep-parentesco"
+                    placeholder="Filho, Cônjuge, etc."
+                    value={dependenteForm.parentesco}
+                    onChange={(e) =>
+                      setDependenteForm((prev) => ({
+                        ...prev,
+                        parentesco: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 disabled:opacity-60"
+                  disabled={criarDependenteMutation.isPending}
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>
+                    {criarDependenteMutation.isPending
+                      ? "Adicionando..."
+                      : "Adicionar Dependente"}
+                  </span>
+                </button>
+              </div>
+            </form>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {cliente.dependentes.map((dependente) => (
@@ -589,63 +714,13 @@ const DetalhesCliente = () => {
             </div>
           </div>
         )}
-
-        {abaAtiva === "beneficios" && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">
-                Club de Benefícios
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="text-center p-6 bg-linear-to-br from-purple-50 to-pink-50 rounded-lg">
-                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Gift className="w-8 h-8 text-purple-600" />
-                  </div>
-                  <h4 className="font-semibold text-gray-900 mb-2">
-                    Descontos Exclusivos
-                  </h4>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Até 40% de desconto em estabelecimentos parceiros
-                  </p>
-                  <button className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
-                    Ver Parceiros
-                  </button>
-                </div>
-
-                <div className="text-center p-6 bg-linear-to-br from-blue-50 to-cyan-50 rounded-lg">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Phone className="w-8 h-8 text-blue-600" />
-                  </div>
-                  <h4 className="font-semibold text-gray-900 mb-2">
-                    Telemedicina
-                  </h4>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Consultas médicas online 24h
-                  </p>
-                  <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                    Agendar Consulta
-                  </button>
-                </div>
-
-                <div className="text-center p-6 bg-linear-to-br from-green-50 to-emerald-50 rounded-lg">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Shield className="w-8 h-8 text-green-600" />
-                  </div>
-                  <h4 className="font-semibold text-gray-900 mb-2">
-                    Assistência 24h
-                  </h4>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Suporte completo a qualquer hora
-                  </p>
-                  <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
-                    Entrar em Contato
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+      <ClienteEditDialog
+        open={openEdit}
+        onClose={() => setOpenEdit(false)}
+        cliente={cliente}
+        onUpdated={() => refetch()}
+      />
     </div>
   );
 };

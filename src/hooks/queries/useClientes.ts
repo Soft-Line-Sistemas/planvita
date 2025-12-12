@@ -15,6 +15,7 @@ export const useClientes = (params: {
   search?: string;
   status?: string;
   plano?: string;
+  enabled?: boolean;
 }) => {
   return useQuery<ClientesApiResponse, Error>({
     queryKey: ["clientes", params],
@@ -64,5 +65,6 @@ export const useClientes = (params: {
       return payload;
     },
     staleTime: 1000 * 60, // 1 minuto
+    enabled: params.enabled ?? true,
   });
 };

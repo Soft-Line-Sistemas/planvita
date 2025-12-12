@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import api from "@/utils/api";
 import {
   Card,
@@ -13,11 +13,18 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { motion } from "framer-motion";
 import { Shield, PlusCircle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 type Role = {
   id?: number;
@@ -32,6 +39,7 @@ type Permission = {
 };
 
 export default function RolesPermissionsPage() {
+  const { hasPermission } = useAuth();
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [newRoleName, setNewRoleName] = useState("");
@@ -39,6 +47,10 @@ export default function RolesPermissionsPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (!hasPermission("role.view")) {
+      setLoading(false);
+      return;
+    }
     const fetchData = async () => {
       try {
         const [rolesRes, permRes] = await Promise.all([
@@ -55,9 +67,33 @@ export default function RolesPermissionsPage() {
       }
     };
     fetchData();
-  }, []);
+  }, [hasPermission]);
+
+  const canCreateRole = useMemo(
+    () => hasPermission("role.create"),
+    [hasPermission],
+  );
+  const canUpdateRole = useMemo(
+    () => hasPermission("role.update"),
+    [hasPermission],
+  );
+
+  const groupedPermissions = useMemo(() => {
+    return permissions.reduce<Record<string, Permission[]>>((groups, perm) => {
+      const moduleKey = perm.name.split(".")[0] || "geral";
+      if (!groups[moduleKey]) groups[moduleKey] = [];
+      groups[moduleKey].push(perm);
+      return groups;
+    }, {});
+  }, [permissions]);
+
+  const sortedModules = useMemo(
+    () => Object.keys(groupedPermissions).sort((a, b) => a.localeCompare(b)),
+    [groupedPermissions],
+  );
 
   const handleCreateRole = async () => {
+    if (!canCreateRole) return;
     if (!newRoleName.trim()) return;
     setSaving(true);
     try {
@@ -69,6 +105,24 @@ export default function RolesPermissionsPage() {
       alert("Erro ao criar cargo");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const updateRolePermissions = async (
+    roleId: number,
+    permissionIds: number[],
+  ) => {
+    if (!canUpdateRole) return;
+    try {
+      await api.put(`/roles/${roleId}/permissions`, { permissionIds });
+      setRoles((prev) =>
+        prev.map((r) =>
+          r.id === roleId ? { ...r, permissions: permissionIds } : r,
+        ),
+      );
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao atualizar permissões");
     }
   };
 
@@ -85,19 +139,45 @@ export default function RolesPermissionsPage() {
       ? currentPermissions.filter((p) => p !== permissionId)
       : [...currentPermissions, permissionId];
 
-    try {
-      await api.put(`/roles/${roleId}/permissions`, {
-        permissionIds: updatedPermissions,
-      });
-      setRoles(
-        roles.map((r) =>
-          r.id === roleId ? { ...r, permissions: updatedPermissions } : r,
-        ),
-      );
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao atualizar permissões");
-    }
+    updateRolePermissions(roleId, updatedPermissions);
+  };
+
+  const handleToggleModule = async (
+    roleId: number,
+    moduleKey: string,
+    shouldCheck: boolean,
+  ) => {
+    const role = roles.find((r) => r.id === roleId);
+    if (!role) return;
+
+    const modulePermissions = groupedPermissions[moduleKey] ?? [];
+    const modulePermissionIds = modulePermissions.map((perm) => perm.id);
+    if (modulePermissionIds.length === 0) return;
+
+    const currentPermissions = role.permissions ?? [];
+    const updatedPermissions = shouldCheck
+      ? Array.from(new Set([...currentPermissions, ...modulePermissionIds]))
+      : currentPermissions.filter((p) => !modulePermissionIds.includes(p));
+
+    updateRolePermissions(roleId, updatedPermissions);
+  };
+
+  const formatModuleName = (moduleKey: string) =>
+    moduleKey
+      .replace(/[_-]/g, " ")
+      .split(" ")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+
+  const getModuleCheckedState = (role: Role, moduleKey: string) => {
+    const modulePermissions = groupedPermissions[moduleKey] ?? [];
+    const assignedCount = modulePermissions.filter((perm) =>
+      role.permissions?.includes(perm.id),
+    ).length;
+
+    if (assignedCount === 0) return false;
+    if (assignedCount === modulePermissions.length) return true;
+    return "indeterminate";
   };
 
   if (loading)
@@ -106,6 +186,21 @@ export default function RolesPermissionsPage() {
         Carregando dados...
       </div>
     );
+
+  if (!hasPermission("role.view")) {
+    return (
+      <div className="p-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Sem permissão</CardTitle>
+          </CardHeader>
+          <CardContent>
+            Você não pode visualizar ou gerenciar permissões.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -145,9 +240,13 @@ export default function RolesPermissionsPage() {
               value={newRoleName}
               onChange={(e) => setNewRoleName(e.target.value)}
               placeholder="Ex: Administrador, Gestor, Financeiro..."
+              disabled={!canCreateRole}
             />
           </div>
-          <Button onClick={handleCreateRole} disabled={saving}>
+          <Button
+            onClick={handleCreateRole}
+            disabled={saving || !canCreateRole}
+          >
             {saving ? "Salvando..." : "Criar Cargo"}
           </Button>
         </CardContent>
@@ -186,23 +285,102 @@ export default function RolesPermissionsPage() {
                 </CardHeader>
 
                 <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {permissions.map((perm) => {
-                    const checked = role.permissions?.includes(perm.id);
-                    return (
-                      <div
-                        key={perm.id}
-                        className="flex items-center space-x-2 rounded-md border p-2 hover:bg-muted/50 transition"
-                      >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={() =>
-                            handleTogglePermission(role.id!, perm.id)
-                          }
-                        />
-                        <Label className="text-sm">{perm.description}</Label>
-                      </div>
-                    );
-                  })}
+                  <div className="sm:col-span-2 md:col-span-3">
+                    <Accordion
+                      type="multiple"
+                      className="divide-y rounded-lg border"
+                    >
+                      {sortedModules.map((moduleKey) => {
+                        const modulePermissions = groupedPermissions[moduleKey];
+                        const checkedState = getModuleCheckedState(
+                          role,
+                          moduleKey,
+                        );
+                        const assignedCount = modulePermissions.filter((perm) =>
+                          role.permissions?.includes(perm.id),
+                        ).length;
+
+                        return (
+                          <AccordionItem key={moduleKey} value={moduleKey}>
+                            <div className="flex items-center gap-3 px-4">
+                              <Checkbox
+                                checked={checkedState}
+                                disabled={!canUpdateRole}
+                                onCheckedChange={(state) =>
+                                  handleToggleModule(
+                                    role.id!,
+                                    moduleKey,
+                                    state === true,
+                                  )
+                                }
+                              />
+                              <AccordionTrigger className="flex-1 px-0">
+                                <div className="flex flex-1 items-center justify-between gap-3">
+                                  <div className="flex flex-col">
+                                    <span className="font-semibold leading-none">
+                                      {formatModuleName(moduleKey)}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {assignedCount}/{modulePermissions.length}{" "}
+                                      permissões
+                                    </span>
+                                  </div>
+                                  <Badge
+                                    variant={
+                                      checkedState === true
+                                        ? "default"
+                                        : "outline"
+                                    }
+                                    className="text-[11px]"
+                                  >
+                                    {checkedState === true
+                                      ? "Tudo selecionado"
+                                      : checkedState === "indeterminate"
+                                        ? "Parcial"
+                                        : "Nenhuma"}
+                                  </Badge>
+                                </div>
+                              </AccordionTrigger>
+                            </div>
+                            <AccordionContent className="px-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                {modulePermissions.map((perm) => {
+                                  const checked = role.permissions?.includes(
+                                    perm.id,
+                                  );
+                                  return (
+                                    <div
+                                      key={perm.id}
+                                      className="flex items-center space-x-2 rounded-md border p-2 hover:bg-muted/50 transition"
+                                    >
+                                      <Checkbox
+                                        checked={checked}
+                                        disabled={!canUpdateRole}
+                                        onCheckedChange={() =>
+                                          handleTogglePermission(
+                                            role.id!,
+                                            perm.id,
+                                          )
+                                        }
+                                      />
+                                      <div className="flex flex-col gap-0.5">
+                                        <Label className="text-sm leading-tight">
+                                          {perm.description}
+                                        </Label>
+                                        <span className="text-[11px] text-muted-foreground">
+                                          {perm.name}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        );
+                      })}
+                    </Accordion>
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
