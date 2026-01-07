@@ -32,6 +32,12 @@ import { useContasFinanceiras } from "@/hooks/queries/useContasFinanceiras";
 import { getDiasAtraso } from "@/types/Financeiro";
 import { useRelatorioFinanceiro } from "@/hooks/queries/useRelatorioFinanceiro";
 import { gerarBoletoPDF } from "@/utils/boleto";
+// import { MetricasRecorrencia } from "@/components/Financeiro/metricasRecorrencia";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import AsaasWingsMark from "@/components/ui/AsaasWingsMark";
+import { useFinanceiroClientes } from "@/hooks/queries/useFinanceiroClientes";
+import { useCriarContaFinanceira } from "@/hooks/mutations/useContaFinanceiraMutations";
 
 const GestaoFinanceira = () => {
   const {
@@ -219,6 +225,7 @@ const GestaoFinanceira = () => {
         nome: "Relatórios Financeiros",
         icon: FileText,
       },
+      { id: "boletos", nome: "Boletos", icon: CreditCard },
     ];
 
     if (isBosqueTenant) {
@@ -864,6 +871,7 @@ const GestaoFinanceira = () => {
         {abaAtiva === "contas" && <ContasFinanceiro />}
         {abaAtiva === "relatoriosFinanceiro" && <RelatorioFinanceiro />}
         {abaAtiva === "asaas" && isBosqueTenant && <AsaasPaymentsPanel />}
+        {abaAtiva === "boletos" && <BoletosEmissaoTab />}
       </div>
 
       {/* Modal de Detalhes do Pagamento */}
@@ -1021,3 +1029,241 @@ const GestaoFinanceira = () => {
 };
 
 export default GestaoFinanceira;
+
+const BoletosEmissaoTab: React.FC = () => {
+  const [buscaCliente, setBuscaCliente] = useState("");
+  const [selectedClienteId, setSelectedClienteId] = useState<string>("");
+  const [descricao, setDescricao] = useState("");
+  const [valor, setValor] = useState("");
+  const [vencimento, setVencimento] = useState("");
+  const [erro, setErro] = useState<string | null>(null);
+  const [previewConta, setPreviewConta] = useState<{
+    clienteNome?: string | null;
+    clienteCpf?: string | null;
+    valor?: number | null;
+    dataVencimento?: string | null;
+    paymentUrl?: string | null;
+  } | null>(null);
+
+  const { data: clientesDisponiveis = [], isLoading: carregandoClientes } =
+    useFinanceiroClientes(buscaCliente, true);
+  const criarConta = useCriarContaFinanceira();
+
+  const onSubmit = () => {
+    setErro(null);
+    const valorNumerico = Number(valor);
+    if (
+      !descricao.trim() ||
+      !valor ||
+      !vencimento ||
+      Number.isNaN(valorNumerico) ||
+      valorNumerico <= 0
+    ) {
+      if (valorNumerico <= 0 || Number.isNaN(valorNumerico)) {
+        setErro("Informe um valor positivo.");
+      } else {
+        setErro("Preencha descrição, valor e vencimento.");
+      }
+      return;
+    }
+    const clienteIdNum = selectedClienteId
+      ? Number(selectedClienteId)
+      : undefined;
+    criarConta.mutate(
+      {
+        tipo: "Receber",
+        payload: {
+          descricao: descricao.trim(),
+          valor: valorNumerico,
+          vencimento,
+          clienteId: clienteIdNum,
+          integrarAsaas: true,
+          billingType: "BOLETO",
+        },
+      },
+      {
+        onSuccess: (conta) => {
+          setPreviewConta({
+            clienteNome: conta.cliente?.nome ?? null,
+            clienteCpf: conta.cliente?.cpf ?? null,
+            valor: conta.valor ?? null,
+            dataVencimento: conta.dataVencimento ?? null,
+            paymentUrl: conta.paymentUrl ?? null,
+          });
+          setDescricao("");
+          setValor("");
+          setVencimento("");
+          setSelectedClienteId("");
+        },
+        onError: (error) => {
+          setErro(
+            error instanceof Error ? error.message : "Falha ao emitir boleto.",
+          );
+        },
+      },
+    );
+  };
+
+  const handlePreviewLocal = () => {
+    if (!previewConta) return;
+    const pagamento = {
+      id: "preview",
+      cliente: {
+        id: "0",
+        nome: previewConta.clienteNome ?? "Cliente",
+        email: "",
+        telefone: "",
+        cpf: previewConta.clienteCpf ?? "",
+        plano: "",
+      },
+      valor: Number(previewConta.valor ?? 0),
+      dataVencimento: previewConta.dataVencimento ?? new Date().toISOString(),
+      dataPagamento: null,
+      status: "PENDENTE" as const,
+      metodoPagamento: "Boleto" as const,
+      referencia: "Pré-visualização",
+      diasAtraso: 0,
+      observacoes: "",
+    };
+    gerarBoletoPDF(pagamento);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            Emissão de Boletos
+            <AsaasWingsMark variant="badge" withTooltip />
+          </h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm text-gray-600">Descrição</label>
+            <Input
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-sm text-gray-600">Valor</label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={valor}
+              onChange={(e) => setValor(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-sm text-gray-600">Vencimento</label>
+            <Input
+              type="date"
+              value={vencimento}
+              onChange={(e) => setVencimento(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-sm text-gray-600">Cliente</label>
+            <div className="space-y-2">
+              <Input
+                placeholder="Buscar por nome, e-mail ou CPF"
+                value={buscaCliente}
+                onChange={(e) => setBuscaCliente(e.target.value)}
+              />
+              <select
+                className="w-full border rounded-lg px-3 py-2 text-sm"
+                value={selectedClienteId}
+                onChange={(e) => setSelectedClienteId(e.target.value)}
+              >
+                <option value="">Selecione um cliente</option>
+                {carregandoClientes && (
+                  <option value="" disabled>
+                    Carregando clientes...
+                  </option>
+                )}
+                {!carregandoClientes &&
+                  clientesDisponiveis.map((cliente) => (
+                    <option key={cliente.id} value={String(cliente.id)}>
+                      {cliente.nome} • {cliente.cpf || "CPF não informado"}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {erro && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2 mt-4">
+            {erro}
+          </p>
+        )}
+
+        <div className="flex justify-end gap-2 mt-4">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setDescricao("");
+              setValor("");
+              setVencimento("");
+              setSelectedClienteId("");
+              setErro(null);
+              setPreviewConta(null);
+            }}
+          >
+            Limpar
+          </Button>
+          <Button onClick={onSubmit} disabled={criarConta.isPending}>
+            {criarConta.isPending ? "Emitindo..." : "Emitir Boleto"}
+          </Button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <h4 className="font-semibold text-gray-900 mb-3">Pré-visualização</h4>
+        {!previewConta ? (
+          <p className="text-sm text-gray-500">
+            Nenhum boleto emitido ainda. Após emitir, você poderá visualizar
+            aqui.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <AsaasWingsMark variant="inline" withTooltip />
+              <span className="text-sm text-gray-700">
+                {previewConta.clienteNome ?? "Cliente"} •{" "}
+                {previewConta.dataVencimento
+                  ? new Date(previewConta.dataVencimento).toLocaleDateString(
+                      "pt-BR",
+                    )
+                  : "—"}
+              </span>
+            </div>
+            <div className="text-sm text-gray-700">
+              Valor: R$ {(previewConta.valor ?? 0).toLocaleString("pt-BR")}
+            </div>
+            <div className="flex items-center gap-3">
+              {previewConta.paymentUrl ? (
+                <a
+                  href={previewConta.paymentUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-600 hover:underline text-sm"
+                >
+                  Abrir boleto no provedor
+                </a>
+              ) : (
+                <span className="text-xs text-gray-500">
+                  Link do provedor ainda não disponível.
+                </span>
+              )}
+              <Button variant="outline" onClick={handlePreviewLocal}>
+                Pré-visualizar PDF local
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

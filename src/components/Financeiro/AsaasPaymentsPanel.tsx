@@ -6,6 +6,7 @@ import { useAsaasPayments } from "@/hooks/queries/useAsaasPayments";
 import { AsaasPaymentStatus } from "@/services/financeiro/asaas.service";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import AsaasWingsMark from "@/components/ui/AsaasWingsMark";
 
 const STATUS_OPTIONS: Array<AsaasPaymentStatus | "all"> = [
   "all",
@@ -218,8 +219,9 @@ export const AsaasPaymentsPanel = () => {
                 {filteredPayments.map((payment) => (
                   <tr key={payment.id} className="hover:bg-gray-50">
                     <td className="px-4 py-4">
-                      <div className="font-semibold text-gray-900">
+                      <div className="font-semibold text-gray-900 flex items-center gap-2">
                         {payment.customerName}
+                        <AsaasWingsMark variant="inline" withTooltip />
                       </div>
                       <div className="text-xs text-gray-500">
                         {payment.description || "—"}

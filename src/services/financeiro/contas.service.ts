@@ -131,6 +131,8 @@ export type NovaContaReceberPayload = {
   valor: number;
   vencimento: string;
   clienteId?: number;
+  integrarAsaas?: boolean;
+  billingType?: "PIX" | "BOLETO" | "CREDIT_CARD";
 };
 
 export const criarContaFinanceira = async (
@@ -150,4 +152,29 @@ export const reconsultarContaReceber = async (id: number | string) => {
     `/financeiro/contas/receber/${id}/reconsulta`,
   );
   return mapContaFinanceira(data);
+};
+
+export type AtualizarContaPagarPayload = Partial<NovaContaPagarPayload>;
+export type AtualizarContaReceberPayload = Partial<NovaContaReceberPayload>;
+
+export const atualizarContaFinanceira = async (
+  tipo: TipoConta,
+  id: number | string,
+  payload: AtualizarContaPagarPayload | AtualizarContaReceberPayload,
+) => {
+  const endpoint = tipo === "Pagar" ? "pagar" : "receber";
+  const { data } = await api.put<ContaFinanceiraApi>(
+    `/financeiro/contas/${endpoint}/${id}`,
+    payload,
+  );
+  return mapContaFinanceira(data);
+};
+
+export const deleteContaFinanceira = async (
+  tipo: TipoConta,
+  id: number | string,
+) => {
+  const endpoint = tipo === "Pagar" ? "pagar" : "receber";
+  await api.delete(`/financeiro/contas/${endpoint}/${id}`);
+  return true;
 };
