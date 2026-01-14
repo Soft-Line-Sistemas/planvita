@@ -19,6 +19,7 @@ import {
   Mail,
   User,
   Loader2,
+  Barcode,
 } from "lucide-react";
 import { Pagamento, StatusPagamento } from "@/types/PaymentType";
 import CadastroFinanceiro from "@/components/Financeiro/cadastroFinanceiro";
@@ -32,6 +33,7 @@ import { useContasFinanceiras } from "@/hooks/queries/useContasFinanceiras";
 import { getDiasAtraso } from "@/types/Financeiro";
 import { useRelatorioFinanceiro } from "@/hooks/queries/useRelatorioFinanceiro";
 import { gerarBoletoPDF } from "@/utils/boleto";
+import EmissaoBoleto from "@/components/Financeiro/EmissaoBoleto";
 
 const GestaoFinanceira = () => {
   const {
@@ -247,6 +249,7 @@ const GestaoFinanceira = () => {
       { id: "relatorios", nome: "Relatórios", icon: FileText },
       { id: "cadastros", nome: "Cadastros", icon: TrendingUp },
       { id: "contas", nome: "Contas Financeiras", icon: DollarSign },
+      { id: "boletos", nome: "Boletos", icon: Barcode },
       {
         id: "relatoriosFinanceiro",
         nome: "Relatórios Financeiros",
@@ -940,6 +943,7 @@ const GestaoFinanceira = () => {
         {abaAtiva === "contas" && <ContasFinanceiro />}
         {abaAtiva === "relatoriosFinanceiro" && <RelatorioFinanceiro />}
         {abaAtiva === "asaas" && isBosqueTenant && <AsaasPaymentsPanel />}
+        {abaAtiva === "boletos" && <EmissaoBoleto />}
       </div>
 
       {/* Modal de Detalhes do Pagamento */}

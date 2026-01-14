@@ -131,6 +131,8 @@ export type NovaContaReceberPayload = {
   valor: number;
   vencimento: string;
   clienteId?: number;
+  integrarAsaas?: boolean;
+  billingType?: string;
 };
 
 export const criarContaFinanceira = async (
