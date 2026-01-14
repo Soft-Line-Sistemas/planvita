@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import api from "@/utils/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -55,7 +54,6 @@ type User = {
 
 export default function AcessoPage() {
   const { user, hasPermission } = useAuth();
-  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,22 +69,6 @@ export default function AcessoPage() {
   const [emailModalUser, setEmailModalUser] = useState<User | null>(null);
   const [newEmail, setNewEmail] = useState("");
   const [updatingEmail, setUpdatingEmail] = useState(false);
-
-  const fallbackMenu = useMemo(
-    () => [
-      { href: "/painel/dashboard", permission: "dashboard.view" },
-      { href: "/painel/cliente/cadastro", permission: "titular.create" },
-      { href: "/painel/cliente", permission: "titular.view" },
-      { href: "/painel/gestao/planos", permission: "plano.view" },
-      { href: "/painel/gestao/financeiro", permission: "finance.view" },
-      { href: "/painel/gestao/notificacoes", permission: "notifications.read" },
-      { href: "/painel/relatorios", permission: "report.view" },
-      { href: "/painel/permissoes", permission: "role.view" },
-      { href: "/painel/configuracoes", permission: "layout.view" },
-      { href: "/painel/conta", permission: undefined },
-    ],
-    [],
-  );
 
   useEffect(() => {
     if (!hasPermission("user.view")) {

@@ -14,7 +14,7 @@ import {
   Trash,
   PlusCircle,
   Copy,
-  Link,
+  // Link,
   RefreshCcw,
   AlertCircle,
   Search,
@@ -56,7 +56,7 @@ import { Input } from "@/components/ui/input";
 import { useFinanceiroClientes } from "@/hooks/queries/useFinanceiroClientes";
 import type { ClienteFinanceiroResumo } from "@/services/financeiro/clientes.service";
 import { toast } from "sonner";
-import AsaasWingsMark from "@/components/ui/AsaasWingsMark";
+import { AsaasWingsMark } from "@/components/ui/AsaasWingsMark";
 
 type FiltroStatus =
   | "todas"
@@ -909,10 +909,12 @@ const ContasFinanceiro: React.FC = () => {
                       <td className="px-6 py-4 text-sm">
                         {conta.tipo === "Receber" && sincronizada ? (
                           <div className="space-y-2">
-                            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">
-                              <Link className="w-4 h-4" />
-                              Sincronizado Asaas
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <AsaasWingsMark variant="badge" />
+                              <span className="text-xs font-medium text-emerald-700">
+                                Sincronizado
+                              </span>
+                            </div>
                             <p className="text-xs text-gray-600">
                               Método:{" "}
                               <span className="font-semibold text-gray-800">

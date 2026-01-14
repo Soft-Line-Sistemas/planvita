@@ -6,7 +6,7 @@ import { useAsaasPayments } from "@/hooks/queries/useAsaasPayments";
 import { AsaasPaymentStatus } from "@/services/financeiro/asaas.service";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import AsaasWingsMark from "@/components/ui/AsaasWingsMark";
+import { AsaasWingsMark } from "../ui/AsaasWingsMark";
 
 const STATUS_OPTIONS: Array<AsaasPaymentStatus | "all"> = [
   "all",
@@ -231,7 +231,10 @@ export const AsaasPaymentsPanel = () => {
                       {formatCurrency(payment.value)}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600">
-                      {payment.billingType}
+                      <div className="flex items-center gap-2">
+                        <AsaasWingsMark variant="inline" />
+                        {payment.billingType}
+                      </div>
                     </td>
                     <td className="px-4 py-4">
                       <span

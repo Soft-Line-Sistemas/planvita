@@ -20,8 +20,10 @@ interface Props {
 }
 
 export const EnderecoForm = ({ form }: Props) => {
+  const cepValue = form.watch("cep");
+
   useEffect(() => {
-    const cep = form.watch("cep")?.replace(/\D/g, "");
+    const cep = cepValue?.replace(/\D/g, "");
 
     if (cep?.length === 8) {
       fetch(`https://viacep.com.br/ws/${cep}/json/`)
@@ -38,7 +40,7 @@ export const EnderecoForm = ({ form }: Props) => {
           console.warn("Erro ao buscar CEP no ViaCEP");
         });
     }
-  }, [form.watch("cep")]);
+  }, [cepValue, form]);
 
   return (
     <div className="space-y-6">

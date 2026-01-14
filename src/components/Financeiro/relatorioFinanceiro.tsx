@@ -46,12 +46,16 @@ const RelatoriosFinanceiro = () => {
   const [processingAction, setProcessingAction] = useState(false);
   const { data, isLoading, isError, error, refetch } = useRelatorioFinanceiro();
 
-  const totais = data?.totais ?? {
-    entradas: 0,
-    saidas: 0,
-    lucro: 0,
-    margem: 0,
-  };
+  const totais = useMemo(
+    () =>
+      data?.totais ?? {
+        entradas: 0,
+        saidas: 0,
+        lucro: 0,
+        margem: 0,
+      },
+    [data?.totais],
+  );
 
   const dadosMensais = data?.mensal ?? [];
   const distribuicaoCategorias = data?.distribuicao ?? [];

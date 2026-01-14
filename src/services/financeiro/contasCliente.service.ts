@@ -7,6 +7,8 @@ export type ContaFinanceira = {
   vencimento: string;
   status: string;
   tipo: "Pagar" | "Receber";
+  asaasPaymentId?: string | null;
+  asaasSubscriptionId?: string | null;
 };
 
 export const listarContasDoCliente = async (
@@ -29,5 +31,7 @@ export const listarContasDoCliente = async (
       vencimento: conta.vencimento,
       status: conta.status ?? "PENDENTE",
       tipo: conta.tipo,
+      asaasPaymentId: conta.asaasPaymentId,
+      asaasSubscriptionId: conta.asaasSubscriptionId,
     }));
 };

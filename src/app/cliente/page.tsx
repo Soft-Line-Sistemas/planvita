@@ -20,6 +20,7 @@ import SignaturePad, {
 } from "@/components/SignaturePad";
 import getTenantFromHost from "@/utils/getTenantFromHost";
 import Image from "next/image";
+import { AsaasWingsMark } from "@/components/ui/AsaasWingsMark";
 
 const normalizeCpf = (value: string) => value.replace(/\D/g, "");
 
@@ -447,7 +448,15 @@ export default function ConsultaClientePage() {
                         <tbody>
                           {contasFinanceiras.map((conta) => (
                             <tr key={conta.id} className="border-b">
-                              <td className="px-4 py-2">{conta.descricao}</td>
+                              <td className="px-4 py-2">
+                                <div className="flex items-center gap-2">
+                                  {conta.descricao}
+                                  {(conta.asaasPaymentId ||
+                                    conta.asaasSubscriptionId) && (
+                                    <AsaasWingsMark variant="inline" />
+                                  )}
+                                </div>
+                              </td>
                               <td className="px-4 py-2">
                                 {formatDate(conta.vencimento)}
                               </td>

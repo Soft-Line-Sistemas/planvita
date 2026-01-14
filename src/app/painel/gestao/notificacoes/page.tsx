@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Bell,
   Send,
@@ -116,6 +116,59 @@ export default function NotificacoesRecorrentesPage() {
   const tenantSlug =
     typeof window !== "undefined" ? getTenantFromHost() : "lider";
 
+  const buildDefaultTemplate = useCallback(
+    (canal: NotificationChannel, flow: NotificationFlow) => {
+      const tenant = (tenantSlug || "lider").toLowerCase();
+      const nomeEmpresa =
+        tenant === "bosque"
+          ? "PLANO FAMILIAR CAMPO DO BOSQUE LTDA"
+          : tenant === "pax"
+            ? "PAX PLANVITA"
+            : "LIDER PLANVITA";
+
+      let assunto = "";
+      let html = "";
+      let text = "";
+
+      if (flow === "pendencia-periodica") {
+        assunto = "Lembrete de pendência financeira";
+        if (canal === "email") {
+          html = `<p>Olá, ${nomeEmpresa} informa: Consta em nosso sistema uma pendência financeira.</p>`;
+          text = `Olá, ${nomeEmpresa} informa: Consta em nosso sistema uma pendência financeira.`;
+        } else {
+          text = `Olá, ${nomeEmpresa} informa: Consta em nosso sistema uma pendência financeira.`;
+        }
+      } else if (flow === "aviso-vencimento") {
+        assunto = "Aviso de vencimento próximo";
+        if (canal === "email") {
+          html = `<p>Olá, ${nomeEmpresa} lembra: Sua fatura vence em breve.</p>`;
+          text = `Olá, ${nomeEmpresa} lembra: Sua fatura vence em breve.`;
+        } else {
+          text = `Olá, ${nomeEmpresa} lembra: Sua fatura vence em breve.`;
+        }
+      } else if (flow === "aviso-pendencia") {
+        assunto = "Aviso de atraso no pagamento";
+        if (canal === "email") {
+          html = `<p>Olá, ${nomeEmpresa} informa: Não identificamos o pagamento da sua fatura.</p>`;
+          text = `Olá, ${nomeEmpresa} informa: Não identificamos o pagamento da sua fatura.`;
+        } else {
+          text = `Olá, ${nomeEmpresa} informa: Não identificamos o pagamento da sua fatura.`;
+        }
+      } else if (flow === "suspensao-preventiva") {
+        assunto = "Aviso de suspensão preventiva";
+        if (canal === "email") {
+          html = `<p>Olá, ${nomeEmpresa} informa: Seu plano está sujeito a suspensão preventiva.</p>`;
+          text = `Olá, ${nomeEmpresa} informa: Seu plano está sujeito a suspensão preventiva.`;
+        } else {
+          text = `Olá, ${nomeEmpresa} informa: Seu plano está sujeito a suspensão preventiva.`;
+        }
+      }
+
+      return { html, text, assunto };
+    },
+    [tenantSlug],
+  );
+
   const [contadorSegundos, setContadorSegundos] = useState(0);
   const [frequenciaMinutos, setFrequenciaMinutos] = useState(1440);
   const [metodo, setMetodo] = useState<NotificationChannel>("whatsapp");
@@ -165,14 +218,18 @@ export default function NotificacoesRecorrentesPage() {
   const isPeriodic = tipoAviso === "pendencia-periodica";
 
   useEffect(() => {
-    setNovoTemplate((prev) => ({
-      ...prev,
-      flow: tipoAviso,
-      assunto:
-        buildDefaultTemplate(prev.canal as NotificationChannel, tipoAviso)
-          .assunto ?? prev.assunto,
-    }));
-  }, [tipoAviso]);
+    setNovoTemplate((prev) => {
+      const base = buildDefaultTemplate(
+        prev.canal as NotificationChannel,
+        tipoAviso,
+      );
+      return {
+        ...prev,
+        flow: tipoAviso,
+        assunto: base.assunto ?? prev.assunto,
+      };
+    });
+  }, [tipoAviso, buildDefaultTemplate]);
 
   const destinatarios = useMemo(
     () => data?.destinatarios ?? [],
@@ -228,115 +285,6 @@ export default function NotificacoesRecorrentesPage() {
         refetchLogs();
       },
     });
-  };
-
-  const buildDefaultTemplate = (
-    canal: NotificationChannel,
-    flow: NotificationFlow,
-  ) => {
-    const tenant = (tenantSlug || "lider").toLowerCase();
-    const nomeEmpresa =
-      tenant === "bosque"
-        ? "PLANO FAMILIAR CAMPO DO BOSQUE LTDA"
-        : tenant === "pax"
-          ? "PAX PLANVITA"
-          : "LIDER PLANVITA";
-    const urlBase = `https://${tenant}.planvita.com.br`;
-    const urlCobranca = `${urlBase}/cliente`;
-    const assuntoPorFluxo: Record<NotificationFlow, string> = {
-      "pendencia-periodica": "Cobrança pendente",
-      "aviso-vencimento": "Lembrete de vencimento",
-      "aviso-pendencia": "Aviso de pendência",
-      "suspensao-preventiva": "Aviso de suspensão preventiva",
-    };
-
-    if (canal === "whatsapp") {
-      const textoPorFluxo: Record<NotificationFlow, string> = {
-        "pendencia-periodica":
-          "Olá, {{nomeCliente}}\n" +
-          `Sua cobrança gerada por ${nomeEmpresa} no valor de {{valor}} vence em {{vencimento}}.\n` +
-          "Descrição: {{descricao}}.\n" +
-          `Visualize/regularize em: ${urlCobranca}`,
-        "aviso-vencimento":
-          "Olá, {{nomeCliente}}\n" +
-          `Lembrete: sua cobrança de {{valor}} vence em {{vencimento}}.\n` +
-          "Descrição: {{descricao}}.\n" +
-          `Pague ou consulte em: ${urlCobranca}`,
-        "aviso-pendencia":
-          "Olá, {{nomeCliente}}\n" +
-          `Identificamos uma pendência de {{valor}} vencida em {{vencimento}}.\n` +
-          "Descrição: {{descricao}}.\n" +
-          `Regularize em: ${urlCobranca}`,
-        "suspensao-preventiva":
-          "Olá, {{nomeCliente}}\n" +
-          "Seu plano pode ser suspenso em breve por pendência financeira.\n" +
-          `Cobrança de {{valor}} vencida em {{vencimento}} ({{descricao}}).\n` +
-          `Evite suspensão regularizando em: ${urlCobranca}`,
-      };
-      const texto = textoPorFluxo[flow];
-      return { html: texto, text: texto, assunto: assuntoPorFluxo[flow] };
-    }
-
-    const html = `
-    <div style="font-family: Arial, sans-serif; background-color: #f4f5f7; padding: 24px;">
-      <div style="max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.06);">
-        <div style="background: linear-gradient(135deg, #16a34a, #0d7a35); color: #ffffff; padding: 18px 24px; display: flex; align-items: center; gap: 12px;">
-          <div>
-            <div style="font-size: 14px; opacity: 0.9;">${nomeEmpresa}</div>
-            <div style="font-size: 12px; opacity: 0.9;">51.121.484/0001-68</div>
-          </div>
-        </div>
-        <div style="padding: 24px; color: #0f172a;">
-          <p style="font-size: 16px; margin: 0 0 12px 0;">Olá, {{nomeCliente}}.</p>
-          <p style="font-size: 14px; margin: 0 0 12px 0;">
-            ${
-              flow === "aviso-vencimento"
-                ? "Lembrete: sua cobrança vence em breve."
-                : flow === "aviso-pendencia"
-                  ? "Identificamos uma pendência em seu cadastro."
-                  : flow === "suspensao-preventiva"
-                    ? "Seu plano pode ser suspenso por pendência financeira."
-                    : "Há cobranças pendentes registradas para você."
-            }
-          </p>
-          <p style="font-size: 14px; margin: 0 0 12px 0;">
-            Gerada por <strong>${nomeEmpresa}</strong> no valor de <strong>{{valor}}</strong>
-            ${flow === "aviso-vencimento" ? " com vencimento em" : " vencida em"}
-            <strong>{{vencimento}}</strong>.
-          </p>
-          <p style="font-size: 14px; margin: 0 0 16px 0;">
-            Descrição da cobrança: {{descricao}}
-          </p>
-          <div style="text-align: center; margin: 24px 0;">
-            <a href="${urlCobranca}" style="background: #16a34a; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">
-              Visualizar cobrança
-            </a>
-          </div>
-          <p style="font-size: 13px; color: #475569;">Clique no botão acima para visualizar a cobrança. Ou acesse: ${urlBase}</p>
-        </div>
-        <div style="background: #0f172a; color: #e2e8f0; padding: 18px 24px; font-size: 12px;">
-          <strong>${nomeEmpresa}</strong><br/>
-          51.121.484/0001-68<br/>
-          <a href="${urlBase}" style="color: #a7f3d0;">${urlBase}</a><br/>
-          <a href="mailto:pfcampodobosque@gmail.com" style="color: #a7f3d0;">pfcampodobosque@gmail.com</a><br/>
-          (71) 3034-7323<br/>
-          Avenida Centenário, 21, LOJA 80, Garcia<br/>
-          CEP: 40100180<br/>
-          Salvador - BA
-        </div>
-      </div>
-    </div>
-    `;
-    const texto =
-      flow === "aviso-vencimento"
-        ? "Olá, {{nomeCliente}}. Lembrete: sua cobrança de {{valor}} vence em {{vencimento}}. Descrição: {{descricao}}. Acesse: {{linkCobranca}}"
-        : flow === "aviso-pendencia"
-          ? "Olá, {{nomeCliente}}. Há uma pendência de {{valor}} vencida em {{vencimento}}. Descrição: {{descricao}}. Regularize em: {{linkCobranca}}"
-          : flow === "suspensao-preventiva"
-            ? "Olá, {{nomeCliente}}. Seu plano pode ser suspenso por pendência de {{valor}} vencida em {{vencimento}}. Descrição: {{descricao}}. Evite a suspensão em: {{linkCobranca}}"
-            : "Olá, {{nomeCliente}}. Lembramos que sua cobrança gerada por {{nomeEmpresa}} no valor de {{valor}} vence em {{vencimento}}. Descrição: {{descricao}}. Acesse: {{linkCobranca}}";
-
-    return { html, text: texto, assunto: assuntoPorFluxo[flow] };
   };
 
   const aplicarModeloPadrao = () => {

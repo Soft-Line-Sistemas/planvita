@@ -1,6 +1,6 @@
 "use client";
 
-import api from "@/utils/api";
+// import api from "@/utils/api";
 
 /**
  * Carrega e injeta o CSS dinâmico de tema no <head>
@@ -38,15 +38,15 @@ export const useTheme = async () => {
 /**
  * Função utilitária que injeta ou atualiza o <style id="theme">
  */
-function injectTheme(css: string) {
-  let styleTag = document.getElementById("theme") as HTMLStyleElement;
-
-  if (!styleTag) {
-    styleTag = document.createElement("style");
-    styleTag.id = "theme";
-    document.head.appendChild(styleTag);
-  }
-
-  // Substitui o conteúdo anterior (sem duplicar)
-  styleTag.innerHTML = css;
-}
+// function injectTheme(css: string) {
+//   let styleTag = document.getElementById("theme") as HTMLStyleElement;
+//
+//   if (!styleTag) {
+//     styleTag = document.createElement("style");
+//     styleTag.id = "theme";
+//     document.head.appendChild(styleTag);
+//   }
+//
+//   // Substitui o conteúdo anterior (sem duplicar)
+//   styleTag.innerHTML = css;
+// }
