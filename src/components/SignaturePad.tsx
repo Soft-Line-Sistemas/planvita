@@ -8,6 +8,7 @@ import {
 } from "react";
 
 export interface SignaturePadHandle {
+  [x: string]: unknown;
   clear: () => void;
   getDataURL: () => string | null;
   hasDrawing: () => boolean;

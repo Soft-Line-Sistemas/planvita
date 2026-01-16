@@ -36,6 +36,12 @@ type TitularResponse = {
   statusPlano?: string | null;
   dataContratacao?: string | null;
   plano?: PlanoResponse | null;
+  dependentes?: Array<{
+    id?: number | null;
+    nome?: string | null;
+    dataNascimento?: string | null;
+    tipoDependente?: string | null;
+  }> | null;
 };
 
 const mapTitularToCarteirinha = (titular: TitularResponse): ClientePlano => {
@@ -44,6 +50,14 @@ const mapTitularToCarteirinha = (titular: TitularResponse): ClientePlano => {
     plano?.coberturas?.map(
       (item) => item?.descricao || item?.tipo || "Cobertura incluída",
     ) ?? [];
+
+  const dependentes =
+    titular?.dependentes?.map((dep) => ({
+      id: dep?.id ?? 0,
+      nome: dep?.nome ?? "Dependente",
+      dataNascimento: dep?.dataNascimento ?? null,
+      tipo: dep?.tipoDependente ?? null,
+    })) ?? [];
 
   const vigenciaInicio = titular?.dataContratacao ?? new Date().toISOString();
   const vigenciaFim = addMonths(vigenciaInicio, plano?.vigenciaMeses ?? 12);
@@ -83,6 +97,7 @@ const mapTitularToCarteirinha = (titular: TitularResponse): ClientePlano => {
         : ["Cobertura padrão do plano contratado."],
       observacoes: plano?.descricao ?? undefined,
     },
+    dependentes,
   };
 };
 
@@ -94,19 +109,17 @@ export const consultarClientePorCpf = async (
     throw new Error("Informe um CPF válido com 11 dígitos.");
   }
 
-  const searchResponse = await api.get("/titular", {
+  const searchResponse = await api.get("/titular/public/search", {
     params: {
-      search: normalized,
-      limit: 1,
-      page: 1,
+      cpf: normalized,
     },
   });
 
-  const candidato = searchResponse.data?.data?.[0];
+  const candidato = searchResponse.data;
   if (!candidato) {
     throw new Error("Plano não encontrado para o CPF informado.");
   }
 
-  const detailResponse = await api.get(`/titular/${candidato.id}`);
-  return mapTitularToCarteirinha(detailResponse.data ?? candidato);
+  // A rota pública já retorna os detalhes completos
+  return mapTitularToCarteirinha(candidato);
 };
