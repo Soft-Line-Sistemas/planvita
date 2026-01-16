@@ -12,6 +12,13 @@ export interface PlanoDetalhado {
   observacoes?: string;
 }
 
+export interface DependentePlano {
+  id: number;
+  nome: string;
+  dataNascimento?: string | null;
+  tipo?: string | null;
+}
+
 export interface ClientePlano {
   titularId?: number | string | null;
   cpf: string;
@@ -20,4 +27,5 @@ export interface ClientePlano {
   email?: string;
   telefone?: string;
   plano: PlanoDetalhado;
+  dependentes?: DependentePlano[];
 }

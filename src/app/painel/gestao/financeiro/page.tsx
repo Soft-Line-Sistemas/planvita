@@ -78,10 +78,33 @@ const GestaoFinanceira = () => {
     () => inadimplentes.reduce((acc, conta) => acc + conta.valor, 0),
     [inadimplentes],
   );
-  const taxaInadimplencia = useMemo(() => {
-    if (!contasReceber.length) return 0;
-    return (inadimplentes.length / contasReceber.length) * 100;
-  }, [contasReceber, inadimplentes]);
+  const saldoProjetado = useMemo(() => {
+    const lista = contasFinanceiras ?? [];
+    const totalPagar = lista
+      .filter((conta) => conta.tipo === "Pagar")
+      .reduce((acc, conta) => acc + conta.valor, 0);
+    const totalReceber = lista
+      .filter((conta) => conta.tipo === "Receber")
+      .reduce((acc, conta) => acc + conta.valor, 0);
+    return totalReceber - totalPagar;
+  }, [contasFinanceiras]);
+  const inadimplentesAtrasoMaior5 = useMemo(
+    () => inadimplentes.filter((conta) => getDiasAtraso(conta) > 5),
+    [inadimplentes],
+  );
+  const totalValorCarteira = useMemo(
+    () => contasReceber.reduce((acc, conta) => acc + conta.valor, 0),
+    [contasReceber],
+  );
+  const totalValorInadimplenteGlobal = useMemo(
+    () =>
+      inadimplentesAtrasoMaior5.reduce((acc, conta) => acc + conta.valor, 0),
+    [inadimplentesAtrasoMaior5],
+  );
+  const taxaInadimplenciaGlobal = useMemo(() => {
+    if (!totalValorCarteira) return 0;
+    return (totalValorInadimplenteGlobal / totalValorCarteira) * 100;
+  }, [totalValorCarteira, totalValorInadimplenteGlobal]);
   const resumoCards = useMemo(() => {
     const lista = contasFinanceiras ?? [];
     const sum = (items: typeof lista) =>
@@ -113,6 +136,16 @@ const GestaoFinanceira = () => {
     const mensal = relatorioFinanceiro?.mensal ?? [];
     return [...mensal].reverse().slice(0, 4);
   }, [relatorioFinanceiro]);
+  const diasLiquidezCaixa = useMemo(() => {
+    const mensal = relatorioFinanceiro?.mensal ?? [];
+    if (!mensal.length) return null;
+    const totalSaidas = mensal.reduce((acc, item) => acc + item.saidas, 0);
+    const meses = mensal.length || 1;
+    const mediaMensalSaidas = totalSaidas / meses;
+    const mediaDiariaSaidas = mediaMensalSaidas / 30;
+    if (!mediaDiariaSaidas || mediaDiariaSaidas <= 0) return null;
+    return saldoProjetado / mediaDiariaSaidas;
+  }, [relatorioFinanceiro, saldoProjetado]);
   const [abaAtiva, setAbaAtiva] = useState("contas");
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
@@ -217,6 +250,7 @@ const GestaoFinanceira = () => {
       { id: "relatorios", nome: "Relatórios", icon: FileText },
       { id: "cadastros", nome: "Cadastros", icon: TrendingUp },
       { id: "contas", nome: "Contas Financeiras", icon: DollarSign },
+      { id: "boletos", nome: "Boletos", icon: Barcode },
       {
         id: "relatoriosFinanceiro",
         nome: "Relatórios Financeiros",
@@ -745,7 +779,7 @@ const GestaoFinanceira = () => {
 
         {abaAtiva === "relatorios" && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Receita Mensal
@@ -792,33 +826,76 @@ const GestaoFinanceira = () => {
 
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Taxa de Inadimplência
+                  Liquidez de Caixa
                 </h3>
                 <div className="space-y-4">
                   <div>
                     <p className="text-4xl font-bold text-red-600">
-                      {taxaInadimplencia.toFixed(1)}%
+                      {diasLiquidezCaixa !== null
+                        ? Math.max(0, Math.floor(diasLiquidezCaixa))
+                        : "—"}
                     </p>
                     <p className="text-sm text-gray-500">
-                      {inadimplentes.length} clientes com {contasReceber.length}{" "}
-                      contas abertas
+                      dias de operação com o caixa projetado atual
                     </p>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Valor em aberto</span>
+                    <span className="text-gray-600">Saldo projetado</span>
                     <span className="font-semibold text-gray-900">
-                      R$ {totalValorInadimplente.toLocaleString("pt-BR")}
+                      {formatCurrency(saldoProjetado)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">
-                      Recebíveis monitorados
+                      Despesa média diária estimada
                     </span>
                     <span className="font-semibold text-gray-900">
-                      R${" "}
-                      {contasReceber
-                        .reduce((acc, conta) => acc + conta.valor, 0)
-                        .toLocaleString("pt-BR")}
+                      {diasLiquidezCaixa !== null
+                        ? formatCurrency(
+                            saldoProjetado /
+                              Math.max(diasLiquidezCaixa || 1, 1),
+                          )
+                        : "—"}
+                    </span>
+                  </div>
+                  <div className="pt-4 border-t text-xs text-gray-500">
+                    Última atualização:{" "}
+                    {new Date().toLocaleString("pt-BR", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Taxa de Inadimplência Global (&gt; 5 dias)
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-4xl font-bold text-red-600">
+                      {taxaInadimplenciaGlobal.toFixed(1)}%
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {inadimplentesAtrasoMaior5.length} contas com atraso
+                      superior a 5 dias
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">
+                      Valor em atraso &gt; 5
+                    </span>
+                    <span className="font-semibold text-gray-900">
+                      {formatCurrency(totalValorInadimplenteGlobal)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">
+                      Carteira total monitorada
+                    </span>
+                    <span className="font-semibold text-gray-900">
+                      {formatCurrency(totalValorCarteira)}
                     </span>
                   </div>
                   <div className="pt-4 border-t text-xs text-gray-500">
@@ -873,6 +950,7 @@ const GestaoFinanceira = () => {
         {abaAtiva === "boletos" && <EmissaoBoleto />}
         {abaAtiva === "relatoriosFinanceiro" && <RelatorioFinanceiro />}
         {abaAtiva === "asaas" && isBosqueTenant && <AsaasPaymentsPanel />}
+        {abaAtiva === "boletos" && <EmissaoBoleto />}
       </div>
 
       {/* Modal de Detalhes do Pagamento */}

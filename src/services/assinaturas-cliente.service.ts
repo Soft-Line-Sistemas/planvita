@@ -1,14 +1,15 @@
 import api from "@/utils/api";
 
 export type AssinaturaDigital = {
+  [x: string]: string | number | Date;
   id: number;
   titularId: number;
   tipo: string;
   arquivoId: string;
   arquivoUrl: string;
   filename: string;
-  mimetype?: string;
-  size?: number;
+  mimetype: string;
+  size: number;
   createdAt: string;
   updatedAt: string;
 };
