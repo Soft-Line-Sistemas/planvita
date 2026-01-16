@@ -34,14 +34,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { formatCPF } from "@/helpers/formHelpers";
 import type { ClientePlano } from "@/types/ClientePlano";
@@ -187,11 +179,28 @@ export default function ConsultaClientePage() {
       const clienteEncontrado = await consultarClientePorCpf(digitsOnly);
       setCliente(clienteEncontrado);
       setAbaAtiva("carteirinha");
-    } catch (fetchError) {
+    } catch (fetchError: unknown) {
       console.error(fetchError);
-      setError(
-        "CPF não encontrado ou não cadastrado. Verifique se digitou corretamente ou entre em contato com o suporte.",
-      );
+
+      const errorObject =
+        typeof fetchError === "object" && fetchError !== null
+          ? (fetchError as {
+              response?: { data?: { error?: string; message?: string } };
+            })
+          : undefined;
+
+      const detailedError = errorObject?.response?.data?.error;
+      const serverMessage = errorObject?.response?.data?.message;
+
+      if (detailedError) {
+        setError(`Erro técnico: ${detailedError}`);
+      } else if (serverMessage && serverMessage !== "Internal server error") {
+        setError(serverMessage);
+      } else {
+        setError(
+          "CPF não encontrado ou não cadastrado. Verifique se digitou corretamente ou entre em contato com o suporte.",
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -723,7 +732,7 @@ export default function ConsultaClientePage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {contasFinanceiras.map((conta) => (
+                          {contasFiltradas.map((conta) => (
                             <tr key={conta.id} className="border-b">
                               <td className="px-4 py-2">
                                 <div className="flex items-center gap-2">
@@ -736,14 +745,14 @@ export default function ConsultaClientePage() {
                               </td>
                               <td className="px-4 py-2">
                                 {formatDate(conta.vencimento)}
-                              </TableCell>
-                              <TableCell>
+                              </td>
+                              <td className="px-4 py-2">
                                 {formatCurrency(conta.valor)}
-                              </TableCell>
-                              <TableCell>
+                              </td>
+                              <td className="px-4 py-2">
                                 {getStatusBadge(conta.status)}
-                              </TableCell>
-                              <TableCell className="text-right">
+                              </td>
+                              <td className="px-4 py-2 text-right">
                                 {conta.paymentUrl ? (
                                   <Button
                                     size="sm"
@@ -764,11 +773,11 @@ export default function ConsultaClientePage() {
                                     Indisponível
                                   </span>
                                 )}
-                              </TableCell>
-                            </TableRow>
+                              </td>
+                            </tr>
                           ))}
-                        </TableBody>
-                      </Table>
+                        </tbody>
+                      </table>
                     </div>
                   ) : (
                     <div className="text-center py-10 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
