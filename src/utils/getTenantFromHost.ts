@@ -4,13 +4,10 @@ export default function getTenantFromHost(): string | null {
   const host = window.location.hostname;
   const parts = host.split(".");
 
-  if (host.endsWith("localhost") && parts.length >= 2) {
-    return parts[0];
-  }
+  const forbidden = ["www", "api", "app"];
+  const candidate = parts.find(
+    (part) => part && !forbidden.includes(part.toLowerCase()),
+  );
 
-  if (parts.length >= 3) {
-    return parts[0];
-  }
-
-  return null;
+  return candidate || null;
 }
