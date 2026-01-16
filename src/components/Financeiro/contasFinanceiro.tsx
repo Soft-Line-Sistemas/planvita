@@ -10,12 +10,32 @@ import {
   AlertTriangle,
   Loader2,
   X,
+  Pencil,
+  Trash,
   PlusCircle,
   Copy,
-  Link,
+  // Link,
   RefreshCcw,
   AlertCircle,
+  Search,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  FileSpreadsheet,
+  Table,
 } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   ContaFinanceira,
   StatusFinanceiro,
@@ -27,6 +47,8 @@ import {
   useBaixarContaFinanceira,
   useEstornarContaFinanceira,
   useCriarContaFinanceira,
+  useAtualizarContaFinanceira,
+  useDeletarContaFinanceira,
   useReconsultarContaReceber,
 } from "@/hooks/mutations/useContaFinanceiraMutations";
 import { Button } from "@/components/ui/button";
@@ -34,6 +56,7 @@ import { Input } from "@/components/ui/input";
 import { useFinanceiroClientes } from "@/hooks/queries/useFinanceiroClientes";
 import type { ClienteFinanceiroResumo } from "@/services/financeiro/clientes.service";
 import { toast } from "sonner";
+import { AsaasWingsMark } from "@/components/ui/AsaasWingsMark";
 
 type FiltroStatus =
   | "todas"
@@ -61,11 +84,28 @@ const ContasFinanceiro: React.FC = () => {
   const estornarConta = useEstornarContaFinanceira();
   const criarConta = useCriarContaFinanceira();
   const reconsultarConta = useReconsultarContaReceber();
+  const atualizarConta = useAtualizarContaFinanceira();
+  const deletarConta = useDeletarContaFinanceira();
+
+  const [termoBusca, setTermoBusca] = useState("");
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const itensPorPagina = 10;
+  const [ordenacao, setOrdenacao] = useState<{
+    campo: keyof ContaFinanceira | "status";
+    direcao: "asc" | "desc";
+  }>({
+    campo: "dataVencimento",
+    direcao: "asc",
+  });
 
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>("todas");
   const [filtroTipo, setFiltroTipo] = useState<TipoConta | "todas">("todas");
   const [mostrarModalNovaConta, setMostrarModalNovaConta] = useState(false);
   const [tipoContaNova, setTipoContaNova] = useState<TipoConta>("Pagar");
+  const [modoModalConta, setModoModalConta] = useState<"criar" | "editar">(
+    "criar",
+  );
+  const [contaEditandoId, setContaEditandoId] = useState<number | null>(null);
   const [buscaCliente, setBuscaCliente] = useState("");
   const [erroNovaConta, setErroNovaConta] = useState<string | null>(null);
   const [formNovaConta, setFormNovaConta] = useState({
@@ -107,26 +147,152 @@ const ContasFinanceiro: React.FC = () => {
   }, [contas]);
 
   const contasFiltradas = useMemo(() => {
-    return contas.filter((conta) => {
+    const resultado = contas.filter((conta) => {
+      // Filtro de Tipo
       const matchTipo =
         filtroTipo === "todas" ? true : conta.tipo === filtroTipo;
-
       if (!matchTipo) return false;
 
+      // Filtro de Status
+      let matchStatus = true;
       switch (filtroStatus) {
         case "pagas":
-          return conta.status === "PAGO" || conta.status === "RECEBIDO";
+          matchStatus = conta.status === "PAGO" || conta.status === "RECEBIDO";
+          break;
         case "pendentes":
-          return conta.status === "PENDENTE";
+          matchStatus = conta.status === "PENDENTE";
+          break;
         case "atrasadas":
-          return conta.status === "ATRASADO" || conta.status === "VENCIDO";
+          matchStatus =
+            conta.status === "ATRASADO" || conta.status === "VENCIDO";
+          break;
         case "canceladas":
-          return conta.status === "CANCELADO";
+          matchStatus = conta.status === "CANCELADO";
+          break;
         default:
-          return true;
+          matchStatus = true;
       }
+      if (!matchStatus) return false;
+
+      // Busca Textual
+      if (termoBusca) {
+        const termo = termoBusca.toLowerCase();
+        const matchDescricao = conta.descricao.toLowerCase().includes(termo);
+        const matchParceiro = conta.parceiro?.toLowerCase().includes(termo);
+        const matchValor = conta.valor.toString().includes(termo);
+        if (!matchDescricao && !matchParceiro && !matchValor) return false;
+      }
+
+      return true;
     });
-  }, [contas, filtroStatus, filtroTipo]);
+
+    // Ordenação
+    resultado.sort((a, b) => {
+      const aValue = a[ordenacao.campo];
+      const bValue = b[ordenacao.campo];
+
+      if (aValue === bValue) return 0;
+
+      if (aValue == null && bValue == null) return 0;
+      if (aValue == null) return 1;
+      if (bValue == null) return -1;
+      const comparison = aValue > bValue ? 1 : -1;
+      return ordenacao.direcao === "asc" ? comparison : -comparison;
+    });
+
+    return resultado;
+  }, [contas, filtroStatus, filtroTipo, termoBusca, ordenacao]);
+
+  // Paginação
+  const totalPaginas = Math.ceil(contasFiltradas.length / itensPorPagina);
+  const contasPaginadas = useMemo(() => {
+    const inicio = (paginaAtual - 1) * itensPorPagina;
+    return contasFiltradas.slice(inicio, inicio + itensPorPagina);
+  }, [contasFiltradas, paginaAtual, itensPorPagina]);
+
+  const handleOrdenacao = (campo: keyof ContaFinanceira | "status") => {
+    setOrdenacao((prev) => ({
+      campo,
+      direcao: prev.campo === campo && prev.direcao === "asc" ? "desc" : "asc",
+    }));
+  };
+
+  const exportarCSV = () => {
+    const headers = [
+      "Tipo",
+      "Descrição",
+      "Parceiro",
+      "Vencimento",
+      "Valor",
+      "Status",
+    ];
+    const rows = contasFiltradas.map((c) => [
+      c.tipo,
+      c.descricao,
+      c.parceiro || "",
+      new Date(c.dataVencimento).toLocaleDateString("pt-BR"),
+      c.valor.toFixed(2),
+      c.status,
+    ]);
+
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [headers.join(";"), ...rows.map((e) => e.join(";"))].join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "relatorio_financeiro.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportarPDF = () => {
+    const doc = new jsPDF();
+    doc.text("Relatório Financeiro - PlanVita", 14, 20);
+
+    const tableColumn = [
+      "Tipo",
+      "Descrição",
+      "Parceiro",
+      "Vencimento",
+      "Valor",
+      "Status",
+    ];
+    const tableRows = contasFiltradas.map((c) => [
+      c.tipo,
+      c.descricao,
+      c.parceiro || "",
+      new Date(c.dataVencimento).toLocaleDateString("pt-BR"),
+      `R$ ${c.valor.toFixed(2)}`,
+      c.status,
+    ]);
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 30,
+    });
+
+    doc.save("relatorio_financeiro.pdf");
+  };
+
+  const exportarExcel = () => {
+    const worksheet = XLSX.utils.json_to_sheet(
+      contasFiltradas.map((c) => ({
+        Tipo: c.tipo,
+        Descrição: c.descricao,
+        Parceiro: c.parceiro,
+        Vencimento: new Date(c.dataVencimento).toLocaleDateString("pt-BR"),
+        Valor: c.valor,
+        Status: c.status,
+      })),
+    );
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Financeiro");
+    XLSX.writeFile(workbook, "relatorio_financeiro.xlsx");
+  };
 
   const podeBaixar = (conta: ContaFinanceira) =>
     conta.status === "PENDENTE" ||
@@ -170,6 +336,8 @@ const ContasFinanceiro: React.FC = () => {
     setMostrarModalNovaConta(false);
     setErroNovaConta(null);
     setBuscaCliente("");
+    setModoModalConta("criar");
+    setContaEditandoId(null);
     setFormNovaConta({
       descricao: "",
       valor: "",
@@ -236,6 +404,94 @@ const ContasFinanceiro: React.FC = () => {
         },
       );
     }
+  };
+
+  const handleAbrirEdicao = (conta: ContaFinanceira) => {
+    setErroNovaConta(null);
+    setBuscaCliente("");
+    setModoModalConta("editar");
+    setMostrarModalNovaConta(true);
+    setTipoContaNova(conta.tipo);
+    setContaEditandoId(conta.id);
+    const venc = new Date(conta.dataVencimento).toISOString().slice(0, 10);
+    setFormNovaConta({
+      descricao: conta.descricao || "",
+      valor: conta.valor.toString(),
+      vencimento: venc,
+      fornecedor: conta.tipo === "Pagar" ? conta.parceiro || "" : "",
+      clienteId:
+        conta.tipo === "Receber" ? conta.clienteId?.toString() || "" : "",
+      clienteNome: conta.tipo === "Receber" ? conta.cliente?.nome || "" : "",
+    });
+  };
+
+  const handleAtualizarConta = () => {
+    setErroNovaConta(null);
+    const valorNumerico = Number(formNovaConta.valor);
+    if (
+      !formNovaConta.descricao.trim() ||
+      !formNovaConta.valor ||
+      !formNovaConta.vencimento ||
+      Number.isNaN(valorNumerico) ||
+      valorNumerico <= 0
+    ) {
+      if (valorNumerico <= 0 || Number.isNaN(valorNumerico)) {
+        setErroNovaConta("Informe um valor positivo.");
+      }
+      return;
+    }
+
+    if (!contaEditandoId) return;
+
+    if (tipoContaNova === "Pagar") {
+      atualizarConta.mutate(
+        {
+          tipo: "Pagar",
+          id: contaEditandoId,
+          payload: {
+            descricao: formNovaConta.descricao.trim(),
+            valor: valorNumerico,
+            vencimento: formNovaConta.vencimento,
+            fornecedor: formNovaConta.fornecedor.trim() || undefined,
+          },
+        },
+        {
+          onSuccess: resetModal,
+        },
+      );
+    } else {
+      const clienteId = formNovaConta.clienteId
+        ? Number(formNovaConta.clienteId)
+        : undefined;
+
+      if (!clienteId) {
+        setErroNovaConta("Selecione um cliente vinculado à conta.");
+        return;
+      }
+
+      atualizarConta.mutate(
+        {
+          tipo: "Receber",
+          id: contaEditandoId,
+          payload: {
+            descricao: formNovaConta.descricao.trim(),
+            valor: valorNumerico,
+            vencimento: formNovaConta.vencimento,
+            clienteId,
+          },
+        },
+        {
+          onSuccess: resetModal,
+        },
+      );
+    }
+  };
+
+  const handleExcluirConta = (conta: ContaFinanceira) => {
+    deletarConta.mutate({
+      tipo: conta.tipo,
+      id: conta.id,
+    });
   };
 
   const confirmarAcaoAsaas = () => {
@@ -312,6 +568,22 @@ const ContasFinanceiro: React.FC = () => {
       return true;
     }
 
+    if (
+      atualizarConta.isPending &&
+      atualizarConta.variables &&
+      atualizarConta.variables.id.toString() === targetId
+    ) {
+      return true;
+    }
+
+    if (
+      deletarConta.isPending &&
+      deletarConta.variables &&
+      deletarConta.variables.id.toString() === targetId
+    ) {
+      return true;
+    }
+
     return false;
   };
 
@@ -378,6 +650,7 @@ const ContasFinanceiro: React.FC = () => {
               onClick={() => {
                 setErroNovaConta(null);
                 setBuscaCliente("");
+                setModoModalConta("criar");
                 setMostrarModalNovaConta(true);
               }}
               className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
@@ -386,6 +659,48 @@ const ContasFinanceiro: React.FC = () => {
               Nova conta
             </Button>
           </div>
+        </div>
+
+        {/* Busca e Exportação */}
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+          <div className="relative w-full md:w-96">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Buscar por descrição, parceiro ou valor..."
+              value={termoBusca}
+              onChange={(e) => {
+                setTermoBusca(e.target.value);
+                setPaginaAtual(1);
+              }}
+              className="pl-10"
+            />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 text-gray-700 border-gray-300 hover:bg-gray-50"
+              >
+                <Download className="w-4 h-4" />
+                Exportar
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={exportarCSV}>
+                <FileText className="w-4 h-4 mr-2" />
+                Exportar CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportarExcel}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Exportar Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportarPDF}>
+                <Table className="w-4 h-4 mr-2" />
+                Exportar PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Resumo */}
@@ -460,24 +775,35 @@ const ContasFinanceiro: React.FC = () => {
             <table className="min-w-full divide-y divide-gray-100">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500">
-                    Tipo
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500">
-                    Descrição
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500">
-                    Parceiro
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500">
-                    Vencimento
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500">
-                    Valor
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500">
-                    Status
-                  </th>
+                  {(
+                    [
+                      { label: "Tipo", key: "tipo" },
+                      { label: "Descrição", key: "descricao" },
+                      { label: "Parceiro", key: "parceiro" },
+                      { label: "Vencimento", key: "dataVencimento" },
+                      { label: "Valor", key: "valor" },
+                      { label: "Status", key: "status" },
+                    ] as {
+                      label: string;
+                      key: keyof ContaFinanceira | "status";
+                    }[]
+                  ).map((col) => (
+                    <th
+                      key={col.key}
+                      className="px-6 py-3 text-left text-xs font-semibold text-gray-500 cursor-pointer hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                      onClick={() => handleOrdenacao(col.key)}
+                    >
+                      <div className="flex items-center gap-1">
+                        {col.label}
+                        {ordenacao.campo === col.key &&
+                          (ordenacao.direcao === "asc" ? (
+                            <ChevronUp className="w-3 h-3" />
+                          ) : (
+                            <ChevronDown className="w-3 h-3" />
+                          ))}
+                      </div>
+                    </th>
+                  ))}
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500">
                     Cobrança Asaas
                   </th>
@@ -525,7 +851,12 @@ const ContasFinanceiro: React.FC = () => {
                         )}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        <p className="font-semibold">{conta.descricao}</p>
+                        <p className="font-semibold flex items-center gap-2">
+                          {conta.descricao}
+                          {sincronizada && (
+                            <AsaasWingsMark variant="badge" withTooltip />
+                          )}
+                        </p>
                         {conta.observacao && (
                           <p className="text-xs text-gray-500">
                             {conta.observacao}
@@ -566,15 +897,24 @@ const ContasFinanceiro: React.FC = () => {
                         >
                           <Icon className="w-4 h-4" />
                           {conta.status}
+                          {sincronizada && (
+                            <AsaasWingsMark
+                              className="w-3.5 h-3.5 text-sky-500"
+                              variant="default"
+                              withTooltip={false}
+                            />
+                          )}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm">
                         {conta.tipo === "Receber" && sincronizada ? (
                           <div className="space-y-2">
-                            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">
-                              <Link className="w-4 h-4" />
-                              Sincronizado Asaas
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <AsaasWingsMark variant="badge" />
+                              <span className="text-xs font-medium text-emerald-700">
+                                Sincronizado
+                              </span>
+                            </div>
                             <p className="text-xs text-gray-600">
                               Método:{" "}
                               <span className="font-semibold text-gray-800">
@@ -677,6 +1017,32 @@ const ContasFinanceiro: React.FC = () => {
                               Estornar
                             </button>
                           )}
+
+                          <button
+                            onClick={() => handleAbrirEdicao(conta)}
+                            disabled={isProcessing(conta)}
+                            className="px-3 py-1 rounded-md text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1"
+                          >
+                            {isProcessing(conta) ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Pencil className="w-3 h-3" />
+                            )}
+                            Editar
+                          </button>
+
+                          <button
+                            onClick={() => handleExcluirConta(conta)}
+                            disabled={isProcessing(conta)}
+                            className="px-3 py-1 rounded-md text-xs font-medium bg-gray-200 text-gray-800 hover:bg-gray-300 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1"
+                          >
+                            {isProcessing(conta) ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Trash className="w-3 h-3" />
+                            )}
+                            Excluir
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -696,6 +1062,39 @@ const ContasFinanceiro: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Paginação */}
+          <div className="flex items-center justify-between p-4 bg-white border-t border-gray-100">
+            <p className="text-sm text-gray-500">
+              Mostrando {contasPaginadas.length} de {contasFiltradas.length}{" "}
+              resultados
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
+                disabled={paginaAtual === 1}
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Anterior
+              </Button>
+              <span className="text-sm text-gray-600">
+                Página {paginaAtual} de {totalPaginas || 1}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setPaginaAtual((p) => Math.min(totalPaginas, p + 1))
+                }
+                disabled={paginaAtual >= totalPaginas}
+              >
+                Próxima
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
       {acaoAsaasConfirmacao && (
@@ -709,13 +1108,24 @@ const ContasFinanceiro: React.FC = () => {
       )}
       {mostrarModalNovaConta && (
         <ModalNovaConta
+          titulo={
+            modoModalConta === "criar"
+              ? "Nova conta financeira"
+              : "Editar conta financeira"
+          }
           tipo={tipoContaNova}
           setTipo={setTipoContaNova}
           form={formNovaConta}
           setForm={setFormNovaConta}
           onClose={resetModal}
-          onSubmit={handleCriarConta}
-          isSubmitting={criarConta.isPending}
+          onSubmit={
+            modoModalConta === "criar" ? handleCriarConta : handleAtualizarConta
+          }
+          isSubmitting={
+            modoModalConta === "criar"
+              ? criarConta.isPending
+              : atualizarConta.isPending
+          }
           clientes={clientesDisponiveis}
           isLoadingClientes={carregandoClientes}
           buscaCliente={buscaCliente}
@@ -798,6 +1208,7 @@ const ModalConfirmacaoAsaas = ({
 };
 
 const ModalNovaConta = ({
+  titulo,
   tipo,
   setTipo,
   form,
@@ -812,6 +1223,7 @@ const ModalNovaConta = ({
   erro,
   onClearErro,
 }: {
+  titulo: string;
   tipo: TipoConta;
   setTipo: (tipo: TipoConta) => void;
   form: {
@@ -846,9 +1258,7 @@ const ModalNovaConta = ({
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
       <div className="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Nova conta financeira
-          </h3>
+          <h3 className="text-lg font-semibold text-gray-900">{titulo}</h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"

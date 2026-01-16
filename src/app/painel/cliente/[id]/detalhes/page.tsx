@@ -28,6 +28,7 @@ import { ClienteEditDialog } from "@/components/Titular/Cliente/ClienteEditDialo
 import { criarDependente } from "@/services/dependente.service";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AsaasWingsMark } from "@/components/ui/AsaasWingsMark";
 
 const DetalhesCliente = () => {
   const params = useParams();
@@ -673,9 +674,15 @@ const DetalhesCliente = () => {
                       return (
                         <tr key={pagamento.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {new Date(
-                              pagamento.dataVencimento,
-                            ).toLocaleDateString("pt-BR")}
+                            <div className="flex items-center gap-2">
+                              {new Date(
+                                pagamento.dataVencimento,
+                              ).toLocaleDateString("pt-BR")}
+                              {(pagamento.asaasPaymentId ||
+                                pagamento.asaasSubscriptionId) && (
+                                <AsaasWingsMark variant="inline" />
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             R$ {pagamento.valor.toFixed(2)}

@@ -34,6 +34,7 @@ import { getDiasAtraso } from "@/types/Financeiro";
 import { useRelatorioFinanceiro } from "@/hooks/queries/useRelatorioFinanceiro";
 import { gerarBoletoPDF } from "@/utils/boleto";
 import EmissaoBoleto from "@/components/Financeiro/EmissaoBoleto";
+import { AsaasWingsMark } from "@/components/ui/AsaasWingsMark";
 
 const GestaoFinanceira = () => {
   const {
@@ -254,6 +255,11 @@ const GestaoFinanceira = () => {
         id: "relatoriosFinanceiro",
         nome: "Relatórios Financeiros",
         icon: FileText,
+      },
+      {
+        id: "boletos",
+        nome: "Boleto",
+        icon: Barcode,
       },
     ];
 
@@ -941,6 +947,7 @@ const GestaoFinanceira = () => {
         )}
         {abaAtiva === "cadastros" && <CadastroFinanceiro />}
         {abaAtiva === "contas" && <ContasFinanceiro />}
+        {abaAtiva === "boletos" && <EmissaoBoleto />}
         {abaAtiva === "relatoriosFinanceiro" && <RelatorioFinanceiro />}
         {abaAtiva === "asaas" && isBosqueTenant && <AsaasPaymentsPanel />}
         {abaAtiva === "boletos" && <EmissaoBoleto />}
@@ -952,9 +959,18 @@ const GestaoFinanceira = () => {
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Detalhes do Pagamento
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Detalhes do Pagamento
+                  </h3>
+                  {(pagamentoSelecionado.asaasPaymentId ||
+                    pagamentoSelecionado.asaasSubscriptionId) && (
+                    <AsaasWingsMark
+                      variant="badge"
+                      tooltipText="Integrado via Asaas"
+                    />
+                  )}
+                </div>
                 <button
                   onClick={() => setModalAberto(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -1040,9 +1056,15 @@ const GestaoFinanceira = () => {
                     <label className="text-sm text-gray-600">
                       Método de Pagamento
                     </label>
-                    <p className="font-medium">
-                      {pagamentoSelecionado.metodoPagamento}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">
+                        {pagamentoSelecionado.metodoPagamento}
+                      </p>
+                      {(pagamentoSelecionado.asaasPaymentId ||
+                        pagamentoSelecionado.asaasSubscriptionId) && (
+                        <AsaasWingsMark variant="inline" />
+                      )}
+                    </div>
                   </div>
                   <div>
                     <label className="text-sm text-gray-600">Referência</label>

@@ -47,6 +47,8 @@ interface Dependente {
 type MetodoPagamento = "Boleto" | "PIX" | "Cartão de Crédito";
 
 interface Pagamento {
+  asaasSubscriptionId?: string | null;
+  asaasPaymentId?: string | null;
   id: string;
   valor: number;
   dataVencimento: string;

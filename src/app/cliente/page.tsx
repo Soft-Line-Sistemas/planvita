@@ -59,6 +59,7 @@ import SignaturePad, {
   type SignaturePadHandle,
 } from "@/components/SignaturePad";
 import Image from "next/image";
+import { AsaasWingsMark } from "@/components/ui/AsaasWingsMark";
 
 const normalizeCpf = (value: string) => value.replace(/\D/g, "");
 
@@ -712,23 +713,28 @@ export default function ConsultaClientePage() {
                     </div>
                   ) : contasFiltradas.length > 0 ? (
                     <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Descrição</TableHead>
-                            <TableHead>Vencimento</TableHead>
-                            <TableHead>Valor</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Ações</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {contasFiltradas.map((conta) => (
-                            <TableRow key={conta.id}>
-                              <TableCell className="font-medium">
-                                {conta.descricao}
-                              </TableCell>
-                              <TableCell>
+                      <table className="min-w-full text-sm text-gray-700">
+                        <thead className="bg-gray-100">
+                          <tr>
+                            <th className="px-4 py-2 text-left">Descrição</th>
+                            <th className="px-4 py-2 text-left">Vencimento</th>
+                            <th className="px-4 py-2 text-left">Valor</th>
+                            <th className="px-4 py-2 text-left">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {contasFinanceiras.map((conta) => (
+                            <tr key={conta.id} className="border-b">
+                              <td className="px-4 py-2">
+                                <div className="flex items-center gap-2">
+                                  {conta.descricao}
+                                  {(conta.asaasPaymentId ||
+                                    conta.asaasSubscriptionId) && (
+                                    <AsaasWingsMark variant="inline" />
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-4 py-2">
                                 {formatDate(conta.vencimento)}
                               </TableCell>
                               <TableCell>

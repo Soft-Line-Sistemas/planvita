@@ -21,4 +21,6 @@ export interface Pagamento {
   referencia: string;
   diasAtraso: number;
   observacoes: string;
+  asaasPaymentId?: string;
+  asaasSubscriptionId?: string;
 }

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { UseFormReturn } from "react-hook-form";
-import { Switch } from "@/components/ui/switch";
+// import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Phone, Mail } from "lucide-react";
@@ -33,7 +33,7 @@ interface Props {
 export const ResponsavelFinanceiroForm = ({
   form,
   usarMesmosDados,
-  setUsarMesmosDados,
+  // setUsarMesmosDados,
 }: Props) => {
   useEffect(() => {
     form.setValue("usarMesmosDados", usarMesmosDados);

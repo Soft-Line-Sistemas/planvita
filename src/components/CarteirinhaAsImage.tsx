@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useCallback, useState, useRef } from "react";
+import Image from "next/image";
 import { Button } from "./ui/button";
 import type { ClientePlano } from "@/types/ClientePlano";
 
@@ -228,7 +229,7 @@ export default function CarteirinhaAsImage({
   const svgToPngDataUrl = useCallback(
     (svgUrl: string, width = WIDTH, height = HEIGHT) =>
       new Promise<string>((resolve, reject) => {
-        const img = new Image();
+        const img = new window.Image();
         img.crossOrigin = "anonymous";
         img.onload = () => {
           const canvas = document.createElement("canvas");
@@ -339,22 +340,26 @@ export default function CarteirinhaAsImage({
             }}
           >
             <div className="absolute inset-0 rounded-[0.75rem] overflow-hidden shadow-2xl [backface-visibility:hidden]">
-              <img
+              <Image
                 key={frontSrc.length}
                 src={frontSrc}
                 alt="Carteirinha - frente"
                 className="w-full h-full object-cover"
                 draggable={false}
+                width={WIDTH}
+                height={HEIGHT}
               />
             </div>
 
             <div className="absolute inset-0 rounded-[0.75rem] overflow-hidden shadow-2xl [backface-visibility:hidden] [transform:rotateY(180deg)]">
-              <img
+              <Image
                 key={backSrc.length}
                 src={backSrc}
                 alt="Carteirinha - verso"
                 className="w-full h-full object-cover"
                 draggable={false}
+                width={WIDTH}
+                height={HEIGHT}
               />
             </div>
           </div>

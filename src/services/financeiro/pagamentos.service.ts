@@ -6,6 +6,8 @@ import {
 } from "@/types/PaymentType";
 
 export type PagamentoApi = {
+  asaasSubscriptionId: undefined;
+  asaasPaymentId: undefined;
   id: number;
   titularId: number | null;
   valor: number | null;
@@ -106,6 +108,8 @@ export const mapPagamentoFromApi = (payload: PagamentoApi): Pagamento => {
         ? calcularDiasAtraso(dataVencimento)
         : 0,
     observacoes: "",
+    asaasPaymentId: payload.asaasPaymentId ?? undefined,
+    asaasSubscriptionId: payload.asaasSubscriptionId ?? undefined,
   };
 };
 
