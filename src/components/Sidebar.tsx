@@ -19,6 +19,7 @@ import {
   CreditCard,
   KeyRound,
   Bell,
+  Link as LinkIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -26,6 +27,8 @@ import logoPlanvita from "@/assets/logo-planvita.png";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/utils/api";
+import { useMemo } from "react";
+import { toast } from "sonner";
 
 interface MenuItem {
   id: string;
@@ -131,6 +134,21 @@ export function Sidebar() {
     router.push("/login");
   };
 
+  const consultorLink = useMemo(() => {
+    const isConsultor = user?.role?.name?.toLowerCase() === "consultor";
+    if (isConsultor && user?.id && typeof window !== "undefined") {
+      return `${window.location.origin}/cliente/cadastro?consultorId=${user.id}`;
+    }
+    return null;
+  }, [user]);
+
+  const handleCopyLink = () => {
+    if (consultorLink) {
+      navigator.clipboard.writeText(consultorLink);
+      toast.success("Link copiado com sucesso!");
+    }
+  };
+
   return (
     <>
       {/* Botão mobile */}
@@ -232,6 +250,17 @@ export function Sidebar() {
 
           {/* Rodapé */}
           <div className="p-4 border-t border-gray-200 space-y-3">
+            {consultorLink && (
+              <Button
+                onClick={handleCopyLink}
+                variant="outline"
+                className="w-full justify-start border-blue-200 text-blue-700 hover:bg-blue-50"
+              >
+                <LinkIcon className="mr-3 h-4 w-4" />
+                Copiar meu link
+              </Button>
+            )}
+
             <Card className="p-3 bg-gray-50">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
