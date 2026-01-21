@@ -24,9 +24,21 @@ import type { Cliente } from "@/types/ClientType";
 
 export default function ClientesPage() {
   const router = useRouter();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const canViewClientes = hasPermission("titular.view");
   const canCreateClient = hasPermission("titular.create");
+
+  const consultorLink = useMemo(() => {
+    if (!user) return undefined;
+
+    // Verifica se é consultor pelo nome da role
+    const isConsultor = user.role?.name?.toLowerCase() === "consultor";
+
+    if (isConsultor && typeof window !== "undefined") {
+      return `${window.location.origin}/cliente/cadastro?consultorId=${user.id}`;
+    }
+    return undefined;
+  }, [user]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
@@ -148,6 +160,7 @@ export default function ClientesPage() {
       <ClienteHeader
         onExport={handleExportClients}
         onNewClient={handleNewClient}
+        consultorLink={consultorLink}
       />
       <ClienteStats stats={stats} />
       <ClienteFilters
