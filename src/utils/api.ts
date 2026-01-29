@@ -1,11 +1,11 @@
 import axios from "axios";
 import getTenantFromHost from "./getTenantFromHost";
+import { getApiUrl, API_VERSION } from "../config/api-config";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-const API_VERSION = process.env.API_VERSION || "v1";
+const BASE_URL = getApiUrl();
 
 const api = axios.create({
-  baseURL: `${BASE_URL}/${API_VERSION}`,
+  baseURL: BASE_URL ? `${BASE_URL}/${API_VERSION}` : `/${API_VERSION}`,
   headers: {
     "Content-Type": "application/json",
   },
@@ -27,6 +27,26 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.code === "ERR_NETWORK") {
+      console.error(
+        "Erro de rede: Não foi possível conectar ao servidor da API. Verifique se o backend está rodando e a URL está correta.",
+        {
+          baseURL: error.config?.baseURL,
+          url: error.config?.url,
+        },
+      );
+    } else if (
+      error.response?.status === 403 &&
+      error.response?.data?.message?.includes("CORS")
+    ) {
+      console.error(
+        "Erro de CORS: A origem atual não é permitida pelo backend.",
+        {
+          origin:
+            typeof window !== "undefined" ? window.location.origin : "unknown",
+        },
+      );
+    }
     return Promise.reject(error);
   },
 );
