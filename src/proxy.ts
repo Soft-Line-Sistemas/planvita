@@ -8,6 +8,9 @@ export function proxy(req: NextRequest) {
     req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
 
   const subdomain = getSubdomainFromHost(host);
+  const tenantParam = req.nextUrl.searchParams.get("tenant");
+  const tenantCookie = req.cookies.get("tenant")?.value;
+  const tenant = subdomain || tenantParam || tenantCookie;
 
   if (pathname.startsWith("/api")) {
     // Desativa qualquer backend do Next (rotas API) e evita surface de ataque.
@@ -32,13 +35,13 @@ export function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith("/login") && !subdomain) {
+  if (pathname.startsWith("/login") && !tenant) {
     const url = req.nextUrl.clone();
     url.pathname = "/login/redirecionamento";
     return NextResponse.redirect(url);
   }
 
-  if (pathname.startsWith("/painel") && !subdomain) {
+  if (pathname.startsWith("/painel") && !tenant) {
     const url = req.nextUrl.clone();
     url.pathname = "/login/redirecionamento";
     return NextResponse.redirect(url);
@@ -46,8 +49,8 @@ export function proxy(req: NextRequest) {
 
   const response = NextResponse.next();
 
-  if (subdomain) {
-    response.headers.set("X-tenant", subdomain);
+  if (tenant) {
+    response.headers.set("X-tenant", tenant);
   }
 
   return response;

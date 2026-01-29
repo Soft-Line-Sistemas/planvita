@@ -13,14 +13,31 @@ import logoPlanvita from "@/assets/logo-planvita.png";
 
 export default function SelectTenantPage() {
   const handleSelectTenant = (tenant: string) => {
-    const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
 
+    // Salva o tenant em um cookie para persistência (útil na Vercel)
+    document.cookie = `tenant=${tenant}; path=/; max-age=31536000; SameSite=Lax`;
+
+    // Se estivermos na Vercel (domínio .vercel.app), subdomínios como lider.planvita-lilac.vercel.app
+    // geralmente não funcionam sem configuração de Wildcard.
+    if (hostname.includes("vercel.app")) {
+      window.location.href = `/login?tenant=${tenant}`;
+      return;
+    }
+
+    // Lógica original para domínios próprios ou localhost
     const host =
-      process.env.NODE_ENV === "production"
+      process.env.NODE_ENV === "production" &&
+      process.env.NEXT_PUBLIC_DOMAIN_URL &&
+      !process.env.NEXT_PUBLIC_DOMAIN_URL.includes("localhost")
         ? process.env.NEXT_PUBLIC_DOMAIN_URL
         : window.location.host;
 
-    const url = `${protocol}://${tenant}.${host}/login`;
+    // Se o host já contém o tenant (ex: lider.localhost:61347), limpa ele antes de adicionar o novo
+    const cleanHost = host.replace(/^(lider|pax|bosque)\./, "");
+
+    const url = `${protocol}//${tenant}.${cleanHost}/login`;
     window.location.href = url;
   };
 
