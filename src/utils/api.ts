@@ -2,10 +2,7 @@ import axios from "axios";
 import getTenantFromHost from "./getTenantFromHost";
 import { getApiUrl, API_VERSION } from "../config/api-config";
 
-const BASE_URL = getApiUrl();
-
 const api = axios.create({
-  baseURL: BASE_URL ? `${BASE_URL}/${API_VERSION}` : `/${API_VERSION}`,
   headers: {
     "Content-Type": "application/json",
   },
@@ -14,6 +11,10 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
+    // Garante que a baseURL seja calculada dinamicamente se estiver errada ou for localhost em produção
+    const currentBase = getApiUrl();
+    config.baseURL = `${currentBase}/${API_VERSION}`;
+
     const tenant = getTenantFromHost();
     if (tenant) {
       config.headers["X-Tenant"] = tenant;
