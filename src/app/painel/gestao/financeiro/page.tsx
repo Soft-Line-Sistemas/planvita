@@ -256,11 +256,6 @@ const GestaoFinanceira = () => {
         nome: "Relatórios Financeiros",
         icon: FileText,
       },
-      {
-        id: "boletos",
-        nome: "Boleto",
-        icon: Barcode,
-      },
     ];
 
     if (isBosqueTenant) {
@@ -950,7 +945,6 @@ const GestaoFinanceira = () => {
         {abaAtiva === "boletos" && <EmissaoBoleto />}
         {abaAtiva === "relatoriosFinanceiro" && <RelatorioFinanceiro />}
         {abaAtiva === "asaas" && isBosqueTenant && <AsaasPaymentsPanel />}
-        {abaAtiva === "boletos" && <EmissaoBoleto />}
       </div>
 
       {/* Modal de Detalhes do Pagamento */}
