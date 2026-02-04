@@ -25,6 +25,7 @@ export type CreateTitularInput = {
   step2?: Step2Values;
   step3?: Step3Values;
   step5?: PlanoFormValues;
+  consultorId?: number;
   dependentes: Dependente[];
   usarMesmosDados: boolean;
 } & Record<string, unknown>;

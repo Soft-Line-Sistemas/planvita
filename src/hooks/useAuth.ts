@@ -8,6 +8,13 @@ export interface User {
   role: { id: number; name: string } | null;
   permissions: string[];
   tenant: string;
+  consultor?: {
+    id: number;
+    nome: string;
+    valorComissaoIndicacao: number;
+    comissaoPendente: number;
+    comissaoPaga: number;
+  } | null;
 }
 
 export function useAuth() {

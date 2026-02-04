@@ -50,6 +50,9 @@ type User = {
   name: string;
   email: string;
   roleId?: number | null;
+  consultorId?: number | null;
+  valorComissaoIndicacao?: number | null;
+  comissaoPendente?: number;
 };
 
 export default function AcessoPage() {
@@ -61,6 +64,7 @@ export default function AcessoPage() {
   const [newUserName, setNewUserName] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserRole, setNewUserRole] = useState<number | null>(null);
+  const [newUserCommission, setNewUserCommission] = useState("0");
   const [creating, setCreating] = useState(false);
   const [passwordModalUser, setPasswordModalUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState("");
@@ -111,22 +115,33 @@ export default function AcessoPage() {
       return;
     }
 
+    const roleSelecionada = roles.find((role) => role.id === newUserRole);
+    const isConsultorRole =
+      roleSelecionada?.name?.toLowerCase().trim() === "consultor";
+
     setCreating(true);
     try {
       const res = await api.post("/users", {
         nome: newUserName,
         email: newUserEmail,
         roleId: newUserRole,
+        valorComissaoIndicacao: isConsultorRole
+          ? Number(newUserCommission || 0)
+          : undefined,
       });
 
       // 🔗 gera o link pessoal automaticamente
-      const linkCadastro = `${window.location.origin}/cliente/cadastro?consultorId=${res.data.id}`;
+      const consultorId = res.data.consultorId;
+      const linkCadastro = consultorId
+        ? `${window.location.origin}/cliente/cadastro?consultorId=${consultorId}`
+        : undefined;
       const novoUser = { ...res.data, linkCadastro };
 
       setUsers((prev) => [...prev, novoUser]);
       setNewUserName("");
       setNewUserEmail("");
       setNewUserRole(null);
+      setNewUserCommission("0");
       alert("Colaborador criado com sucesso!");
     } catch (err) {
       console.error(err);
@@ -219,6 +234,9 @@ export default function AcessoPage() {
   const isAdmin = user?.role?.name === "admin_master";
   const canAssignRole = hasPermission("user.assign_roles");
   const canUpdateUser = hasPermission("user.update");
+  const roleSelecionada = roles.find((role) => role.id === newUserRole);
+  const roleSelecionadaEhConsultor =
+    roleSelecionada?.name?.toLowerCase().trim() === "consultor";
 
   if (!loading && !hasPermission("user.view")) {
     return (
@@ -301,6 +319,16 @@ export default function AcessoPage() {
                 ))}
               </SelectContent>
             </Select>
+            {roleSelecionadaEhConsultor && (
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Comissão por referência (R$)"
+                value={newUserCommission}
+                onChange={(e) => setNewUserCommission(e.target.value)}
+              />
+            )}
             <Button
               onClick={handleCreateUser}
               className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
@@ -334,6 +362,8 @@ export default function AcessoPage() {
                   <TableHead>Nome</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Cargo Atual</TableHead>
+                  <TableHead>Comissão</TableHead>
+                  <TableHead>A receber</TableHead>
                   <TableHead>Alterar Cargo</TableHead>
                   {isAdmin && (
                     <TableHead className="text-right">Alterar Senha</TableHead>
@@ -374,6 +404,16 @@ export default function AcessoPage() {
                           Sem cargo
                         </Badge>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      {user.consultorId
+                        ? `R$ ${Number(user.valorComissaoIndicacao ?? 0).toFixed(2)}`
+                        : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {user.consultorId
+                        ? `R$ ${Number(user.comissaoPendente ?? 0).toFixed(2)}`
+                        : "—"}
                     </TableCell>
                     <TableCell className="flex w-full justify-end">
                       <Select
@@ -416,7 +456,15 @@ export default function AcessoPage() {
                         onClick={() => {
                           const link =
                             user.linkCadastro ||
-                            `${window.location.origin}/cliente/cadastro?consultorId=${user.id}`;
+                            (user.consultorId
+                              ? `${window.location.origin}/cliente/cadastro?consultorId=${user.consultorId}`
+                              : "");
+                          if (!link) {
+                            toast.error(
+                              "Este colaborador não possui vínculo de consultor",
+                            );
+                            return;
+                          }
                           setSelectedLink(link);
                           setShareModalOpen(true);
                         }}
