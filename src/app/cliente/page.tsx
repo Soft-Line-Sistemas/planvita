@@ -52,6 +52,7 @@ import SignaturePad, {
 } from "@/components/SignaturePad";
 import Image from "next/image";
 import { AsaasWingsMark } from "@/components/ui/AsaasWingsMark";
+import api from "@/utils/api";
 
 const normalizeCpf = (value: string) => value.replace(/\D/g, "");
 
