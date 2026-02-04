@@ -156,7 +156,7 @@ const DetalhesCliente = () => {
     if (
       limiteBeneficiarios &&
       limiteBeneficiarios > 0 &&
-      cliente.dependentes.length >= limiteBeneficiarios
+      (cliente?.dependentes?.length ?? 0) >= limiteBeneficiarios
     ) {
       toast.error(
         `Limite de beneficiários (${limiteBeneficiarios}) já atingido para este cliente.`,
