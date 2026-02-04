@@ -1,6 +1,7 @@
 export type StatusContaPagar = "PENDENTE" | "PAGO" | "ATRASADO" | "CANCELADO";
 export type StatusContaReceber =
   | "PENDENTE"
+  | "CONFIRMADO"
   | "RECEBIDO"
   | "ATRASADO"
   | "VENCIDO"
@@ -8,6 +9,7 @@ export type StatusContaReceber =
 
 export type StatusFinanceiro =
   | "PENDENTE"
+  | "CONFIRMADO"
   | "PAGO"
   | "RECEBIDO"
   | "ATRASADO"

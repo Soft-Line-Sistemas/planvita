@@ -165,6 +165,7 @@ const GestaoFinanceira = () => {
   const getStatusColor = (status: StatusPagamento) => {
     switch (status) {
       case "PAGO":
+      case "RECEBIDO":
         return {
           icon: CheckCircle,
           color: "text-green-600",
@@ -206,7 +207,10 @@ const GestaoFinanceira = () => {
           break;
         }
         case "vencidos":
-          matchData = dataVencimento < hoje && pagamento.status !== "PAGO";
+          matchData =
+            dataVencimento < hoje &&
+            pagamento.status !== "PAGO" &&
+            pagamento.status !== "RECEBIDO";
           break;
         case "mes_atual":
           matchData =
@@ -227,7 +231,7 @@ const GestaoFinanceira = () => {
   };
 
   const handleConfirmarPagamento = (pagamento: Pagamento) => {
-    if (pagamento.status === "PAGO") return;
+    if (pagamento.status === "PAGO" || pagamento.status === "RECEBIDO") return;
 
     const numeroId = Number(pagamento.id);
     const payloadId = Number.isNaN(numeroId) ? pagamento.id : numeroId;

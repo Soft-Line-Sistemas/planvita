@@ -38,6 +38,7 @@ const normalizarStatus = (valor?: string | null): StatusFinanceiro => {
   if (upper === "OVERDUE") return "VENCIDO";
   const aceitos: StatusFinanceiro[] = [
     "PENDENTE",
+    "CONFIRMADO",
     "PAGO",
     "RECEBIDO",
     "ATRASADO",

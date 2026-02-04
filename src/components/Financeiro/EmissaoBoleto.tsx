@@ -193,6 +193,8 @@ export default function EmissaoBoleto() {
         return "bg-green-100 text-green-700 border-green-200";
       case "PENDENTE":
         return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      case "CONFIRMADO":
+        return "bg-sky-100 text-sky-700 border-sky-200";
       case "VENCIDO":
       case "ATRASADO":
         return "bg-red-100 text-red-700 border-red-200";

@@ -96,6 +96,7 @@ const DetalhesCliente = () => {
   const getStatusPagamento = (status: StatusPagamento) => {
     switch (status) {
       case "PAGO":
+      case "RECEBIDO":
         return {
           icon: CheckCircle,
           color: "text-green-600",
