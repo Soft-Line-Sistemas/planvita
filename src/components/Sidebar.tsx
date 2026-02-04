@@ -20,6 +20,7 @@ import {
   KeyRound,
   Bell,
   Link as LinkIcon,
+  HandCoins,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -43,6 +44,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading, hasPermission } = useAuth();
+  const isConsultor = user?.role?.name?.toLowerCase() === "consultor";
 
   useEffect(() => {
     if (!loading && !user && process.env.NODE_ENV === "production") {
@@ -72,6 +74,17 @@ export function Sidebar() {
       href: "/painel/cliente/",
       requiredPermission: "titular.view",
     },
+    ...(isConsultor
+      ? [
+          {
+            id: "comissoes",
+            label: "Minhas Comissões",
+            icon: HandCoins,
+            href: "/painel/comissoes",
+            requiredPermission: "titular.view",
+          } as MenuItem,
+        ]
+      : []),
     {
       id: "colaboradores",
       label: "Colaboradores",
@@ -135,13 +148,12 @@ export function Sidebar() {
   };
 
   const consultorLink = useMemo(() => {
-    const isConsultor = user?.role?.name?.toLowerCase() === "consultor";
     const consultorId = user?.consultor?.id;
     if (isConsultor && consultorId && typeof window !== "undefined") {
       return `${window.location.origin}/cliente/cadastro?consultorId=${consultorId}`;
     }
     return null;
-  }, [user]);
+  }, [isConsultor, user]);
 
   const handleCopyLink = () => {
     if (consultorLink) {

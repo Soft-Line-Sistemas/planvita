@@ -29,6 +29,7 @@ export type PagamentoApi = {
 
 const STATUS_PERMITIDOS: StatusPagamento[] = [
   "PAGO",
+  "RECEBIDO",
   "PENDENTE",
   "VENCIDO",
   "CANCELADO",
@@ -99,7 +100,8 @@ export const mapPagamentoFromApi = (payload: PagamentoApi): Pagamento => {
     },
     valor: Number(payload.valor ?? 0),
     dataVencimento,
-    dataPagamento: status === "PAGO" ? payload.dataPagamento : null,
+    dataPagamento:
+      status === "PAGO" || status === "RECEBIDO" ? payload.dataPagamento : null,
     status,
     metodoPagamento,
     referencia: gerarReferencia(payload.id),

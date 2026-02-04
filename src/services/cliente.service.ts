@@ -18,8 +18,11 @@ type PagamentoApi = {
   id: number;
   valor: number | null;
   dataPagamento: string | null;
+  dataVencimento?: string | null;
   status: string | null;
   metodoPagamento: string | null;
+  asaasPaymentId?: string | null;
+  asaasSubscriptionId?: string | null;
 };
 
 type PlanoCoberturaApi = {
@@ -85,6 +88,7 @@ const normalizarStatusPagamento = (value?: string | null): StatusPagamento => {
   const permitidos: StatusPagamento[] = [
     "PENDENTE",
     "PAGO",
+    "RECEBIDO",
     "VENCIDO",
     "CANCELADO",
   ];
@@ -115,9 +119,11 @@ const mapPagamentos = (titular: TitularApi): Pagamento[] => {
       plano: titular.plano?.nome ?? "—",
     },
     valor: Number(pagamento.valor ?? 0),
-    dataVencimento: pagamento.dataPagamento
-      ? toISODate(pagamento.dataPagamento)
-      : new Date().toISOString().split("T")[0],
+    dataVencimento: pagamento.dataVencimento
+      ? toISODate(pagamento.dataVencimento)
+      : pagamento.dataPagamento
+        ? toISODate(pagamento.dataPagamento)
+        : new Date().toISOString().split("T")[0],
     dataPagamento: pagamento.dataPagamento
       ? toISODate(pagamento.dataPagamento)
       : null,
@@ -126,6 +132,8 @@ const mapPagamentos = (titular: TitularApi): Pagamento[] => {
     referencia: `PG-${String(pagamento.id).padStart(4, "0")}`,
     diasAtraso: 0,
     observacoes: "",
+    asaasPaymentId: pagamento.asaasPaymentId ?? undefined,
+    asaasSubscriptionId: pagamento.asaasSubscriptionId ?? undefined,
   }));
 };
 
@@ -220,6 +228,8 @@ export const mapClienteFromApi = (payload: TitularApi): Cliente => {
       diasAtraso: pagamento.diasAtraso,
       referencia: pagamento.referencia,
       observacoes: pagamento.observacoes,
+      asaasPaymentId: pagamento.asaasPaymentId,
+      asaasSubscriptionId: pagamento.asaasSubscriptionId,
     })),
   };
 };

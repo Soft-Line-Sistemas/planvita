@@ -7,7 +7,12 @@ interface Cliente {
   plano: string;
 }
 
-export type StatusPagamento = "PENDENTE" | "PAGO" | "VENCIDO" | "CANCELADO";
+export type StatusPagamento =
+  | "PENDENTE"
+  | "PAGO"
+  | "RECEBIDO"
+  | "VENCIDO"
+  | "CANCELADO";
 export type MetodoPagamento = "Boleto" | "PIX" | "Cartão de Crédito";
 
 export interface Pagamento {

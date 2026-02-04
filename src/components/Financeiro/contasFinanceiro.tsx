@@ -70,6 +70,7 @@ const statusConfig: Record<
   { icon: React.ElementType; color: string; bg: string }
 > = {
   PENDENTE: { icon: Clock, color: "text-yellow-600", bg: "bg-yellow-50" },
+  CONFIRMADO: { icon: Clock, color: "text-sky-700", bg: "bg-sky-50" },
   ATRASADO: { icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50" },
   VENCIDO: { icon: AlertCircle, color: "text-red-700", bg: "bg-red-50" },
   PAGO: { icon: CheckCircle, color: "text-green-600", bg: "bg-green-50" },
@@ -160,7 +161,8 @@ const ContasFinanceiro: React.FC = () => {
           matchStatus = conta.status === "PAGO" || conta.status === "RECEBIDO";
           break;
         case "pendentes":
-          matchStatus = conta.status === "PENDENTE";
+          matchStatus =
+            conta.status === "PENDENTE" || conta.status === "CONFIRMADO";
           break;
         case "atrasadas":
           matchStatus =
@@ -296,6 +298,7 @@ const ContasFinanceiro: React.FC = () => {
 
   const podeBaixar = (conta: ContaFinanceira) =>
     conta.status === "PENDENTE" ||
+    conta.status === "CONFIRMADO" ||
     conta.status === "ATRASADO" ||
     conta.status === "VENCIDO";
 
@@ -832,6 +835,7 @@ const ContasFinanceiro: React.FC = () => {
                   const staleAsaas =
                     sincronizada &&
                     (conta.status === "PENDENTE" ||
+                      conta.status === "CONFIRMADO" ||
                       conta.status === "VENCIDO") &&
                     diasAtraso > 0;
                   const metodoPagamento =
