@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -65,7 +64,9 @@ export function CadastroClienteWizard({
   variant = "dashboard",
 }: CadastroClienteWizardProps) {
   const isPublic = variant === "public";
-  const searchParams = useSearchParams();
+  const [consultorIdFromQuery, setConsultorIdFromQuery] = useState<
+    number | undefined
+  >();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<WizardStepsData>({});
@@ -94,6 +95,19 @@ export function CadastroClienteWizard({
     resolver: zodResolver(responsavelFinanceiroSchema),
   });
   const planoForm = useForm<PlanoFormValues>();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const consultorIdParam = new URLSearchParams(window.location.search).get(
+      "consultorId",
+    );
+    const consultorId = consultorIdParam ? Number(consultorIdParam) : undefined;
+    setConsultorIdFromQuery(
+      consultorId && Number.isFinite(consultorId) && consultorId > 0
+        ? consultorId
+        : undefined,
+    );
+  }, []);
 
   useEffect(() => {
     let ativo = true;
@@ -224,9 +238,6 @@ export function CadastroClienteWizard({
     const step2Data = formData.step2 ?? enderecoForm.getValues();
     const step3Data = formData.step3 ?? responsavelForm.getValues();
     const step5Data = formData.step5 ?? planoForm.getValues();
-    const consultorIdParam = searchParams?.get("consultorId");
-    const consultorId = consultorIdParam ? Number(consultorIdParam) : undefined;
-
     const payload: CreateTitularInput = {
       ...formData,
       step1: step1Data,
@@ -235,10 +246,7 @@ export function CadastroClienteWizard({
       step5: step5Data,
       dependentes,
       usarMesmosDados,
-      consultorId:
-        consultorId && Number.isFinite(consultorId) && consultorId > 0
-          ? consultorId
-          : undefined,
+      consultorId: consultorIdFromQuery,
     };
 
     await mutateAsync(payload);
