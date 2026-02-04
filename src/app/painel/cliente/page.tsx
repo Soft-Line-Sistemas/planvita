@@ -34,8 +34,8 @@ export default function ClientesPage() {
     // Verifica se é consultor pelo nome da role
     const isConsultor = user.role?.name?.toLowerCase() === "consultor";
 
-    if (isConsultor && typeof window !== "undefined") {
-      return `${window.location.origin}/cliente/cadastro?consultorId=${user.id}`;
+    if (isConsultor && user.consultor?.id && typeof window !== "undefined") {
+      return `${window.location.origin}/cliente/cadastro?consultorId=${user.consultor.id}`;
     }
     return undefined;
   }, [user]);
@@ -161,6 +161,7 @@ export default function ClientesPage() {
         onExport={handleExportClients}
         onNewClient={handleNewClient}
         consultorLink={consultorLink}
+        comissaoPendente={user?.consultor?.comissaoPendente}
       />
       <ClienteStats stats={stats} />
       <ClienteFilters

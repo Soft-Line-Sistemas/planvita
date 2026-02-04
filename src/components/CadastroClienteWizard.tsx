@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -37,6 +38,7 @@ import {
   useCreateTitular,
   type CreateTitularInput,
 } from "@/hooks/mutations/useCreateTitular";
+import api from "@/utils/api";
 
 type CadastroClienteWizardVariant = "dashboard" | "public";
 
@@ -63,10 +65,14 @@ export function CadastroClienteWizard({
   variant = "dashboard",
 }: CadastroClienteWizardProps) {
   const isPublic = variant === "public";
+  const searchParams = useSearchParams();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<WizardStepsData>({});
   const [dependentes, setDependentes] = useState<Dependente[]>([]);
+  const [limiteBeneficiarios, setLimiteBeneficiarios] = useState<number | null>(
+    null,
+  );
   const [usarMesmosDados, setUsarMesmosDados] = useState(false);
   const { mutateAsync, isPending } = useCreateTitular();
   const steps = [
@@ -88,6 +94,29 @@ export function CadastroClienteWizard({
     resolver: zodResolver(responsavelFinanceiroSchema),
   });
   const planoForm = useForm<PlanoFormValues>();
+
+  useEffect(() => {
+    let ativo = true;
+    api
+      .get("/regras")
+      .then((res) => {
+        if (!ativo) return;
+        const regra = Array.isArray(res.data) ? res.data[0] : null;
+        const limite = Number(regra?.limiteBeneficiarios);
+        if (Number.isFinite(limite) && limite > 0) {
+          setLimiteBeneficiarios(limite);
+        } else {
+          setLimiteBeneficiarios(null);
+        }
+      })
+      .catch(() => {
+        if (ativo) setLimiteBeneficiarios(null);
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   const persistStepData = async (): Promise<boolean> => {
     switch (currentStep) {
@@ -149,7 +178,14 @@ export function CadastroClienteWizard({
   const handlePrevious = () =>
     setCurrentStep((prev) => (prev > 1 ? prev - 1 : prev));
 
-  const handleAddDependente = () =>
+  const handleAddDependente = () => {
+    if (
+      limiteBeneficiarios &&
+      limiteBeneficiarios > 0 &&
+      dependentes.length >= limiteBeneficiarios
+    ) {
+      return;
+    }
     setDependentes((prev) => [
       ...prev,
       {
@@ -161,6 +197,7 @@ export function CadastroClienteWizard({
         cpf: "",
       },
     ]);
+  };
 
   const handleRemoveDependente = (index: number) =>
     setDependentes((prev) => prev.filter((_, i) => i !== index));
@@ -177,11 +214,18 @@ export function CadastroClienteWizard({
     });
   };
 
+  const podeAdicionarDependente =
+    !limiteBeneficiarios ||
+    limiteBeneficiarios <= 0 ||
+    dependentes.length < limiteBeneficiarios;
+
   const handleFinish = async () => {
     const step1Data = formData.step1 ?? dadosPessoaisForm.getValues();
     const step2Data = formData.step2 ?? enderecoForm.getValues();
     const step3Data = formData.step3 ?? responsavelForm.getValues();
     const step5Data = formData.step5 ?? planoForm.getValues();
+    const consultorIdParam = searchParams?.get("consultorId");
+    const consultorId = consultorIdParam ? Number(consultorIdParam) : undefined;
 
     const payload: CreateTitularInput = {
       ...formData,
@@ -191,6 +235,10 @@ export function CadastroClienteWizard({
       step5: step5Data,
       dependentes,
       usarMesmosDados,
+      consultorId:
+        consultorId && Number.isFinite(consultorId) && consultorId > 0
+          ? consultorId
+          : undefined,
     };
 
     await mutateAsync(payload);
@@ -263,6 +311,8 @@ export function CadastroClienteWizard({
             handleAddDependente={handleAddDependente}
             handleRemoveDependente={handleRemoveDependente}
             handleDependenteChange={handleDependenteChange}
+            canAddDependente={podeAdicionarDependente}
+            limiteBeneficiarios={limiteBeneficiarios}
           />
         );
 

@@ -117,6 +117,8 @@ const API_VERSION =
 const ASSINATURA_API_BASE = API_BASE_URL
   ? `${API_BASE_URL}/${API_VERSION}`
   : undefined;
+const DEFAULT_DIAS_SUSPENSAO = 90;
+const DEFAULT_DIAS_POS_SUSPENSAO = 92;
 
 export default function ConsultaClientePage() {
   const [cpf, setCpf] = useState("");
@@ -225,11 +227,75 @@ export default function ConsultaClientePage() {
     staleTime: 30 * 1000,
   });
 
+  const { data: regraNotificacao } = useQuery<{
+    diasSuspensao?: number | null;
+    diasPosSuspensao?: number | null;
+  } | null>({
+    queryKey: ["cliente-regras-notificacao"],
+    queryFn: async () => {
+      const { data } = await api.get("/regras");
+      if (!Array.isArray(data) || data.length === 0) return null;
+      const regra = data[0] ?? null;
+      return regra
+        ? {
+            diasSuspensao: regra.diasSuspensao,
+            diasPosSuspensao: regra.diasPosSuspensao,
+          }
+        : null;
+    },
+    staleTime: 60 * 1000,
+  });
+
   useEffect(() => {
     if (cliente?.titularId) {
       refetchFinanceiro();
     }
   }, [cliente?.titularId, refetchFinanceiro]);
+
+  const maxDiasAtrasoFinanceiro = useMemo(() => {
+    if (!Array.isArray(contasFinanceiras) || contasFinanceiras.length === 0)
+      return 0;
+    const hoje = new Date();
+
+    const calcularDiasAtraso = (vencimento: string) => {
+      const dataVencimento = new Date(vencimento);
+      if (Number.isNaN(dataVencimento.getTime())) return 0;
+      const diff = hoje.getTime() - dataVencimento.getTime();
+      const dias = Math.floor(diff / (1000 * 60 * 60 * 24));
+      return dias > 0 ? dias : 0;
+    };
+
+    return contasFinanceiras.reduce((maior, conta) => {
+      const status = String(conta.status ?? "").toUpperCase();
+      if (["PAGO", "RECEBIDO", "CANCELADO"].includes(status)) return maior;
+      return Math.max(maior, calcularDiasAtraso(conta.vencimento));
+    }, 0);
+  }, [contasFinanceiras]);
+
+  const diasSuspensao =
+    regraNotificacao?.diasSuspensao && regraNotificacao.diasSuspensao > 0
+      ? regraNotificacao.diasSuspensao
+      : DEFAULT_DIAS_SUSPENSAO;
+  const diasPosSuspensao =
+    regraNotificacao?.diasPosSuspensao && regraNotificacao.diasPosSuspensao > 0
+      ? regraNotificacao.diasPosSuspensao
+      : DEFAULT_DIAS_POS_SUSPENSAO;
+
+  const suspensoPorRegra = maxDiasAtrasoFinanceiro >= diasSuspensao;
+  const posSuspensaoAtingido = maxDiasAtrasoFinanceiro >= diasPosSuspensao;
+
+  const clienteExibicao = useMemo(() => {
+    if (!cliente) return null;
+    if (cliente.plano.status === "suspenso" || !suspensoPorRegra)
+      return cliente;
+    return {
+      ...cliente,
+      plano: {
+        ...cliente.plano,
+        status: "suspenso",
+      },
+    };
+  }, [cliente, suspensoPorRegra]);
 
   const contasFiltradas = useMemo(() => {
     let filtradas = [...contasFinanceiras];
@@ -498,9 +564,31 @@ export default function ConsultaClientePage() {
                 ))}
             </div>
 
-            {abaAtiva === "carteirinha" && (
+            {posSuspensaoAtingido && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Plano suspenso com pendência prolongada</AlertTitle>
+                <AlertDescription>
+                  Seu plano está suspenso há mais de {diasPosSuspensao} dias de
+                  atraso. Regularize o pagamento para solicitar a reativação.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {!posSuspensaoAtingido && suspensoPorRegra && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Plano suspenso</AlertTitle>
+                <AlertDescription>
+                  Seu plano atingiu a regra de suspensão ({diasSuspensao} dias
+                  de atraso). Regularize o pagamento para retomar os benefícios.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {abaAtiva === "carteirinha" && clienteExibicao && (
               <CarteirinhaAsImage
-                cliente={cliente}
+                cliente={clienteExibicao}
                 isFlipped={isFlipped}
                 setIsFlipped={setIsFlipped}
                 formatDate={formatDate}
@@ -508,7 +596,7 @@ export default function ConsultaClientePage() {
               />
             )}
 
-            {abaAtiva === "plano" && (
+            {abaAtiva === "plano" && clienteExibicao && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card className="md:col-span-2 border-emerald-100 shadow-sm">
                   <CardHeader>
@@ -548,17 +636,17 @@ export default function ConsultaClientePage() {
                         <span className="text-sm text-gray-500">Status</span>
                         <Badge
                           variant={
-                            cliente.plano.status === "ativo"
+                            clienteExibicao.plano.status === "ativo"
                               ? "default"
                               : "destructive"
                           }
                           className={
-                            cliente.plano.status === "ativo"
+                            clienteExibicao.plano.status === "ativo"
                               ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
                               : ""
                           }
                         >
-                          {cliente.plano.status.toUpperCase()}
+                          {clienteExibicao.plano.status.toUpperCase()}
                         </Badge>
                       </div>
                       <div className="space-y-1">
@@ -606,7 +694,7 @@ export default function ConsultaClientePage() {
                           {formatDate(new Date().toISOString())}
                         </p>
                         <p className="text-sm text-gray-600 mt-1">
-                          Plano {cliente.plano.status}
+                          Plano {clienteExibicao.plano.status}
                         </p>
                       </div>
                       <div className="relative">

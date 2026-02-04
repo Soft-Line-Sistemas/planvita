@@ -8,12 +8,14 @@ interface Props {
   onExport: () => void;
   onNewClient: () => void;
   consultorLink?: string;
+  comissaoPendente?: number;
 }
 
 export const ClienteHeader = ({
   onExport,
   onNewClient,
   consultorLink,
+  comissaoPendente,
 }: Props) => {
   const handleCopyLink = () => {
     if (consultorLink) {
@@ -29,6 +31,11 @@ export const ClienteHeader = ({
         <p className="text-sm text-gray-500">
           Gerencie todos os titulares e dependentes cadastrados
         </p>
+        {typeof comissaoPendente === "number" && (
+          <p className="text-sm font-semibold text-emerald-700 mt-1">
+            Comissão a receber: R$ {comissaoPendente.toFixed(2)}
+          </p>
+        )}
       </div>
 
       <div className="flex gap-2">

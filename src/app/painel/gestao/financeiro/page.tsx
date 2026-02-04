@@ -256,11 +256,6 @@ const GestaoFinanceira = () => {
         nome: "Relatórios Financeiros",
         icon: FileText,
       },
-      {
-        id: "boletos",
-        nome: "Boleto",
-        icon: Barcode,
-      },
     ];
 
     if (isBosqueTenant) {
@@ -307,7 +302,7 @@ const GestaoFinanceira = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               {/* <button
@@ -340,7 +335,7 @@ const GestaoFinanceira = () => {
 
       {/* Navegação por abas */}
       <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10">
           <nav className="flex space-x-8">
             {abas.map((aba) => {
               const Icon = aba.icon;
@@ -364,7 +359,7 @@ const GestaoFinanceira = () => {
       </div>
 
       {/* Conteúdo */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-8">
         {/* Estatísticas */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-sm p-6">
@@ -950,7 +945,6 @@ const GestaoFinanceira = () => {
         {abaAtiva === "boletos" && <EmissaoBoleto />}
         {abaAtiva === "relatoriosFinanceiro" && <RelatorioFinanceiro />}
         {abaAtiva === "asaas" && isBosqueTenant && <AsaasPaymentsPanel />}
-        {abaAtiva === "boletos" && <EmissaoBoleto />}
       </div>
 
       {/* Modal de Detalhes do Pagamento */}

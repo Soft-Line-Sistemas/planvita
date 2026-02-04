@@ -26,6 +26,8 @@ import { StatusPagamento } from "@/types/PaymentType";
 import { useClienteDetalhes } from "@/hooks/queries/useClienteDetalhes";
 import { ClienteEditDialog } from "@/components/Titular/Cliente/ClienteEditDialog";
 import { criarDependente } from "@/services/dependente.service";
+import api from "@/utils/api";
+import { extractApiError } from "@/utils/httpError";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AsaasWingsMark } from "@/components/ui/AsaasWingsMark";
@@ -35,6 +37,9 @@ const DetalhesCliente = () => {
   const clienteId = params?.id as string | undefined;
   const [abaAtiva, setAbaAtiva] = useState("geral");
   const [openEdit, setOpenEdit] = useState(false);
+  const [limiteBeneficiarios, setLimiteBeneficiarios] = useState<number | null>(
+    null,
+  );
   const [dependenteForm, setDependenteForm] = useState({
     nome: "",
     dataNascimento: "",
@@ -67,8 +72,9 @@ const DetalhesCliente = () => {
       setDependenteForm({ nome: "", dataNascimento: "", parentesco: "" });
       await refetch();
     },
-    onError: () => {
-      toast.error("Não foi possível adicionar o dependente. Tente novamente.");
+    onError: (error: unknown) => {
+      const { message } = extractApiError(error);
+      toast.error(message);
     },
   });
 
@@ -112,6 +118,29 @@ const DetalhesCliente = () => {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    let ativo = true;
+    api
+      .get("/regras")
+      .then((res) => {
+        if (!ativo) return;
+        const regra = Array.isArray(res.data) ? res.data[0] : null;
+        const limite = Number(regra?.limiteBeneficiarios);
+        if (Number.isFinite(limite) && limite > 0) {
+          setLimiteBeneficiarios(limite);
+        } else {
+          setLimiteBeneficiarios(null);
+        }
+      })
+      .catch(() => {
+        if (ativo) setLimiteBeneficiarios(null);
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
   const handleAdicionarDependente = (
     event: React.FormEvent<HTMLFormElement>,
   ) => {
@@ -122,6 +151,16 @@ const DetalhesCliente = () => {
     }
     if (!dependenteForm.nome || !dependenteForm.dataNascimento) {
       toast.error("Informe nome e data de nascimento do dependente.");
+      return;
+    }
+    if (
+      limiteBeneficiarios &&
+      limiteBeneficiarios > 0 &&
+      cliente.dependentes.length >= limiteBeneficiarios
+    ) {
+      toast.error(
+        `Limite de beneficiários (${limiteBeneficiarios}) já atingido para este cliente.`,
+      );
       return;
     }
     criarDependenteMutation.mutate({
@@ -184,6 +223,10 @@ const DetalhesCliente = () => {
     { id: "dependentes", nome: "Dependentes", icon: Users },
     { id: "financeiro", nome: "Financeiro", icon: CreditCard },
   ];
+  const limiteAtingido =
+    !!limiteBeneficiarios &&
+    limiteBeneficiarios > 0 &&
+    cliente.dependentes.length >= limiteBeneficiarios;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -467,12 +510,22 @@ const DetalhesCliente = () => {
               <h3 className="text-lg font-semibold text-gray-900">
                 Dependentes ({cliente.dependentes.length})
               </h3>
+              {limiteBeneficiarios && limiteBeneficiarios > 0 ? (
+                <span className="text-sm text-gray-500">
+                  Limite: {limiteBeneficiarios}
+                </span>
+              ) : null}
             </div>
 
             <form
               className="bg-white rounded-lg shadow-sm p-6 space-y-4"
               onSubmit={handleAdicionarDependente}
             >
+              {limiteAtingido ? (
+                <p className="text-sm text-red-600">
+                  Limite de beneficiários atingido para este cliente.
+                </p>
+              ) : null}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="dep-nome">Nome completo</Label>
@@ -522,7 +575,7 @@ const DetalhesCliente = () => {
                 <button
                   type="submit"
                   className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 disabled:opacity-60"
-                  disabled={criarDependenteMutation.isPending}
+                  disabled={criarDependenteMutation.isPending || limiteAtingido}
                 >
                   <Plus className="w-4 h-4" />
                   <span>

@@ -88,6 +88,16 @@ const fluxoOptions: Record<
     descricao:
       "Aviso único para clientes próximos da suspensão preventiva, seguindo a regra configurada.",
   },
+  suspensao: {
+    titulo: "Suspensão",
+    descricao:
+      "Envio único quando a cobrança atinge a regra de dias para suspensão.",
+  },
+  "pos-suspensao": {
+    titulo: "Pós-suspensão",
+    descricao:
+      "Envio único após o prazo pós-suspensão para orientar regularização e reativação.",
+  },
 };
 
 const flowLabel = (flow?: NotificationFlow | null) =>
@@ -161,6 +171,22 @@ export default function NotificacoesRecorrentesPage() {
           text = `Olá, ${nomeEmpresa} informa: Seu plano está sujeito a suspensão preventiva.`;
         } else {
           text = `Olá, ${nomeEmpresa} informa: Seu plano está sujeito a suspensão preventiva.`;
+        }
+      } else if (flow === "suspensao") {
+        assunto = "Aviso de suspensão do plano";
+        if (canal === "email") {
+          html = `<p>Olá, ${nomeEmpresa} informa: Seu plano está suspenso por pendência financeira.</p>`;
+          text = `Olá, ${nomeEmpresa} informa: Seu plano está suspenso por pendência financeira.`;
+        } else {
+          text = `Olá, ${nomeEmpresa} informa: Seu plano está suspenso por pendência financeira.`;
+        }
+      } else if (flow === "pos-suspensao") {
+        assunto = "Plano suspenso: regularize para reativação";
+        if (canal === "email") {
+          html = `<p>Olá, ${nomeEmpresa} informa: Seu plano permanece suspenso. Regularize para reativação.</p>`;
+          text = `Olá, ${nomeEmpresa} informa: Seu plano permanece suspenso. Regularize para reativação.`;
+        } else {
+          text = `Olá, ${nomeEmpresa} informa: Seu plano permanece suspenso. Regularize para reativação.`;
         }
       }
 

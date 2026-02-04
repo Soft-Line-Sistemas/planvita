@@ -17,6 +17,8 @@ interface Props {
     field: K,
     value: Dependente[K],
   ) => void;
+  canAddDependente?: boolean;
+  limiteBeneficiarios?: number | null;
 }
 
 export const DependentesForm = ({
@@ -24,18 +26,33 @@ export const DependentesForm = ({
   handleAddDependente,
   handleRemoveDependente,
   handleDependenteChange,
+  canAddDependente = true,
+  limiteBeneficiarios = null,
 }: Props) => (
   <div className="space-y-6">
     <div className="flex justify-between items-center">
-      <h3 className="text-lg font-semibold text-gray-800">Dependentes</h3>
+      <div>
+        <h3 className="text-lg font-semibold text-gray-800">Dependentes</h3>
+        {limiteBeneficiarios && limiteBeneficiarios > 0 ? (
+          <p className="text-xs text-gray-500">
+            Limite configurado: {limiteBeneficiarios}
+          </p>
+        ) : null}
+      </div>
       <Button
         onClick={handleAddDependente}
         className="bg-green-600 hover:bg-green-700"
+        disabled={!canAddDependente}
       >
         <Plus className="w-4 h-4 mr-2" />
         Adicionar
       </Button>
     </div>
+    {!canAddDependente && limiteBeneficiarios && limiteBeneficiarios > 0 ? (
+      <p className="text-sm text-red-600">
+        Limite de beneficiários atingido para este cadastro.
+      </p>
+    ) : null}
 
     {dependentes.length === 0 ? (
       <div className="text-center py-8 text-gray-500">

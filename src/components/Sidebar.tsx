@@ -136,8 +136,9 @@ export function Sidebar() {
 
   const consultorLink = useMemo(() => {
     const isConsultor = user?.role?.name?.toLowerCase() === "consultor";
-    if (isConsultor && user?.id && typeof window !== "undefined") {
-      return `${window.location.origin}/cliente/cadastro?consultorId=${user.id}`;
+    const consultorId = user?.consultor?.id;
+    if (isConsultor && consultorId && typeof window !== "undefined") {
+      return `${window.location.origin}/cliente/cadastro?consultorId=${consultorId}`;
     }
     return null;
   }, [user]);

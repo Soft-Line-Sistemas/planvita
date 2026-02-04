@@ -31,7 +31,6 @@ type BusinessRulesConfig = {
   notificarEstoqueBaixo: boolean;
 
   // Planos e Autorizações
-  idadeMaximaDependente: number;
   limiteBeneficiarios: number;
 
   // Frota
@@ -212,16 +211,6 @@ export default function ConfiguracoesPage() {
           <CardTitle>Planos e Autorizações</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4">
-          <div>
-            <Label>Idade máxima do dependente</Label>
-            <Input
-              type="number"
-              value={config?.idadeMaximaDependente || 18}
-              onChange={(e) =>
-                handleChange("idadeMaximaDependente", Number(e.target.value))
-              }
-            />
-          </div>
           <div>
             <Label>Limite de beneficiários</Label>
             <Input
