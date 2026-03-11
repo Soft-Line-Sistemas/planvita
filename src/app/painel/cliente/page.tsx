@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { ClienteHeader } from "@/components/Titular/Cliente/ClienteHeader";
 import { ClienteStats } from "@/components/Titular/Cliente/ClienteStats";
@@ -113,38 +114,35 @@ export default function ClientesPage() {
   }
 
   const handleExportClients = () => {
-    const csv = [
-      [
-        "Nome",
-        "Email",
-        "Telefone",
-        "CPF",
-        "Plano",
-        "Status",
-        "Valor",
-        "Data Contratação",
-      ].join(","),
-      ...clientes.map((c) =>
-        [
-          c.nome,
-          c.email,
-          c.telefone,
-          c.cpf,
-          c.plano?.nome ?? "-",
-          c.statusPlano,
-          c.plano?.valorMensal ?? "-",
-          c.dataContratacao,
-        ].join(","),
-      ),
-    ].join("\n");
+    void (async () => {
+      try {
+        const response = await api.get("/titular/export/cadastro", {
+          params: {
+            search: searchTerm || undefined,
+            status: statusFilter || undefined,
+            plano: planoFilter || undefined,
+          },
+          responseType: "blob",
+        });
 
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "clientes.csv";
-    a.click();
-    window.URL.revokeObjectURL(url);
+        const contentDisposition = response.headers["content-disposition"] as
+          | string
+          | undefined;
+        const filenameMatch =
+          contentDisposition?.match(/filename="?([^"]+)"?/i);
+        const filename = filenameMatch?.[1] ?? "cadastro-clientes.csv";
+
+        const url = window.URL.createObjectURL(response.data as Blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error("Erro ao exportar cadastro de clientes", error);
+        toast.error("Não foi possível exportar o cadastro de clientes.");
+      }
+    })();
   };
 
   const stats = {

@@ -24,6 +24,12 @@ interface ConfirmacaoProps {
 
 export function Confirmacao({ dados }: ConfirmacaoProps) {
   const { titular, dependentes = [], planoSelecionado, consultor } = dados;
+  const formatDateBr = (value?: string | null) => {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString("pt-BR");
+  };
 
   return (
     <Card className="border-green-200 shadow-md">
@@ -55,7 +61,8 @@ export function Confirmacao({ dados }: ConfirmacaoProps) {
           )}
           {titular.dataNascimento && (
             <p>
-              <strong>Data de Nascimento:</strong> {titular.dataNascimento}
+              <strong>Data de Nascimento:</strong>{" "}
+              {formatDateBr(titular.dataNascimento)}
             </p>
           )}
         </div>
@@ -69,7 +76,9 @@ export function Confirmacao({ dados }: ConfirmacaoProps) {
                 <li key={i}>
                   {dep.nome}{" "}
                   {dep.idade !== undefined ? `- ${dep.idade} anos` : ""}
-                  {dep.dataNascimento ? ` (Nasc: ${dep.dataNascimento})` : ""}
+                  {dep.dataNascimento
+                    ? ` (Nasc: ${formatDateBr(dep.dataNascimento)})`
+                    : ""}
                 </li>
               ))}
             </ul>

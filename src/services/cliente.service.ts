@@ -35,6 +35,7 @@ type PlanoApi = {
   id: number;
   nome: string;
   valorMensal: number;
+  vigenciaMeses?: number | null;
   coberturas?: PlanoCoberturaApi[];
 };
 
@@ -201,6 +202,7 @@ export const mapClienteFromApi = (payload: TitularApi): Cliente => {
       id: payload.plano ? String(payload.plano.id) : "",
       nome: payload.plano?.nome ?? "Plano não informado",
       valorMensal: Number(payload.plano?.valorMensal ?? 0),
+      vigenciaMeses: Number(payload.plano?.vigenciaMeses ?? 0) || undefined,
       coberturas: mapPlanoCoberturas(payload.plano),
     },
     consultor: {

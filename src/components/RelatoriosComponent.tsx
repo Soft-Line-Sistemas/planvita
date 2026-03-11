@@ -41,6 +41,13 @@ export const RelatoriosComponent: React.FC<RelatoriosProps> = ({
     return matchTerm && matchStatus;
   });
 
+  const formatDateBr = (value?: string | null) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString("pt-BR");
+  };
+
   // Exportar Excel
   const handleExportExcel = () => {
     const worksheetData = filteredPagamentos.map((p) => ({
@@ -175,8 +182,8 @@ export const RelatoriosComponent: React.FC<RelatoriosProps> = ({
                         currency: "BRL",
                       })}
                     </TableCell>
-                    <TableCell>{p.dataVencimento}</TableCell>
-                    <TableCell>{p.dataPagamento ?? "-"}</TableCell>
+                    <TableCell>{formatDateBr(p.dataVencimento)}</TableCell>
+                    <TableCell>{formatDateBr(p.dataPagamento)}</TableCell>
                     <TableCell>{p.status}</TableCell>
                     <TableCell>{p.metodoPagamento}</TableCell>
                     <TableCell>{p.referencia}</TableCell>

@@ -1083,7 +1083,8 @@ function AssinaturaCard({
             <CheckCircle className="h-5 w-5 text-emerald-500" />
           </CardTitle>
           <CardDescription className="text-xs">
-            Assinado em {new Date(assinatura.criadoEm).toLocaleDateString()}
+            Assinado em{" "}
+            {new Date(assinatura.criadoEm).toLocaleDateString("pt-BR")}
           </CardDescription>
         </CardHeader>
         <CardContent>

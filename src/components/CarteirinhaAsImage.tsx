@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useCallback, useState, useRef } from "react";
-import Image from "next/image";
 import { Button } from "./ui/button";
 import type { ClientePlano } from "@/types/ClientePlano";
+import getTenantFromHost from "@/utils/getTenantFromHost";
 
 type Props = {
   cliente: ClientePlano;
@@ -52,7 +52,20 @@ function esc(s: unknown) {
 }
 
 function svgDataUrl(svg: string) {
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  const bytes = new TextEncoder().encode(svg);
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return `data:image/svg+xml;base64,${window.btoa(binary)}`;
+}
+
+function getTenantDisplayName(tenant: string | null) {
+  const normalized = (tenant || "").trim().toLowerCase();
+  if (normalized === "bosque") return "Campo do Bosque";
+  if (normalized === "pax") return "Pax";
+  if (normalized === "lider") return "Lider";
+  return "Planvita";
 }
 
 export default function CarteirinhaAsImage({
@@ -64,7 +77,14 @@ export default function CarteirinhaAsImage({
 }: Props) {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardWrapRef = useRef<HTMLDivElement | null>(null);
-  const frontSrc = useMemo(() => {
+  const tenantLabel = useMemo(
+    () =>
+      typeof window !== "undefined"
+        ? getTenantDisplayName(getTenantFromHost())
+        : "Planvita",
+    [],
+  );
+  const frontSvg = useMemo(() => {
     const nome = esc(cliente.nome.toUpperCase());
     const cpf = esc(cliente.cpf);
     const codigo = esc(cliente.plano.codigo);
@@ -88,7 +108,7 @@ export default function CarteirinhaAsImage({
         ">
           <div style="display:flex;justify-content:space-between;align-items:center;
               text-transform:uppercase;letter-spacing:.3em;font-weight:600;font-size:14px;">
-            <span>Planvita</span><span>${codigo}</span>
+            <span>${tenantLabel}</span><span>${codigo}</span>
           </div>
 
           <div style="margin-top:40px;display:flex;flex-direction:column;gap:16px;">
@@ -142,10 +162,11 @@ export default function CarteirinhaAsImage({
         </foreignObject>
       </svg>
     `;
-    return svgDataUrl(svg);
-  }, [cliente, formatCurrency, formatDate]);
+    return svg;
+  }, [cliente, formatCurrency, formatDate, tenantLabel]);
+  const frontSrc = useMemo(() => svgDataUrl(frontSvg), [frontSvg]);
 
-  const backSrc = useMemo(() => {
+  const backSvg = useMemo(() => {
     const coberturaLis = cliente.plano.cobertura
       .map((item) => {
         const t = esc(item);
@@ -178,7 +199,7 @@ export default function CarteirinhaAsImage({
         ">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <h2 style="margin:0;font-size:18px;font-weight:700;color:${COLORS.slate900}">Benefícios do plano</h2>
-            <span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.3em;color:${COLORS.slate400}">Planvita</span>
+            <span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.3em;color:${COLORS.slate400}">${tenantLabel}</span>
           </div>
 
           <ul style="margin:24px 0 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px;">
@@ -205,8 +226,9 @@ export default function CarteirinhaAsImage({
         </foreignObject>
       </svg>
     `;
-    return svgDataUrl(svg);
-  }, [cliente]);
+    return svg;
+  }, [cliente, tenantLabel]);
+  const backSrc = useMemo(() => svgDataUrl(backSvg), [backSvg]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const target = cardWrapRef.current;
@@ -251,12 +273,8 @@ export default function CarteirinhaAsImage({
     [],
   );
 
-  function stripShadowFromSvgDataUrl(svgDataUrl: string) {
-    const prefix = "data:image/svg+xml;charset=utf-8,";
-    if (!svgDataUrl.startsWith(prefix)) return svgDataUrl;
-    const decoded = decodeURIComponent(svgDataUrl.slice(prefix.length));
-    const cleaned = decoded.replace(/box-shadow:[^;"]*;?/g, "");
-    return prefix + encodeURIComponent(cleaned);
+  function stripShadowFromSvg(svg: string) {
+    return svg.replace(/box-shadow:[^;"]*;?/g, "");
   }
 
   const handleDownloadPdf = useCallback(async () => {
@@ -276,15 +294,15 @@ export default function CarteirinhaAsImage({
       const y1 = marginTop;
       const y2 = y1 + CARD_MM_H + gap;
 
-      const frontClean = stripShadowFromSvgDataUrl(frontSrc);
-      const backClean = stripShadowFromSvgDataUrl(backSrc);
+      const frontClean = stripShadowFromSvg(frontSvg);
+      const backClean = stripShadowFromSvg(backSvg);
 
       const targetW = Math.round(WIDTH * PRINT_SCALE);
       const targetH = Math.round(HEIGHT * PRINT_SCALE);
 
       const [frontPng, backPng] = await Promise.all([
-        svgToPngDataUrl(frontClean, targetW, targetH),
-        svgToPngDataUrl(backClean, targetW, targetH),
+        svgToPngDataUrl(svgDataUrl(frontClean), targetW, targetH),
+        svgToPngDataUrl(svgDataUrl(backClean), targetW, targetH),
       ]);
 
       pdf.addImage(
@@ -314,14 +332,17 @@ export default function CarteirinhaAsImage({
       console.error(err);
       alert("Não foi possível gerar o PDF. Tente novamente.");
     }
-  }, [cliente.numeroCarteirinha, frontSrc, backSrc, svgToPngDataUrl]);
+  }, [cliente.numeroCarteirinha, frontSvg, backSvg, svgToPngDataUrl]);
 
   return (
     <div className="flex flex-col items-center gap-6">
       <div
         ref={cardWrapRef}
         className="relative w-[min(92vw,640px)] aspect-[336/212] select-none"
-        style={{ perspective: "1200px" }}
+        style={{
+          perspective: "1200px",
+          WebkitPerspective: "1200px",
+        }}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
@@ -330,6 +351,8 @@ export default function CarteirinhaAsImage({
           style={{
             transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
             transition: "transform 450ms cubic-bezier(.2,.8,.2,1)",
+            transformStyle: "preserve-3d",
+            WebkitTransformStyle: "preserve-3d",
           }}
         >
           <div
@@ -337,29 +360,41 @@ export default function CarteirinhaAsImage({
             style={{
               transform: `rotateY(${isFlipped ? 180 : 0}deg)`,
               transition: "transform 700ms cubic-bezier(.2,.8,.2,1)",
+              transformStyle: "preserve-3d",
+              WebkitTransformStyle: "preserve-3d",
             }}
           >
-            <div className="absolute inset-0 rounded-[0.75rem] overflow-hidden shadow-2xl [backface-visibility:hidden]">
-              <Image
+            <div
+              className="absolute inset-0 rounded-[0.75rem] overflow-hidden shadow-2xl [backface-visibility:hidden]"
+              style={{
+                backfaceVisibility: "hidden",
+                WebkitBackfaceVisibility: "hidden",
+              }}
+            >
+              <img
                 key={frontSrc.length}
                 src={frontSrc}
                 alt="Carteirinha - frente"
                 className="w-full h-full object-cover"
                 draggable={false}
-                width={WIDTH}
-                height={HEIGHT}
+                loading="eager"
               />
             </div>
 
-            <div className="absolute inset-0 rounded-[0.75rem] overflow-hidden shadow-2xl [backface-visibility:hidden] [transform:rotateY(180deg)]">
-              <Image
+            <div
+              className="absolute inset-0 rounded-[0.75rem] overflow-hidden shadow-2xl [backface-visibility:hidden] [transform:rotateY(180deg)]"
+              style={{
+                backfaceVisibility: "hidden",
+                WebkitBackfaceVisibility: "hidden",
+              }}
+            >
+              <img
                 key={backSrc.length}
                 src={backSrc}
                 alt="Carteirinha - verso"
                 className="w-full h-full object-cover"
                 draggable={false}
-                width={WIDTH}
-                height={HEIGHT}
+                loading="eager"
               />
             </div>
           </div>
