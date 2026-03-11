@@ -40,12 +40,13 @@ export const DependentesForm = ({
         ) : null}
       </div>
       <Button
+        type="button"
         onClick={handleAddDependente}
         className="bg-green-600 hover:bg-green-700"
         disabled={!canAddDependente}
       >
-        <Plus className="w-4 h-4 mr-2" />
-        Adicionar
+        Adicionar +
+        <Plus className="w-4 h-4" />
       </Button>
     </div>
     {!canAddDependente && limiteBeneficiarios && limiteBeneficiarios > 0 ? (

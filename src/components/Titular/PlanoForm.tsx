@@ -8,7 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Shield } from "lucide-react";
 import api from "@/utils/api";
 import { Plano } from "@/types/PlanType";
-import { sanitizePlanoArray, type ParticipanteMin } from "@/utils/planos";
+import {
+  obterMaiorIdadeParticipantes,
+  sanitizePlanoArray,
+  selecionarPlanoPorMaiorIdade,
+  type ParticipanteMin,
+} from "@/utils/planos";
 
 type PlanoFormFields = {
   planoId?: number;
@@ -173,12 +178,18 @@ export function PlanoForm({
 
   // ----- Seleção -----
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const maiorIdadeParticipantes = useMemo(
+    () => obterMaiorIdadeParticipantes(participantes),
+    [participantes],
+  );
 
   const planoPadrao = useMemo<Plano | null>(() => {
     if (planoSelecionado) return planoSelecionado;
-    if (elegiveis && elegiveis.length > 0) return elegiveis[0];
+    if (elegiveis && elegiveis.length > 0) {
+      return selecionarPlanoPorMaiorIdade(elegiveis, maiorIdadeParticipantes);
+    }
     return null;
-  }, [planoSelecionado, elegiveis]);
+  }, [planoSelecionado, elegiveis, maiorIdadeParticipantes]);
 
   useEffect(() => {
     const idStr = planoPadrao?.id != null ? String(planoPadrao.id) : null;
@@ -251,32 +262,9 @@ export function PlanoForm({
           </p>
         )}
 
-        {planoPadrao && (
-          <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-            <h3 className="text-lg font-semibold text-green-700">
-              Plano sugerido
-            </h3>
-            <div className="mt-2 flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-800">{planoPadrao.nome}</p>
-                <p className="text-xs text-gray-600">
-                  Idade Máxima: {idadeMaxToLabel(planoPadrao.idadeMaxima)}
-                </p>
-              </div>
-              <p className="text-sm font-medium text-green-700">
-                {formatCurrency(planoPadrao.valorMensal)}
-              </p>
-            </div>
-
-            {renderBeneficios(planoPadrao)}
-            {renderCoberturas(planoPadrao)}
-            {renderBeneficiarios(planoPadrao)}
-          </div>
-        )}
-
         {elegiveis && elegiveis.length > 0 ? (
           <div className="space-y-3">
-            <Label>Outras opções de planos</Label>
+            <Label>Planos disponíveis</Label>
             <div className="space-y-2">
               {elegiveis.map((pl) => (
                 <PlanoOption key={String(pl.id)} plano={pl} />

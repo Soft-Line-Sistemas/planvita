@@ -20,6 +20,7 @@ interface Plano {
   id: string;
   nome: string;
   valorMensal: number;
+  vigenciaMeses?: number;
   coberturas: {
     servicosPadrao: Cobertura[];
     coberturaTranslado: Cobertura[];

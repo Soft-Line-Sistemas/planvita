@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   User,
   Phone,
@@ -110,6 +110,23 @@ const DetalhesCliente = () => {
         return { icon: XCircle, color: "text-gray-600", bg: "bg-gray-100" };
     }
   };
+
+  const dataPossivelRenovacao = useMemo(() => {
+    if (!cliente?.dataContratacao) return "—";
+
+    const dataBase = new Date(cliente.dataContratacao);
+    if (Number.isNaN(dataBase.getTime())) return "—";
+
+    const vigenciaMeses =
+      Number(cliente.plano?.vigenciaMeses) > 0
+        ? Number(cliente.plano?.vigenciaMeses)
+        : 12;
+
+    const renovacao = new Date(dataBase);
+    renovacao.setMonth(renovacao.getMonth() + vigenciaMeses);
+
+    return renovacao.toLocaleDateString("pt-BR");
+  }, [cliente?.dataContratacao, cliente?.plano?.vigenciaMeses]);
 
   useEffect(() => {
     if (!searchParams) return;
@@ -379,6 +396,12 @@ const DetalhesCliente = () => {
                         {new Date(cliente.dataContratacao).toLocaleDateString(
                           "pt-BR",
                         )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Possível renovação:</span>
+                      <span className="font-medium">
+                        {dataPossivelRenovacao}
                       </span>
                     </div>
                     <div className="flex justify-between">

@@ -134,6 +134,7 @@ type PlanoFormState = {
   auxilioCemiterio: string;
   taxaInclusaCemiterioPublico: boolean;
   ativo: boolean;
+  beneficiariosTexto: string;
 };
 
 const buildFormState = (plano?: Plano | null): PlanoFormState => ({
@@ -162,6 +163,7 @@ const buildFormState = (plano?: Plano | null): PlanoFormState => ({
     plano?.taxaInclusaCemiterioPublico ?? false,
   ),
   ativo: Boolean(plano?.ativo ?? true),
+  beneficiariosTexto: getBeneficiariosNomes(plano?.beneficiarios).join(", "),
 });
 
 const toNumber = (value: string, fallback = 0) => {
@@ -171,6 +173,14 @@ const toNumber = (value: string, fallback = 0) => {
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : fallback;
 };
+
+const parseBeneficiariosTexto = (value: string): string[] =>
+  value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(
+      (item, index, array) => item.length > 0 && array.indexOf(item) === index,
+    );
 
 const GestaoPlanos = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -285,8 +295,8 @@ const GestaoPlanos = () => {
   };
 
   const handleSalvarPlano = async () => {
-    if (!canUpdate) return;
-    if (!planoSelecionado) return;
+    if (planoSelecionado && !canUpdate) return;
+    if (!planoSelecionado && !canCreate) return;
     if (!formPlano.nome.trim()) {
       setFeedbackMensagem("Informe o nome do plano.");
       return;
@@ -295,55 +305,64 @@ const GestaoPlanos = () => {
     setIsSavingPlano(true);
     setFeedbackMensagem(null);
     try {
+      const beneficiarios = parseBeneficiariosTexto(
+        formPlano.beneficiariosTexto,
+      );
       const payload = {
         nome: formPlano.nome.trim(),
         valorMensal: toNumber(
           formPlano.valorMensal,
-          planoSelecionado.valorMensal,
+          planoSelecionado?.valorMensal ?? 0,
         ),
         idadeMaxima:
           formPlano.idadeMaxima.trim() === ""
             ? null
             : toNumber(
                 formPlano.idadeMaxima,
-                planoSelecionado.idadeMaxima ?? 0,
+                planoSelecionado?.idadeMaxima ?? 0,
               ),
         coberturaMaxima: toNumber(
           formPlano.coberturaMaxima,
-          planoSelecionado.coberturaMaxima,
+          planoSelecionado?.coberturaMaxima ?? 0,
         ),
         carenciaDias: toNumber(
           formPlano.carenciaDias,
-          planoSelecionado.carenciaDias,
+          planoSelecionado?.carenciaDias ?? 0,
         ),
         vigenciaMeses: toNumber(
           formPlano.vigenciaMeses,
-          planoSelecionado.vigenciaMeses,
+          planoSelecionado?.vigenciaMeses ?? 0,
         ),
         assistenciaFuneral: toNumber(
           formPlano.assistenciaFuneral,
-          planoSelecionado.assistenciaFuneral,
+          planoSelecionado?.assistenciaFuneral ?? 0,
         ),
         auxilioCemiterio:
           formPlano.auxilioCemiterio.trim() === ""
             ? null
             : toNumber(
                 formPlano.auxilioCemiterio,
-                planoSelecionado.auxilioCemiterio ?? 0,
+                planoSelecionado?.auxilioCemiterio ?? 0,
               ),
         taxaInclusaCemiterioPublico: formPlano.taxaInclusaCemiterioPublico,
         ativo: formPlano.ativo,
+        beneficiarios,
       };
 
-      const planoIdNumber = Number(planoSelecionado.id);
-      const endpointId = Number.isNaN(planoIdNumber)
-        ? planoSelecionado.id
-        : planoIdNumber;
+      if (planoSelecionado) {
+        const planoIdNumber = Number(planoSelecionado.id);
+        const endpointId = Number.isNaN(planoIdNumber)
+          ? planoSelecionado.id
+          : planoIdNumber;
+        await api.put(`/plano/${endpointId}`, payload);
+      } else {
+        await api.post("/plano", payload);
+      }
 
-      await api.put(`/plano/${endpointId}`, payload);
       await refetch();
       setModalAberto(false);
       setPlanoSelecionado(null);
+      setModoEdicao(false);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Não foi possível salvar o plano.";
@@ -389,6 +408,28 @@ const GestaoPlanos = () => {
   const beneficiariosSelecionados = planoSelecionado
     ? getBeneficiariosNomes(planoSelecionado.beneficiarios)
     : [];
+  const beneficiariosDigitados = parseBeneficiariosTexto(
+    formPlano.beneficiariosTexto,
+  );
+  const isNovoPlano = modoEdicao && !planoSelecionado;
+  const planoDetalhe = planoSelecionado ?? {
+    id: "",
+    nome: "",
+    valorMensal: 0,
+    idadeMaxima: null,
+    coberturaMaxima: 0,
+    carenciaDias: 0,
+    vigenciaMeses: 0,
+    ativo: true,
+    totalClientes: 0,
+    receitaMensal: 0,
+    assistenciaFuneral: 0,
+    auxilioCemiterio: null,
+    taxaInclusaCemiterioPublico: false,
+    beneficios: [],
+    coberturas: [],
+    beneficiarios: [],
+  };
 
   const coberturasSelecionadas = planoSelecionado
     ? mapCoberturasDetalhadas(planoSelecionado.coberturas)
@@ -686,17 +727,22 @@ const GestaoPlanos = () => {
       </div>
 
       {/* Modal de Detalhes/Edição do Plano */}
-      {modalAberto && planoSelecionado && (
+      {modalAberto && (planoSelecionado || isNovoPlano) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {modoEdicao ? "Editar Plano" : "Detalhes do Plano"} -{" "}
-                  {planoSelecionado.nome}
+                  {isNovoPlano
+                    ? "Novo Plano"
+                    : `${modoEdicao ? "Editar Plano" : "Detalhes do Plano"} - ${planoSelecionado?.nome ?? ""}`}
                 </h3>
                 <button
-                  onClick={() => setModalAberto(false)}
+                  onClick={() => {
+                    setModalAberto(false);
+                    setPlanoSelecionado(null);
+                    setModoEdicao(false);
+                  }}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   ✕
@@ -725,7 +771,7 @@ const GestaoPlanos = () => {
                           }
                         />
                       ) : (
-                        <p className="font-medium">{planoSelecionado.nome}</p>
+                        <p className="font-medium">{planoDetalhe.nome}</p>
                       )}
                     </div>
                     <div>
@@ -745,7 +791,7 @@ const GestaoPlanos = () => {
                         />
                       ) : (
                         <p className="font-medium">
-                          {formatCurrency(planoSelecionado.valorMensal)}
+                          {formatCurrency(planoDetalhe.valorMensal)}
                         </p>
                       )}
                     </div>
@@ -766,8 +812,8 @@ const GestaoPlanos = () => {
                         />
                       ) : (
                         <p className="font-medium">
-                          {planoSelecionado.idadeMaxima
-                            ? `${planoSelecionado.idadeMaxima} anos`
+                          {planoDetalhe.idadeMaxima
+                            ? `${planoDetalhe.idadeMaxima} anos`
                             : "Sem limite"}
                         </p>
                       )}
@@ -788,7 +834,7 @@ const GestaoPlanos = () => {
                         />
                       ) : (
                         <p className="font-medium">
-                          {planoSelecionado.coberturaMaxima} pessoas
+                          {planoDetalhe.coberturaMaxima} pessoas
                         </p>
                       )}
                     </div>
@@ -805,7 +851,7 @@ const GestaoPlanos = () => {
                         Total de Clientes
                       </label>
                       <p className="font-medium">
-                        {planoSelecionado.totalClientes}
+                        {planoDetalhe.totalClientes}
                       </p>
                     </div>
                     <div>
@@ -813,7 +859,7 @@ const GestaoPlanos = () => {
                         Receita Mensal
                       </label>
                       <p className="font-medium">
-                        {formatCurrency(planoSelecionado.receitaMensal)}
+                        {formatCurrency(planoDetalhe.receitaMensal)}
                       </p>
                     </div>
                     <div>
@@ -830,7 +876,7 @@ const GestaoPlanos = () => {
                         />
                       ) : (
                         <p className="font-medium">
-                          {planoSelecionado.carenciaDias} dias
+                          {planoDetalhe.carenciaDias} dias
                         </p>
                       )}
                     </div>
@@ -848,7 +894,7 @@ const GestaoPlanos = () => {
                         />
                       ) : (
                         <p className="font-medium">
-                          {planoSelecionado.vigenciaMeses} meses
+                          {planoDetalhe.vigenciaMeses} meses
                         </p>
                       )}
                     </div>
@@ -872,7 +918,7 @@ const GestaoPlanos = () => {
                         />
                       ) : (
                         <p className="font-medium">
-                          {formatCurrency(planoSelecionado.assistenciaFuneral)}
+                          {formatCurrency(planoDetalhe.assistenciaFuneral)}
                         </p>
                       )}
                     </div>
@@ -894,8 +940,8 @@ const GestaoPlanos = () => {
                         />
                       ) : (
                         <p className="font-medium">
-                          {planoSelecionado.auxilioCemiterio
-                            ? formatCurrency(planoSelecionado.auxilioCemiterio)
+                          {planoDetalhe.auxilioCemiterio
+                            ? formatCurrency(planoDetalhe.auxilioCemiterio)
                             : "Não informado"}
                         </p>
                       )}
@@ -922,7 +968,7 @@ const GestaoPlanos = () => {
                         />
                       ) : (
                         <span className="text-sm font-medium">
-                          {planoSelecionado.taxaInclusaCemiterioPublico
+                          {planoDetalhe.taxaInclusaCemiterioPublico
                             ? "Sim"
                             : "Não"}
                         </span>
@@ -943,7 +989,7 @@ const GestaoPlanos = () => {
                         </select>
                       ) : (
                         <p className="font-medium">
-                          {planoSelecionado.ativo ? "Ativo" : "Inativo"}
+                          {planoDetalhe.ativo ? "Ativo" : "Inativo"}
                         </p>
                       )}
                     </div>
@@ -956,22 +1002,59 @@ const GestaoPlanos = () => {
                 <h4 className="font-semibold text-gray-900 mb-4">
                   Beneficiários Cobertos
                 </h4>
-                {beneficiariosSelecionados.length > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {beneficiariosSelecionados.map((beneficiario, index) => (
-                      <div
-                        key={`${beneficiario}-${index}`}
-                        className="flex items-center space-x-2 p-2 bg-green-50 rounded-lg"
-                      >
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                        <span className="text-sm">{beneficiario}</span>
+                {modoEdicao ? (
+                  <div className="space-y-3">
+                    <textarea
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500 min-h-[90px]"
+                      placeholder="Ex: Titular, Cônjuge, Filhos"
+                      value={formPlano.beneficiariosTexto}
+                      onChange={(e) =>
+                        handleCampoPlano("beneficiariosTexto", e.target.value)
+                      }
+                    />
+                    <p className="text-xs text-gray-500">
+                      Informe os beneficiários separados por vírgula.
+                    </p>
+                    {beneficiariosDigitados.length > 0 ? (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {beneficiariosDigitados.map((beneficiario, index) => (
+                          <div
+                            key={`${beneficiario}-${index}`}
+                            className="flex items-center space-x-2 p-2 bg-green-50 rounded-lg"
+                          >
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                            <span className="text-sm">{beneficiario}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    ) : (
+                      <p className="text-sm text-gray-500">
+                        Nenhum beneficiário informado.
+                      </p>
+                    )}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500">
-                    Nenhum beneficiário cadastrado para este plano.
-                  </p>
+                  <>
+                    {beneficiariosSelecionados.length > 0 ? (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {beneficiariosSelecionados.map(
+                          (beneficiario, index) => (
+                            <div
+                              key={`${beneficiario}-${index}`}
+                              className="flex items-center space-x-2 p-2 bg-green-50 rounded-lg"
+                            >
+                              <CheckCircle className="w-4 h-4 text-green-600" />
+                              <span className="text-sm">{beneficiario}</span>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">
+                        Nenhum beneficiário cadastrado para este plano.
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -1093,7 +1176,11 @@ const GestaoPlanos = () => {
                   </button>
                 )}
                 <button
-                  onClick={() => setModalAberto(false)}
+                  onClick={() => {
+                    setModalAberto(false);
+                    setPlanoSelecionado(null);
+                    setModoEdicao(false);
+                  }}
                   className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                 >
                   Fechar
@@ -1109,6 +1196,8 @@ const GestaoPlanos = () => {
                         <Loader2 className="w-4 h-4 animate-spin" />
                         Salvando...
                       </span>
+                    ) : isNovoPlano ? (
+                      "Criar Plano"
                     ) : (
                       "Salvar Alterações"
                     )}
