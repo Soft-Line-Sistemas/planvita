@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback, useState, useRef } from "react";
+import { useMemo, useCallback, useState, useRef, useEffect } from "react";
 import { Button } from "./ui/button";
 import type { ClientePlano } from "@/types/ClientePlano";
 import getTenantFromHost from "@/utils/getTenantFromHost";
@@ -76,6 +76,7 @@ export default function CarteirinhaAsImage({
   formatCurrency,
 }: Props) {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [cardWidthPx, setCardWidthPx] = useState<number | null>(null);
   const cardWrapRef = useRef<HTMLDivElement | null>(null);
   const tenantLabel = useMemo(
     () =>
@@ -248,6 +249,28 @@ export default function CarteirinhaAsImage({
     setTilt({ x: 0, y: 0 });
   }, []);
 
+  useEffect(() => {
+    const updateCardWidth = () => {
+      const viewportWidth =
+        window.visualViewport?.width && window.visualViewport.width > 0
+          ? window.visualViewport.width
+          : window.innerWidth;
+      const nextWidth = Math.min(640, Math.max(280, viewportWidth - 16));
+      setCardWidthPx(nextWidth);
+    };
+
+    updateCardWidth();
+    window.addEventListener("resize", updateCardWidth);
+    window.addEventListener("orientationchange", updateCardWidth);
+    window.visualViewport?.addEventListener("resize", updateCardWidth);
+
+    return () => {
+      window.removeEventListener("resize", updateCardWidth);
+      window.removeEventListener("orientationchange", updateCardWidth);
+      window.visualViewport?.removeEventListener("resize", updateCardWidth);
+    };
+  }, []);
+
   const svgToPngDataUrl = useCallback(
     (svgUrl: string, width = WIDTH, height = HEIGHT) =>
       new Promise<string>((resolve, reject) => {
@@ -338,8 +361,10 @@ export default function CarteirinhaAsImage({
     <div className="flex flex-col items-center gap-6">
       <div
         ref={cardWrapRef}
-        className="relative w-[min(92vw,640px)] aspect-[336/212] select-none"
+        className="relative aspect-[336/212] select-none"
         style={{
+          width: cardWidthPx ? `${cardWidthPx}px` : "calc(100vw - 16px)",
+          maxWidth: "640px",
           perspective: "1200px",
           WebkitPerspective: "1200px",
         }}
