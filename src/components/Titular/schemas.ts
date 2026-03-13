@@ -1,5 +1,19 @@
 import { z } from "zod";
 
+const calcularIdade = (dataNascimento?: string): number | null => {
+  if (!dataNascimento) return null;
+  const data = new Date(dataNascimento);
+  if (Number.isNaN(data.getTime())) return null;
+
+  const hoje = new Date();
+  let idade = hoje.getFullYear() - data.getFullYear();
+  const mes = hoje.getMonth() - data.getMonth();
+  if (mes < 0 || (mes === 0 && hoje.getDate() < data.getDate())) {
+    idade -= 1;
+  }
+  return idade;
+};
+
 const dadosPessoaisSchema = z.object({
   nomeCompleto: z.string().min(2, "Nome completo é obrigatório"),
   cpf: z.string().min(11, "CPF inválido"),
@@ -40,7 +54,37 @@ const responsavelFinanceiroSchema = z
       message: "Preencha os campos obrigatórios ou marque 'Usar mesmos dados'",
       path: ["nomeCompleto"],
     },
-  );
+  )
+  .superRefine((data, ctx) => {
+    if (data.usarMesmosDados) return;
+
+    if (!data.dataNascimento) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Data de nascimento do corresponsável é obrigatória",
+        path: ["dataNascimento"],
+      });
+      return;
+    }
+
+    const idade = calcularIdade(data.dataNascimento);
+    if (idade === null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Data de nascimento do corresponsável inválida",
+        path: ["dataNascimento"],
+      });
+      return;
+    }
+
+    if (idade < 18) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Corresponsável deve ser maior de idade (18+)",
+        path: ["dataNascimento"],
+      });
+    }
+  });
 
 const dependentesSchema = z.object({
   dependentes: z.array(

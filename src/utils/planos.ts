@@ -50,6 +50,37 @@ const isPlanoBeneficiario = (value: unknown): value is PlanoBeneficiario => {
   return typeof data.id === "number" && typeof data.nome === "string";
 };
 
+const normalizeCoberturas = (value: unknown): PlanoCobertura[] => {
+  if (Array.isArray(value)) {
+    return value.filter(isPlanoCobertura);
+  }
+
+  if (!value || typeof value !== "object") {
+    return [];
+  }
+
+  const registro = value as Record<string, unknown>;
+  const output: PlanoCobertura[] = [];
+  let idx = 1;
+  const pushItens = (tipo: string, maybeArray: unknown) => {
+    if (!Array.isArray(maybeArray)) return;
+    maybeArray.forEach((item) => {
+      if (typeof item !== "string" || item.trim() === "") return;
+      output.push({
+        id: idx++,
+        tipo,
+        descricao: item.trim(),
+      });
+    });
+  };
+
+  pushItens("servicosPadrao", registro.servicosPadrao);
+  pushItens("coberturaTranslado", registro.coberturaTranslado);
+  pushItens("servicosEspecificos", registro.servicosEspecificos);
+
+  return output;
+};
+
 export const sanitizePlano = (raw: unknown): Plano | null => {
   if (!raw || typeof raw !== "object") return null;
   const data = raw as Record<string, unknown>;
@@ -87,7 +118,7 @@ export const sanitizePlano = (raw: unknown): Plano | null => {
       : [],
     coberturas: Array.isArray(data.coberturas)
       ? data.coberturas.filter(isPlanoCobertura)
-      : [],
+      : normalizeCoberturas(data.coberturas),
     beneficiarios: Array.isArray(data.beneficiarios)
       ? data.beneficiarios.filter(isPlanoBeneficiario)
       : [],
