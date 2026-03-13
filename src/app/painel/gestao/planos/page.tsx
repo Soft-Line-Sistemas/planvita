@@ -135,36 +135,49 @@ type PlanoFormState = {
   taxaInclusaCemiterioPublico: boolean;
   ativo: boolean;
   beneficiariosTexto: string;
+  servicosPadraoTexto: string;
+  coberturaTransladoTexto: string;
+  servicosEspecificosTexto: string;
 };
 
-const buildFormState = (plano?: Plano | null): PlanoFormState => ({
-  nome: plano?.nome ?? "",
-  valorMensal:
-    plano?.valorMensal !== undefined ? String(plano.valorMensal) : "",
-  idadeMaxima:
-    plano?.idadeMaxima !== null && plano?.idadeMaxima !== undefined
-      ? String(plano.idadeMaxima)
-      : "",
-  coberturaMaxima:
-    plano?.coberturaMaxima !== undefined ? String(plano.coberturaMaxima) : "",
-  carenciaDias:
-    plano?.carenciaDias !== undefined ? String(plano.carenciaDias) : "",
-  vigenciaMeses:
-    plano?.vigenciaMeses !== undefined ? String(plano.vigenciaMeses) : "",
-  assistenciaFuneral:
-    plano?.assistenciaFuneral !== undefined
-      ? String(plano.assistenciaFuneral)
-      : "",
-  auxilioCemiterio:
-    plano?.auxilioCemiterio !== null && plano?.auxilioCemiterio !== undefined
-      ? String(plano.auxilioCemiterio)
-      : "",
-  taxaInclusaCemiterioPublico: Boolean(
-    plano?.taxaInclusaCemiterioPublico ?? false,
-  ),
-  ativo: Boolean(plano?.ativo ?? true),
-  beneficiariosTexto: getBeneficiariosNomes(plano?.beneficiarios).join(", "),
-});
+const buildFormState = (plano?: Plano | null): PlanoFormState => {
+  const coberturas = mapCoberturasDetalhadas(plano?.coberturas);
+
+  return {
+    nome: plano?.nome ?? "",
+    valorMensal:
+      plano?.valorMensal !== undefined ? String(plano.valorMensal) : "",
+    idadeMaxima:
+      plano?.idadeMaxima !== null && plano?.idadeMaxima !== undefined
+        ? String(plano.idadeMaxima)
+        : "",
+    coberturaMaxima:
+      plano?.coberturaMaxima !== undefined ? String(plano.coberturaMaxima) : "",
+    carenciaDias:
+      plano?.carenciaDias !== undefined ? String(plano.carenciaDias) : "",
+    vigenciaMeses:
+      plano?.vigenciaMeses !== undefined ? String(plano.vigenciaMeses) : "",
+    assistenciaFuneral:
+      plano?.assistenciaFuneral !== undefined
+        ? String(plano.assistenciaFuneral)
+        : "",
+    auxilioCemiterio:
+      plano?.auxilioCemiterio !== null && plano?.auxilioCemiterio !== undefined
+        ? String(plano.auxilioCemiterio)
+        : "",
+    taxaInclusaCemiterioPublico: Boolean(
+      plano?.taxaInclusaCemiterioPublico ?? false,
+    ),
+    ativo: Boolean(plano?.ativo ?? true),
+    beneficiariosTexto: getBeneficiariosNomes(plano?.beneficiarios).join(", "),
+    servicosPadraoTexto: coberturas.servicosPadrao.join(", "),
+    coberturaTransladoTexto: coberturas.coberturaTranslado.join(", "),
+    servicosEspecificosTexto: [
+      ...coberturas.servicosEspecificos,
+      ...coberturas.outros,
+    ].join(", "),
+  };
+};
 
 const toNumber = (value: string, fallback = 0) => {
   if (value === undefined || value === null) return fallback;
@@ -177,6 +190,14 @@ const toNumber = (value: string, fallback = 0) => {
 const parseBeneficiariosTexto = (value: string): string[] =>
   value
     .split(",")
+    .map((item) => item.trim())
+    .filter(
+      (item, index, array) => item.length > 0 && array.indexOf(item) === index,
+    );
+
+const parseItensTexto = (value: string): string[] =>
+  value
+    .split(/[\n,;]+/)
     .map((item) => item.trim())
     .filter(
       (item, index, array) => item.length > 0 && array.indexOf(item) === index,
@@ -308,6 +329,13 @@ const GestaoPlanos = () => {
       const beneficiarios = parseBeneficiariosTexto(
         formPlano.beneficiariosTexto,
       );
+      const servicosPadrao = parseItensTexto(formPlano.servicosPadraoTexto);
+      const coberturaTranslado = parseItensTexto(
+        formPlano.coberturaTransladoTexto,
+      );
+      const servicosEspecificos = parseItensTexto(
+        formPlano.servicosEspecificosTexto,
+      );
       const payload = {
         nome: formPlano.nome.trim(),
         valorMensal: toNumber(
@@ -347,6 +375,11 @@ const GestaoPlanos = () => {
         taxaInclusaCemiterioPublico: formPlano.taxaInclusaCemiterioPublico,
         ativo: formPlano.ativo,
         beneficiarios,
+        coberturas: {
+          servicosPadrao,
+          coberturaTranslado,
+          servicosEspecificos,
+        },
       };
 
       if (planoSelecionado) {
@@ -410,6 +443,15 @@ const GestaoPlanos = () => {
     : [];
   const beneficiariosDigitados = parseBeneficiariosTexto(
     formPlano.beneficiariosTexto,
+  );
+  const servicosPadraoDigitados = parseItensTexto(
+    formPlano.servicosPadraoTexto,
+  );
+  const coberturaTransladoDigitada = parseItensTexto(
+    formPlano.coberturaTransladoTexto,
+  );
+  const servicosEspecificosDigitados = parseItensTexto(
+    formPlano.servicosEspecificosTexto,
   );
   const isNovoPlano = modoEdicao && !planoSelecionado;
   const planoDetalhe = planoSelecionado ?? {
@@ -1063,93 +1105,195 @@ const GestaoPlanos = () => {
                 <h4 className="font-semibold text-gray-900">
                   Coberturas Incluídas
                 </h4>
-
-                {coberturasSelecionadas.servicosPadrao.length > 0 && (
-                  <div>
-                    <h5 className="font-medium text-gray-800 mb-2">
-                      Serviços Padrão Inclusos
-                    </h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {coberturasSelecionadas.servicosPadrao.map(
-                        (servico, index) => (
-                          <div
-                            key={`padrao-${index}`}
-                            className="flex items-center space-x-2 p-2 bg-blue-50 rounded-lg"
-                          >
-                            <CheckCircle className="w-4 h-4 text-blue-600" />
-                            <span className="text-sm">{servico}</span>
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {coberturasSelecionadas.coberturaTranslado.length > 0 && (
-                  <div>
-                    <h5 className="font-medium text-gray-800 mb-2">
-                      Cobertura e Translado
-                    </h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {coberturasSelecionadas.coberturaTranslado.map(
-                        (cobertura, index) => (
-                          <div
-                            key={`translado-${index}`}
-                            className="flex items-center space-x-2 p-2 bg-purple-50 rounded-lg"
-                          >
-                            <Shield className="w-4 h-4 text-purple-600" />
-                            <span className="text-sm">{cobertura}</span>
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {coberturasSelecionadas.servicosEspecificos.length > 0 && (
-                  <div>
-                    <h5 className="font-medium text-gray-800 mb-2">
-                      Serviços Específicos do Plano
-                    </h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {coberturasSelecionadas.servicosEspecificos.map(
-                        (servico, index) => (
-                          <div
-                            key={`especifico-${index}`}
-                            className="flex items-center space-x-2 p-2 bg-emerald-50 rounded-lg"
-                          >
-                            <Shield className="w-4 h-4 text-emerald-600" />
-                            <span className="text-sm">{servico}</span>
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {coberturasSelecionadas.outros.length > 0 && (
-                  <div>
-                    <h5 className="font-medium text-gray-800 mb-2">
-                      Outras Coberturas
-                    </h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {coberturasSelecionadas.outros.map((descricao, index) => (
-                        <div
-                          key={`outros-${index}`}
-                          className="flex items-center space-x-2 p-2 bg-gray-100 rounded-lg"
-                        >
-                          <Shield className="w-4 h-4 text-gray-600" />
-                          <span className="text-sm">{descricao}</span>
+                {modoEdicao ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm text-gray-600">
+                        Serviços Padrão Inclusos
+                      </label>
+                      <textarea
+                        className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500 min-h-[80px]"
+                        placeholder="Ex: Velório, Urna padrão, Ornamentação básica"
+                        value={formPlano.servicosPadraoTexto}
+                        onChange={(e) =>
+                          handleCampoPlano(
+                            "servicosPadraoTexto",
+                            e.target.value,
+                          )
+                        }
+                      />
+                      {servicosPadraoDigitados.length > 0 && (
+                        <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {servicosPadraoDigitados.map((item, index) => (
+                            <div
+                              key={`padrao-edit-${index}`}
+                              className="flex items-center space-x-2 p-2 bg-blue-50 rounded-lg"
+                            >
+                              <CheckCircle className="w-4 h-4 text-blue-600" />
+                              <span className="text-sm">{item}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </div>
-                )}
 
-                {!possuiCoberturas && (
-                  <p className="text-sm text-gray-500">
-                    Nenhuma cobertura cadastrada para este plano.
-                  </p>
+                    <div>
+                      <label className="text-sm text-gray-600">
+                        Cobertura e Translado
+                      </label>
+                      <textarea
+                        className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500 min-h-[80px]"
+                        placeholder="Ex: Translado até 1000 km rodados"
+                        value={formPlano.coberturaTransladoTexto}
+                        onChange={(e) =>
+                          handleCampoPlano(
+                            "coberturaTransladoTexto",
+                            e.target.value,
+                          )
+                        }
+                      />
+                      {coberturaTransladoDigitada.length > 0 && (
+                        <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {coberturaTransladoDigitada.map((item, index) => (
+                            <div
+                              key={`translado-edit-${index}`}
+                              className="flex items-center space-x-2 p-2 bg-purple-50 rounded-lg"
+                            >
+                              <Shield className="w-4 h-4 text-purple-600" />
+                              <span className="text-sm">{item}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="text-sm text-gray-600">
+                        Serviços Específicos do Plano
+                      </label>
+                      <textarea
+                        className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500 min-h-[80px]"
+                        placeholder="Ex: Cerimonial especial, Coroa de flores premium"
+                        value={formPlano.servicosEspecificosTexto}
+                        onChange={(e) =>
+                          handleCampoPlano(
+                            "servicosEspecificosTexto",
+                            e.target.value,
+                          )
+                        }
+                      />
+                      {servicosEspecificosDigitados.length > 0 && (
+                        <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {servicosEspecificosDigitados.map((item, index) => (
+                            <div
+                              key={`especifico-edit-${index}`}
+                              className="flex items-center space-x-2 p-2 bg-emerald-50 rounded-lg"
+                            >
+                              <Shield className="w-4 h-4 text-emerald-600" />
+                              <span className="text-sm">{item}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-gray-500">
+                      Separe itens por vírgula, ponto e vírgula ou quebra de
+                      linha.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {coberturasSelecionadas.servicosPadrao.length > 0 && (
+                      <div>
+                        <h5 className="font-medium text-gray-800 mb-2">
+                          Serviços Padrão Inclusos
+                        </h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {coberturasSelecionadas.servicosPadrao.map(
+                            (servico, index) => (
+                              <div
+                                key={`padrao-${index}`}
+                                className="flex items-center space-x-2 p-2 bg-blue-50 rounded-lg"
+                              >
+                                <CheckCircle className="w-4 h-4 text-blue-600" />
+                                <span className="text-sm">{servico}</span>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {coberturasSelecionadas.coberturaTranslado.length > 0 && (
+                      <div>
+                        <h5 className="font-medium text-gray-800 mb-2">
+                          Cobertura e Translado
+                        </h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {coberturasSelecionadas.coberturaTranslado.map(
+                            (cobertura, index) => (
+                              <div
+                                key={`translado-${index}`}
+                                className="flex items-center space-x-2 p-2 bg-purple-50 rounded-lg"
+                              >
+                                <Shield className="w-4 h-4 text-purple-600" />
+                                <span className="text-sm">{cobertura}</span>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {coberturasSelecionadas.servicosEspecificos.length > 0 && (
+                      <div>
+                        <h5 className="font-medium text-gray-800 mb-2">
+                          Serviços Específicos do Plano
+                        </h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {coberturasSelecionadas.servicosEspecificos.map(
+                            (servico, index) => (
+                              <div
+                                key={`especifico-${index}`}
+                                className="flex items-center space-x-2 p-2 bg-emerald-50 rounded-lg"
+                              >
+                                <Shield className="w-4 h-4 text-emerald-600" />
+                                <span className="text-sm">{servico}</span>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {coberturasSelecionadas.outros.length > 0 && (
+                      <div>
+                        <h5 className="font-medium text-gray-800 mb-2">
+                          Outras Coberturas
+                        </h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {coberturasSelecionadas.outros.map(
+                            (descricao, index) => (
+                              <div
+                                key={`outros-${index}`}
+                                className="flex items-center space-x-2 p-2 bg-gray-100 rounded-lg"
+                              >
+                                <Shield className="w-4 h-4 text-gray-600" />
+                                <span className="text-sm">{descricao}</span>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {!possuiCoberturas && (
+                      <p className="text-sm text-gray-500">
+                        Nenhuma cobertura cadastrada para este plano.
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </div>

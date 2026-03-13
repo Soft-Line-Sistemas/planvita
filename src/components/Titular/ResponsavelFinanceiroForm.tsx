@@ -103,6 +103,11 @@ export const ResponsavelFinanceiroForm = ({
                 id="dataNascimentoResp"
                 {...form.register("dataNascimento")}
               />
+              {form.formState.errors.dataNascimento && (
+                <p className="text-sm text-red-500 mt-1">
+                  {form.formState.errors.dataNascimento.message}
+                </p>
+              )}
             </div>
             <div className="space-y-1">
               <Label htmlFor="parentesco" className="flex items-center gap-1">
