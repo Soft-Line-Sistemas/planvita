@@ -85,20 +85,20 @@ export function Confirmacao({
         )}
 
         <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-4">
-          <Label htmlFor="colaborador-select" className="text-sm font-medium">
-            Colaborador responsável <span className="text-red-500">*</span>
+          <Label htmlFor="consultor-select" className="text-sm font-medium">
+            Consultor <span className="text-red-500">*</span>
           </Label>
           <Select
             value={selectedValue}
             onValueChange={(value) => onSelectConsultor(Number(value))}
             disabled={isConsultorLocked || isLoadingConsultores}
           >
-            <SelectTrigger id="colaborador-select" className="w-full bg-white">
+            <SelectTrigger id="consultor-select" className="w-full bg-white">
               <SelectValue
                 placeholder={
                   isLoadingConsultores
-                    ? "Carregando colaboradores..."
-                    : "Selecione um colaborador"
+                    ? "Carregando consultores..."
+                    : "Selecione um consultor"
                 }
               />
             </SelectTrigger>
@@ -115,8 +115,7 @@ export function Confirmacao({
           </Select>
           {isConsultorLocked && (
             <p className="text-xs text-gray-600">
-              Colaborador definido pelo link de indicação e bloqueado para
-              edição.
+              Consultor definido pelo link de indicação e bloqueado para edição.
             </p>
           )}
           {consultorError && (

@@ -286,7 +286,7 @@ export function CadastroClienteWizard({
 
   const handleFinish = async () => {
     if (!selectedConsultorId) {
-      setConsultorError("Selecione o colaborador para vincular este cliente.");
+      setConsultorError("Selecione o consultor para vincular este cliente.");
       return;
     }
 
