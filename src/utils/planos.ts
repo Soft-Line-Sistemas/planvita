@@ -162,6 +162,7 @@ export type ParticipanteMin = {
   dataNascimento?: string | null;
   idade?: number | null;
   nome?: string;
+  parentesco?: string | null;
   [key: string]: unknown;
 };
 

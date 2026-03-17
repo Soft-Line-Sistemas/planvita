@@ -25,12 +25,16 @@ import { toast } from "sonner";
 import { StatusPagamento } from "@/types/PaymentType";
 import { useClienteDetalhes } from "@/hooks/queries/useClienteDetalhes";
 import { ClienteEditDialog } from "@/components/Titular/Cliente/ClienteEditDialog";
-import { criarDependente } from "@/services/dependente.service";
+import {
+  atualizarDependente,
+  criarDependente,
+} from "@/services/dependente.service";
 import api from "@/utils/api";
 import { extractApiError } from "@/utils/httpError";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AsaasWingsMark } from "@/components/ui/AsaasWingsMark";
+import { useAuth } from "@/hooks/useAuth";
 
 const DetalhesCliente = () => {
   const params = useParams();
@@ -45,6 +49,7 @@ const DetalhesCliente = () => {
     dataNascimento: "",
     parentesco: "",
   });
+  const { hasPermission } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
@@ -70,6 +75,25 @@ const DetalhesCliente = () => {
     onSuccess: async () => {
       toast.success("Dependente adicionado com sucesso.");
       setDependenteForm({ nome: "", dataNascimento: "", parentesco: "" });
+      await refetch();
+    },
+    onError: (error: unknown) => {
+      const { message } = extractApiError(error);
+      toast.error(message);
+    },
+  });
+  const podeAlternarIsencaoAdicional = hasPermission(
+    "dependente.toggle_adicional_cobranca",
+  );
+
+  const atualizarCobrancaDependenteMutation = useMutation({
+    mutationFn: (payload: { dependenteId: number; excluir: boolean }) =>
+      atualizarDependente({
+        id: payload.dependenteId,
+        excluirCobrancaAdicional: payload.excluir,
+      }),
+    onSuccess: async () => {
+      toast.success("Cobrança adicional atualizada.");
       await refetch();
     },
     onError: (error: unknown) => {
@@ -245,6 +269,12 @@ const DetalhesCliente = () => {
     !!limiteBeneficiarios &&
     limiteBeneficiarios > 0 &&
     cliente.dependentes.length >= limiteBeneficiarios;
+  const totalAdicionaisDependentes = cliente.dependentes.reduce(
+    (acc, dep) => acc + Number(dep.valorAdicionalMensal ?? 0),
+    0,
+  );
+  const valorMensalComAdicionais =
+    Number(cliente.plano.valorMensal ?? 0) + totalAdicionaisDependentes;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -386,8 +416,14 @@ const DetalhesCliente = () => {
                       {cliente.plano.nome}
                     </p>
                     <p className="text-gray-600">
-                      R$ {cliente.plano.valorMensal.toFixed(2)}/mês
+                      R$ {valorMensalComAdicionais.toFixed(2)}/mês
                     </p>
+                    {totalAdicionaisDependentes > 0 ? (
+                      <p className="text-xs text-gray-500">
+                        Base: R$ {cliente.plano.valorMensal.toFixed(2)} + R${" "}
+                        {totalAdicionaisDependentes.toFixed(2)} de adicionais
+                      </p>
+                    ) : null}
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between">
@@ -653,6 +689,47 @@ const DetalhesCliente = () => {
                         {dependente.carenciaRestante} dias
                       </span>
                     </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Adicional:</span>
+                      <span className="font-medium">
+                        R${" "}
+                        {Number(dependente.valorAdicionalMensal ?? 0).toFixed(
+                          2,
+                        )}
+                      </span>
+                    </div>
+                    {dependente.foraGradeFamiliar ? (
+                      <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-3">
+                        <span className="text-xs text-gray-600">
+                          Excluir cobrança adicional
+                        </span>
+                        <label className="inline-flex items-center gap-2 text-xs">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(
+                              dependente.excluirCobrancaAdicional ?? false,
+                            )}
+                            disabled={
+                              !podeAlternarIsencaoAdicional ||
+                              atualizarCobrancaDependenteMutation.isPending
+                            }
+                            onChange={(e) =>
+                              atualizarCobrancaDependenteMutation.mutate({
+                                dependenteId: Number(dependente.id),
+                                excluir: e.target.checked,
+                              })
+                            }
+                          />
+                          {podeAlternarIsencaoAdicional
+                            ? "Autorizado"
+                            : "Sem permissão"}
+                        </label>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500 pt-2 border-t border-gray-100">
+                        Dependente dentro da grade familiar do plano.
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -696,7 +773,7 @@ const DetalhesCliente = () => {
                   <div>
                     <p className="text-sm text-gray-600">Valor Mensal</p>
                     <p className="text-2xl font-bold text-blue-600">
-                      R$ {cliente.plano.valorMensal.toFixed(2)}
+                      R$ {valorMensalComAdicionais.toFixed(2)}
                     </p>
                   </div>
                 </div>
