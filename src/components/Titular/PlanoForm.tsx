@@ -143,6 +143,7 @@ export function PlanoForm({
         dataNascimento: p.dataNascimento ?? null,
         idade: typeof p.idade === "number" ? p.idade : null,
         nome: p.nome ?? undefined,
+        parentesco: typeof p.parentesco === "string" ? p.parentesco : undefined,
       })),
     [participantes],
   );

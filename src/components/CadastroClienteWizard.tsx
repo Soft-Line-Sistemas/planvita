@@ -331,10 +331,12 @@ export function CadastroClienteWizard({
           {
             nome: titularData?.nomeCompleto ?? "",
             dataNascimento: titularData?.dataNascimento ?? null,
+            parentesco: "Titular",
           },
           ...dependentes.map<ParticipanteMin>((d) => ({
             nome: d.nome,
             dataNascimento: d.dataNascimento ?? null,
+            parentesco: d.parentesco ?? "Outro",
             idade:
               typeof d.idade === "number" && !Number.isNaN(d.idade)
                 ? d.idade

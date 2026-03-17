@@ -12,6 +12,10 @@ type DependenteApi = {
   cpf?: string | null;
   dataNascimento?: string | null;
   tipoDependente?: string | null;
+  parentescoNormalizado?: string | null;
+  foraGradeFamiliar?: boolean | null;
+  excluirCobrancaAdicional?: boolean | null;
+  valorAdicionalMensal?: number | null;
 };
 
 type PagamentoApi = {
@@ -218,6 +222,10 @@ export const mapClienteFromApi = (payload: TitularApi): Cliente => {
       dataNascimento: toISODate(dep.dataNascimento),
       idade: calcularIdade(dep.dataNascimento),
       parentesco: dep.tipoDependente ?? "Outro",
+      parentescoNormalizado: dep.parentescoNormalizado ?? undefined,
+      foraGradeFamiliar: Boolean(dep.foraGradeFamiliar ?? false),
+      excluirCobrancaAdicional: Boolean(dep.excluirCobrancaAdicional ?? false),
+      valorAdicionalMensal: Number(dep.valorAdicionalMensal ?? 0),
       carenciaRestante: 0,
     })),
     pagamentos: mapPagamentos(payload).map((pagamento) => ({

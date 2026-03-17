@@ -32,6 +32,7 @@ type BusinessRulesConfig = {
 
   // Planos e Autorizações
   limiteBeneficiarios: number;
+  valorAdicionalDependenteForaGrade: number;
 
   // Frota
   quilometragemMaxVeiculo: number;
@@ -218,6 +219,20 @@ export default function ConfiguracoesPage() {
               value={config?.limiteBeneficiarios || 5}
               onChange={(e) =>
                 handleChange("limiteBeneficiarios", Number(e.target.value))
+              }
+            />
+          </div>
+          <div>
+            <Label>Adicional por dependente fora da grade (R$)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              value={config?.valorAdicionalDependenteForaGrade ?? 14.9}
+              onChange={(e) =>
+                handleChange(
+                  "valorAdicionalDependenteForaGrade",
+                  Number(e.target.value),
+                )
               }
             />
           </div>

@@ -42,6 +42,10 @@ interface Dependente {
   dataNascimento: string;
   idade: number;
   parentesco: string;
+  parentescoNormalizado?: string;
+  foraGradeFamiliar?: boolean;
+  excluirCobrancaAdicional?: boolean;
+  valorAdicionalMensal?: number;
   carenciaRestante: number;
 }
 
