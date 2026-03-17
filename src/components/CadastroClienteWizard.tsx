@@ -60,6 +60,11 @@ interface WizardStepsData {
   [key: string]: unknown;
 }
 
+interface ConsultorOption {
+  id: number;
+  nome: string;
+}
+
 export function CadastroClienteWizard({
   variant = "dashboard",
 }: CadastroClienteWizardProps) {
@@ -75,6 +80,12 @@ export function CadastroClienteWizard({
     null,
   );
   const [usarMesmosDados, setUsarMesmosDados] = useState(false);
+  const [consultores, setConsultores] = useState<ConsultorOption[]>([]);
+  const [isLoadingConsultores, setIsLoadingConsultores] = useState(true);
+  const [consultorError, setConsultorError] = useState<string | null>(null);
+  const [selectedConsultorId, setSelectedConsultorId] = useState<
+    number | undefined
+  >();
   const { mutateAsync, isPending } = useCreateTitular();
   const steps = [
     { id: 1, title: "Dados pessoais", icon: User },
@@ -108,6 +119,46 @@ export function CadastroClienteWizard({
         : undefined,
     );
   }, []);
+
+  useEffect(() => {
+    let ativo = true;
+    setIsLoadingConsultores(true);
+    api
+      .get("/consultor/public")
+      .then((res) => {
+        if (!ativo) return;
+        const data = Array.isArray(res.data) ? res.data : [];
+        const options = data
+          .map((item) => ({
+            id: Number(item?.id),
+            nome: String(item?.nome ?? "").trim(),
+          }))
+          .filter(
+            (item) =>
+              Number.isFinite(item.id) && item.id > 0 && item.nome.length > 0,
+          );
+
+        setConsultores(options);
+      })
+      .catch(() => {
+        if (!ativo) return;
+        setConsultores([]);
+      })
+      .finally(() => {
+        if (ativo) setIsLoadingConsultores(false);
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (consultorIdFromQuery) {
+      setSelectedConsultorId(consultorIdFromQuery);
+      setConsultorError(null);
+    }
+  }, [consultorIdFromQuery]);
 
   useEffect(() => {
     let ativo = true;
@@ -234,6 +285,11 @@ export function CadastroClienteWizard({
     dependentes.length < limiteBeneficiarios;
 
   const handleFinish = async () => {
+    if (!selectedConsultorId) {
+      setConsultorError("Selecione o colaborador para vincular este cliente.");
+      return;
+    }
+
     const step1Data = formData.step1 ?? dadosPessoaisForm.getValues();
     const step2Data = formData.step2 ?? enderecoForm.getValues();
     const step3Data = formData.step3 ?? responsavelForm.getValues();
@@ -246,7 +302,7 @@ export function CadastroClienteWizard({
       step5: step5Data,
       dependentes,
       usarMesmosDados,
-      consultorId: consultorIdFromQuery,
+      consultorId: selectedConsultorId,
     };
 
     await mutateAsync(payload);
@@ -375,6 +431,15 @@ export function CadastroClienteWizard({
               titular: titularResumo,
               dependentes: dependentesResumo,
             }}
+            consultores={consultores}
+            selectedConsultorId={selectedConsultorId}
+            onSelectConsultor={(consultorId) => {
+              setSelectedConsultorId(consultorId);
+              setConsultorError(null);
+            }}
+            isConsultorLocked={Boolean(consultorIdFromQuery)}
+            isLoadingConsultores={isLoadingConsultores}
+            consultorError={consultorError}
           />
         );
       }
