@@ -4,6 +4,14 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plano } from "@/types/PlanType";
 import { User } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 interface ParticipanteMin {
   nome?: string;
@@ -20,10 +28,38 @@ interface ConfirmacaoProps {
     consultor?: { name: string };
     [key: string]: unknown;
   };
+  consultores: Array<{ id: number; nome: string }>;
+  selectedConsultorId?: number;
+  onSelectConsultor: (consultorId: number) => void;
+  isConsultorLocked?: boolean;
+  isLoadingConsultores?: boolean;
+  consultorError?: string | null;
 }
 
-export function Confirmacao({ dados }: ConfirmacaoProps) {
+export function Confirmacao({
+  dados,
+  consultores,
+  selectedConsultorId,
+  onSelectConsultor,
+  isConsultorLocked = false,
+  isLoadingConsultores = false,
+  consultorError = null,
+}: ConfirmacaoProps) {
   const { titular, dependentes = [], planoSelecionado, consultor } = dados;
+  const selectedValue =
+    typeof selectedConsultorId === "number"
+      ? selectedConsultorId.toString()
+      : undefined;
+  const consultorSelecionadoNoLink =
+    typeof selectedConsultorId === "number" &&
+    !consultores.some((item) => item.id === selectedConsultorId);
+  const consultoresDisponiveis = consultorSelecionadoNoLink
+    ? [
+        ...consultores,
+        { id: selectedConsultorId, nome: `Consultor #${selectedConsultorId}` },
+      ]
+    : consultores;
+
   const formatDateBr = (value?: string | null) => {
     if (!value) return null;
     const date = new Date(value);
@@ -47,6 +83,46 @@ export function Confirmacao({ dados }: ConfirmacaoProps) {
             </span>
           </div>
         )}
+
+        <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-4">
+          <Label htmlFor="colaborador-select" className="text-sm font-medium">
+            Colaborador responsável <span className="text-red-500">*</span>
+          </Label>
+          <Select
+            value={selectedValue}
+            onValueChange={(value) => onSelectConsultor(Number(value))}
+            disabled={isConsultorLocked || isLoadingConsultores}
+          >
+            <SelectTrigger id="colaborador-select" className="w-full bg-white">
+              <SelectValue
+                placeholder={
+                  isLoadingConsultores
+                    ? "Carregando colaboradores..."
+                    : "Selecione um colaborador"
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {consultoresDisponiveis.map((consultorItem) => (
+                <SelectItem
+                  key={consultorItem.id}
+                  value={consultorItem.id.toString()}
+                >
+                  {consultorItem.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {isConsultorLocked && (
+            <p className="text-xs text-gray-600">
+              Colaborador definido pelo link de indicação e bloqueado para
+              edição.
+            </p>
+          )}
+          {consultorError && (
+            <p className="text-xs font-medium text-red-600">{consultorError}</p>
+          )}
+        </div>
 
         {/* Titular */}
         <div className="bg-green-50 p-4 rounded-lg">
