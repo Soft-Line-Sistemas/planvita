@@ -157,27 +157,34 @@ const getSubdomainFromCurrentHost = (): string | null => {
   return null;
 };
 
-const buildClienteUrlByUnidade = (unidade: string): string => {
+const buildClienteUrlByUnidade = (
+  unidade: string,
+  cpfValue?: string,
+): string => {
   if (typeof window === "undefined") return `/cliente`;
 
   const { protocol, hostname, port } = window.location;
   const host = hostname.toLowerCase();
+  let baseUrl = "";
 
   if (host.endsWith(".localhost")) {
     const portPart = port ? `:${port}` : "";
-    return `${protocol}//${unidade}.localhost${portPart}/cliente`;
-  }
-
-  if (host === "localhost") {
+    baseUrl = `${protocol}//${unidade}.localhost${portPart}/cliente`;
+  } else if (host === "localhost") {
     const portPart = port ? `:${port}` : "";
-    return `${protocol}//${unidade}.localhost${portPart}/cliente`;
+    baseUrl = `${protocol}//${unidade}.localhost${portPart}/cliente`;
+  } else if (host.endsWith(".planvita.com.br") || host === "planvita.com.br") {
+    baseUrl = `${protocol}//${unidade}.planvita.com.br/cliente`;
+  } else {
+    baseUrl = `${protocol}//${unidade}.${host}/cliente`;
   }
 
-  if (host.endsWith(".planvita.com.br") || host === "planvita.com.br") {
-    return `${protocol}//${unidade}.planvita.com.br/cliente`;
-  }
+  if (!cpfValue) return baseUrl;
 
-  return `${protocol}//${unidade}.${host}/cliente`;
+  const digitsOnly = cpfValue.replace(/\D/g, "");
+  const url = new URL(baseUrl);
+  url.searchParams.set("cpf", digitsOnly);
+  return url.toString();
 };
 
 export default function ConsultaClientePage() {
@@ -205,6 +212,7 @@ export default function ConsultaClientePage() {
   const [assinaturaMensagem, setAssinaturaMensagem] = useState<string | null>(
     null,
   );
+  const autoBuscaExecutadaRef = useRef(false);
   const tenantAtivo = tenantSelecionado || getTenantFromHost();
 
   // Filtros Financeiro
@@ -263,24 +271,85 @@ export default function ConsultaClientePage() {
     return "CPF não encontrado ou não cadastrado. Verifique se digitou corretamente ou entre em contato com o suporte.";
   };
 
-  const handleSelecionarCadastro = (cadastro: TenantCadastro) => {
-    selecionarTenant(cadastro.tenant.slug);
+  const handleSelecionarCadastro = useCallback(
+    (cadastro: TenantCadastro) => {
+      selecionarTenant(cadastro.tenant.slug);
 
-    if (isMainDomainClienteRoute) {
-      window.location.href = buildClienteUrlByUnidade(cadastro.tenant.slug);
-      return;
-    }
+      if (isMainDomainClienteRoute) {
+        window.location.href = buildClienteUrlByUnidade(
+          cadastro.tenant.slug,
+          cadastro.cliente.cpf,
+        );
+        return;
+      }
 
-    setCliente(cadastro.cliente);
-    setAbaAtiva("carteirinha");
-    setModalCadastroAberto(false);
-  };
+      setCliente(cadastro.cliente);
+      setAbaAtiva("carteirinha");
+      setModalCadastroAberto(false);
+    },
+    [isMainDomainClienteRoute, selecionarTenant],
+  );
+
+  const consultarCpf = useCallback(
+    async (digitsOnly: string) => {
+      setError(null);
+      setModalCadastroAberto(false);
+      setCadastrosEncontrados([]);
+
+      setIsLoading(true);
+      setCliente(null);
+      setIsFlipped(false);
+
+      try {
+        if (!isMainDomainClienteRoute) {
+          const clienteEncontrado = await consultarClientePorCpf(digitsOnly);
+          setCliente(clienteEncontrado);
+          setAbaAtiva("carteirinha");
+          return;
+        }
+
+        const consultas = await Promise.allSettled(
+          TENANTS_CLIENTE.map(async (tenant) => {
+            const clienteEncontrado = await consultarClientePorCpf(digitsOnly, {
+              tenant: tenant.slug,
+            });
+            return { tenant, cliente: clienteEncontrado };
+          }),
+        );
+
+        const encontrados = consultas
+          .filter(
+            (resultado): resultado is PromiseFulfilledResult<TenantCadastro> =>
+              resultado.status === "fulfilled",
+          )
+          .map((resultado) => resultado.value);
+
+        if (encontrados.length === 0) {
+          setError(
+            "CPF não encontrado ou não cadastrado. Verifique se digitou corretamente ou entre em contato com o suporte.",
+          );
+          return;
+        }
+
+        if (encontrados.length === 1) {
+          handleSelecionarCadastro(encontrados[0]);
+          return;
+        }
+
+        setCadastrosEncontrados(encontrados);
+        setModalCadastroAberto(true);
+      } catch (fetchError: unknown) {
+        console.error(fetchError);
+        setError(extrairMensagemErro(fetchError));
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [handleSelecionarCadastro, isMainDomainClienteRoute],
+  );
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(null);
-    setModalCadastroAberto(false);
-    setCadastrosEncontrados([]);
 
     const digitsOnly = normalizeCpf(cpf);
     if (!validateCPF(digitsOnly)) {
@@ -288,55 +357,21 @@ export default function ConsultaClientePage() {
       return;
     }
 
-    setIsLoading(true);
-    setCliente(null);
-    setIsFlipped(false);
-
-    try {
-      if (!isMainDomainClienteRoute) {
-        const clienteEncontrado = await consultarClientePorCpf(digitsOnly);
-        setCliente(clienteEncontrado);
-        setAbaAtiva("carteirinha");
-        return;
-      }
-
-      const consultas = await Promise.allSettled(
-        TENANTS_CLIENTE.map(async (tenant) => {
-          const clienteEncontrado = await consultarClientePorCpf(digitsOnly, {
-            tenant: tenant.slug,
-          });
-          return { tenant, cliente: clienteEncontrado };
-        }),
-      );
-
-      const encontrados = consultas
-        .filter(
-          (resultado): resultado is PromiseFulfilledResult<TenantCadastro> =>
-            resultado.status === "fulfilled",
-        )
-        .map((resultado) => resultado.value);
-
-      if (encontrados.length === 0) {
-        setError(
-          "CPF não encontrado ou não cadastrado. Verifique se digitou corretamente ou entre em contato com o suporte.",
-        );
-        return;
-      }
-
-      if (encontrados.length === 1) {
-        handleSelecionarCadastro(encontrados[0]);
-        return;
-      }
-
-      setCadastrosEncontrados(encontrados);
-      setModalCadastroAberto(true);
-    } catch (fetchError: unknown) {
-      console.error(fetchError);
-      setError(extrairMensagemErro(fetchError));
-    } finally {
-      setIsLoading(false);
-    }
+    await consultarCpf(digitsOnly);
   };
+
+  useEffect(() => {
+    if (isMainDomainClienteRoute || autoBuscaExecutadaRef.current) return;
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const cpfFromUrl = normalizeCpf(params.get("cpf") || "");
+    if (!validateCPF(cpfFromUrl)) return;
+
+    autoBuscaExecutadaRef.current = true;
+    setCpf(formatCPF(cpfFromUrl));
+    void consultarCpf(cpfFromUrl);
+  }, [consultarCpf, isMainDomainClienteRoute]);
 
   const handleReset = () => {
     setCpf("");
