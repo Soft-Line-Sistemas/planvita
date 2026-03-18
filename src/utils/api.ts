@@ -15,9 +15,15 @@ api.interceptors.request.use(
     const currentBase = getApiUrl();
     config.baseURL = `${currentBase}/${API_VERSION}`;
 
-    const tenant = getTenantFromHost();
-    if (tenant) {
-      config.headers["X-Tenant"] = tenant;
+    const hasExplicitTenantHeader =
+      Boolean(config.headers?.["X-Tenant"]) ||
+      Boolean(config.headers?.["x-tenant"]);
+
+    if (!hasExplicitTenantHeader) {
+      const tenant = getTenantFromHost();
+      if (tenant) {
+        config.headers["X-Tenant"] = tenant;
+      }
     }
 
     return config;
