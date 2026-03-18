@@ -1,37 +1,35 @@
 export default function getTenantFromHost(): string | null {
   if (typeof window === "undefined") return null;
 
-  const host = window.location.hostname;
+  const host = window.location.hostname.toLowerCase();
 
-  // Se estivermos na Vercel, priorizamos o parâmetro da URL 'tenant' ou o cookie
-  if (host.includes("vercel.app")) {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tenantParam = urlParams.get("tenant");
-    if (tenantParam) return tenantParam;
-
-    const tenantCookie = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("tenant="))
-      ?.split("=")[1];
-    if (tenantCookie) return tenantCookie;
+  // localhost com subdomínio (ex: lider.localhost)
+  if (host.endsWith(".localhost")) {
+    const parts = host.split(".");
+    return parts[0] || null;
   }
 
-  const parts = host.split(".");
+  // domínio principal de produção (ex: lider.planvita.com.br)
+  if (host.endsWith(".planvita.com.br")) {
+    const parts = host.split(".");
+    if (parts.length > 3) {
+      const subdomain = parts.slice(0, -3).join(".");
+      return subdomain === "www" ? null : subdomain;
+    }
+    return null;
+  }
 
-  // Se for localhost, o primeiro parte costuma ser o tenant (ex: lider.localhost)
+  // domínio sem subdomínio explícito
   if (host === "localhost") return null;
 
-  const forbidden = [
-    "www",
-    "api",
-    "app",
-    "vercel",
-    "planvita-lilac",
-    "planvita-api",
-  ];
-  const candidate = parts.find(
-    (part) => part && !forbidden.includes(part.toLowerCase()),
-  );
+  const urlParams = new URLSearchParams(window.location.search);
+  const tenantParam = urlParams.get("tenant");
+  if (tenantParam) return tenantParam.toLowerCase();
 
-  return candidate || null;
+  const tenantCookie = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("tenant="))
+    ?.split("=")[1];
+
+  return tenantCookie ? tenantCookie.toLowerCase() : null;
 }

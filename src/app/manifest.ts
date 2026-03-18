@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Planvita",
     short_name: "Planvita",
     description: "Sistema Planvita",
-    start_url: "/",
+    start_url: "/cliente",
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#ffffff",
