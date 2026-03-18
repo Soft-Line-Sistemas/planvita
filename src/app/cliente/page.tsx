@@ -157,6 +157,29 @@ const getSubdomainFromCurrentHost = (): string | null => {
   return null;
 };
 
+const buildClienteUrlByUnidade = (unidade: string): string => {
+  if (typeof window === "undefined") return `/cliente`;
+
+  const { protocol, hostname, port } = window.location;
+  const host = hostname.toLowerCase();
+
+  if (host.endsWith(".localhost")) {
+    const portPart = port ? `:${port}` : "";
+    return `${protocol}//${unidade}.localhost${portPart}/cliente`;
+  }
+
+  if (host === "localhost") {
+    const portPart = port ? `:${port}` : "";
+    return `${protocol}//${unidade}.localhost${portPart}/cliente`;
+  }
+
+  if (host.endsWith(".planvita.com.br") || host === "planvita.com.br") {
+    return `${protocol}//${unidade}.planvita.com.br/cliente`;
+  }
+
+  return `${protocol}//${unidade}.${host}/cliente`;
+};
+
 export default function ConsultaClientePage() {
   const subdomainFromHost =
     typeof window !== "undefined" ? getSubdomainFromCurrentHost() : null;
@@ -242,6 +265,12 @@ export default function ConsultaClientePage() {
 
   const handleSelecionarCadastro = (cadastro: TenantCadastro) => {
     selecionarTenant(cadastro.tenant.slug);
+
+    if (isMainDomainClienteRoute) {
+      window.location.href = buildClienteUrlByUnidade(cadastro.tenant.slug);
+      return;
+    }
+
     setCliente(cadastro.cliente);
     setAbaAtiva("carteirinha");
     setModalCadastroAberto(false);
