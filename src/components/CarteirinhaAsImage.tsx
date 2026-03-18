@@ -3,7 +3,6 @@
 import { useMemo, useCallback, useState, useRef, useEffect } from "react";
 import { Button } from "./ui/button";
 import type { ClientePlano } from "@/types/ClientePlano";
-import getTenantFromHost from "@/utils/getTenantFromHost";
 
 type Props = {
   cliente: ClientePlano;
@@ -60,14 +59,6 @@ function svgDataUrl(svg: string) {
   return `data:image/svg+xml;base64,${window.btoa(binary)}`;
 }
 
-function getTenantDisplayName(tenant: string | null) {
-  const normalized = (tenant || "").trim().toLowerCase();
-  if (normalized === "bosque") return "Campo do Bosque";
-  if (normalized === "pax") return "Pax";
-  if (normalized === "lider") return "Lider";
-  return "Planvita";
-}
-
 export default function CarteirinhaAsImage({
   cliente,
   isFlipped,
@@ -78,13 +69,7 @@ export default function CarteirinhaAsImage({
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [cardWidthPx, setCardWidthPx] = useState<number | null>(null);
   const cardWrapRef = useRef<HTMLDivElement | null>(null);
-  const tenantLabel = useMemo(
-    () =>
-      typeof window !== "undefined"
-        ? getTenantDisplayName(getTenantFromHost())
-        : "Planvita",
-    [],
-  );
+  const tenantLabel = "Campo do Bosque";
   const frontSvg = useMemo(() => {
     const nome = esc(cliente.nome.toUpperCase());
     const cpf = esc(cliente.cpf);

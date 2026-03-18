@@ -199,19 +199,15 @@ export function obterMaiorIdadeParticipantes(
 /**
  * Seleciona o plano apropriado com base na maior idade entre participantes.
  * Regras:
- * 1) Se existir plano com idadeMaxima === null => retorna esse (prioridade).
- * 2) Senão, retorna o primeiro plano cuja idadeMaxima >= idadeMaximaParticipantes (menor idadeMaxima que cubra).
- * 3) Se nenhum cobrir, retorna o plano com maior idadeMaxima (fallback).
+ * 1) Retorna o plano com menor idadeMaxima que ainda cubra a maior idade dos participantes.
+ * 2) Se nenhum plano com idadeMaxima definida cobrir, usa plano sem limite (idadeMaxima === null) como fallback.
+ * 3) Se ainda assim não houver opção sem limite, retorna o plano com maior idadeMaxima disponível.
  */
 export function selecionarPlanoPorMaiorIdade(
   planos: Plano[],
   idadeMaximaParticipantes: number | null,
 ): Plano | null {
   if (!planos || planos.length === 0) return null;
-
-  // Prioriza plano sem limite
-  const planoSemLimite = planos.find((p) => p.idadeMaxima === null);
-  if (planoSemLimite) return planoSemLimite;
 
   // Se não temos idade, devolve plano com maior idadeMaxima
   if (idadeMaximaParticipantes === null) {
@@ -234,6 +230,10 @@ export function selecionarPlanoPorMaiorIdade(
       return prev.idadeMaxima! <= cur.idadeMaxima! ? prev : cur;
     });
   }
+
+  // Se nenhum plano com idadeMaxima definida cobre, tenta sem limite
+  const planoSemLimite = planos.find((p) => p.idadeMaxima === null);
+  if (planoSemLimite) return planoSemLimite;
 
   // Fallback: maior idadeMaxima disponível
   return planos.reduce((prev, cur) => {

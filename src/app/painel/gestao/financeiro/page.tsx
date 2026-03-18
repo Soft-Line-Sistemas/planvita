@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   CreditCard,
   DollarSign,
@@ -27,7 +27,6 @@ import ContasFinanceiro from "@/components/Financeiro/contasFinanceiro";
 import RelatorioFinanceiro from "@/components/Financeiro/relatorioFinanceiro";
 import { usePagamentos } from "@/hooks/queries/usePagamentos";
 import { useAtualizarStatusPagamento } from "@/hooks/mutations/useAtualizarStatusPagamento";
-import getTenantFromHost from "@/utils/getTenantFromHost";
 import AsaasPaymentsPanel from "@/components/Financeiro/AsaasPaymentsPanel";
 import { useContasFinanceiras } from "@/hooks/queries/useContasFinanceiras";
 import { getDiasAtraso } from "@/types/Financeiro";
@@ -153,14 +152,6 @@ const GestaoFinanceira = () => {
   const [modalAberto, setModalAberto] = useState(false);
   const [pagamentoSelecionado, setPagamentoSelecionado] =
     useState<Pagamento | null>(null);
-  const [tenant, setTenant] = useState<string | null>(null);
-
-  useEffect(() => {
-    setTenant(getTenantFromHost());
-  }, []);
-
-  const isBosqueTenant =
-    typeof tenant === "string" && tenant.trim().toLowerCase() === "bosque";
 
   const getStatusColor = (status: StatusPagamento) => {
     switch (status) {
@@ -248,7 +239,7 @@ const GestaoFinanceira = () => {
   };
 
   const abas = useMemo(() => {
-    const base = [
+    return [
       // { id: "pagamentos", nome: "Pagamentos", icon: CreditCard },
       { id: "inadimplencia", nome: "Inadimplência", icon: AlertCircle },
       { id: "relatorios", nome: "Relatórios", icon: FileText },
@@ -260,18 +251,13 @@ const GestaoFinanceira = () => {
         nome: "Relatórios Financeiros",
         icon: FileText,
       },
-    ];
-
-    if (isBosqueTenant) {
-      base.push({
+      {
         id: "asaas",
         nome: "Integração Asaas",
         icon: CreditCard,
-      });
-    }
-
-    return base;
-  }, [isBosqueTenant]);
+      },
+    ];
+  }, []);
 
   if (isLoading) {
     return (
@@ -948,7 +934,7 @@ const GestaoFinanceira = () => {
         {abaAtiva === "contas" && <ContasFinanceiro />}
         {abaAtiva === "boletos" && <EmissaoBoleto />}
         {abaAtiva === "relatoriosFinanceiro" && <RelatorioFinanceiro />}
-        {abaAtiva === "asaas" && isBosqueTenant && <AsaasPaymentsPanel />}
+        {abaAtiva === "asaas" && <AsaasPaymentsPanel />}
       </div>
 
       {/* Modal de Detalhes do Pagamento */}
