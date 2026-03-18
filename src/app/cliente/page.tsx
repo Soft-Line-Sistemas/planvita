@@ -35,6 +35,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { formatCPF } from "@/helpers/formHelpers";
 import type { ClientePlano } from "@/types/ClientePlano";
 import { consultarClientePorCpf } from "@/services/clienteCarteirinha.service";
@@ -53,6 +60,7 @@ import SignaturePad, {
 import Image from "next/image";
 import { AsaasWingsMark } from "@/components/ui/AsaasWingsMark";
 import api from "@/utils/api";
+import { getSubdomainFromHost } from "@/lib/getSubdomain";
 
 const normalizeCpf = (value: string) => value.replace(/\D/g, "");
 
@@ -120,10 +128,32 @@ const ASSINATURA_API_BASE = API_BASE_URL
   : undefined;
 const DEFAULT_DIAS_SUSPENSAO = 90;
 const DEFAULT_DIAS_POS_SUSPENSAO = 92;
+const TENANTS_CLIENTE = [
+  { slug: "lider", label: "Líder" },
+  { slug: "pax", label: "Pax" },
+  { slug: "bosque", label: "Bosque" },
+] as const;
+
+type TenantCadastro = {
+  tenant: (typeof TENANTS_CLIENTE)[number];
+  cliente: ClientePlano;
+};
 
 export default function ConsultaClientePage() {
+  const subdomainFromHost =
+    typeof window !== "undefined"
+      ? getSubdomainFromHost(window.location.host)
+      : null;
+  const isMainDomainClienteRoute = !subdomainFromHost;
   const [cpf, setCpf] = useState("");
   const [cliente, setCliente] = useState<ClientePlano | null>(null);
+  const [tenantSelecionado, setTenantSelecionado] = useState<string | null>(
+    subdomainFromHost,
+  );
+  const [cadastrosEncontrados, setCadastrosEncontrados] = useState<
+    TenantCadastro[]
+  >([]);
+  const [modalCadastroAberto, setModalCadastroAberto] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -136,12 +166,17 @@ export default function ConsultaClientePage() {
   const [assinaturaMensagem, setAssinaturaMensagem] = useState<string | null>(
     null,
   );
-  const tenantFromHost =
-    typeof window !== "undefined" ? getTenantFromHost() : null;
+  const tenantAtivo = tenantSelecionado || getTenantFromHost();
 
   // Filtros Financeiro
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const [filtroPeriodo, setFiltroPeriodo] = useState<string>("todos");
+
+  useEffect(() => {
+    if (subdomainFromHost) {
+      setTenantSelecionado(subdomainFromHost);
+    }
+  }, [subdomainFromHost]);
 
   const buildAssinaturaUrl = useCallback(
     (
@@ -156,17 +191,51 @@ export default function ConsultaClientePage() {
       if (mode === "inline") {
         params.set("mode", "inline");
       }
-      if (tenantFromHost) {
-        params.set("tenant", tenantFromHost);
+      if (tenantAtivo) {
+        params.set("tenant", tenantAtivo);
       }
       return params.toString() ? `${base}?${params.toString()}` : base;
     },
-    [cliente?.titularId, tenantFromHost],
+    [cliente?.titularId, tenantAtivo],
   );
+
+  const selecionarTenant = useCallback((tenant: string) => {
+    setTenantSelecionado(tenant);
+    if (typeof document !== "undefined") {
+      document.cookie = `tenant=${tenant}; path=/; max-age=31536000; SameSite=Lax`;
+    }
+  }, []);
+
+  const extrairMensagemErro = (fetchError: unknown) => {
+    const errorObject =
+      typeof fetchError === "object" && fetchError !== null
+        ? (fetchError as {
+            response?: { data?: { error?: string; message?: string } };
+          })
+        : undefined;
+
+    const detailedError = errorObject?.response?.data?.error;
+    const serverMessage = errorObject?.response?.data?.message;
+
+    if (detailedError) return `Erro técnico: ${detailedError}`;
+    if (serverMessage && serverMessage !== "Internal server error") {
+      return serverMessage;
+    }
+    return "CPF não encontrado ou não cadastrado. Verifique se digitou corretamente ou entre em contato com o suporte.";
+  };
+
+  const handleSelecionarCadastro = (cadastro: TenantCadastro) => {
+    selecionarTenant(cadastro.tenant.slug);
+    setCliente(cadastro.cliente);
+    setAbaAtiva("carteirinha");
+    setModalCadastroAberto(false);
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
+    setModalCadastroAberto(false);
+    setCadastrosEncontrados([]);
 
     const digitsOnly = normalizeCpf(cpf);
     if (!validateCPF(digitsOnly)) {
@@ -179,31 +248,46 @@ export default function ConsultaClientePage() {
     setIsFlipped(false);
 
     try {
-      const clienteEncontrado = await consultarClientePorCpf(digitsOnly);
-      setCliente(clienteEncontrado);
-      setAbaAtiva("carteirinha");
-    } catch (fetchError: unknown) {
-      console.error(fetchError);
+      if (!isMainDomainClienteRoute) {
+        const clienteEncontrado = await consultarClientePorCpf(digitsOnly);
+        setCliente(clienteEncontrado);
+        setAbaAtiva("carteirinha");
+        return;
+      }
 
-      const errorObject =
-        typeof fetchError === "object" && fetchError !== null
-          ? (fetchError as {
-              response?: { data?: { error?: string; message?: string } };
-            })
-          : undefined;
+      const consultas = await Promise.allSettled(
+        TENANTS_CLIENTE.map(async (tenant) => {
+          const clienteEncontrado = await consultarClientePorCpf(digitsOnly, {
+            tenant: tenant.slug,
+          });
+          return { tenant, cliente: clienteEncontrado };
+        }),
+      );
 
-      const detailedError = errorObject?.response?.data?.error;
-      const serverMessage = errorObject?.response?.data?.message;
+      const encontrados = consultas
+        .filter(
+          (resultado): resultado is PromiseFulfilledResult<TenantCadastro> =>
+            resultado.status === "fulfilled",
+        )
+        .map((resultado) => resultado.value);
 
-      if (detailedError) {
-        setError(`Erro técnico: ${detailedError}`);
-      } else if (serverMessage && serverMessage !== "Internal server error") {
-        setError(serverMessage);
-      } else {
+      if (encontrados.length === 0) {
         setError(
           "CPF não encontrado ou não cadastrado. Verifique se digitou corretamente ou entre em contato com o suporte.",
         );
+        return;
       }
+
+      if (encontrados.length === 1) {
+        handleSelecionarCadastro(encontrados[0]);
+        return;
+      }
+
+      setCadastrosEncontrados(encontrados);
+      setModalCadastroAberto(true);
+    } catch (fetchError: unknown) {
+      console.error(fetchError);
+      setError(extrairMensagemErro(fetchError));
     } finally {
       setIsLoading(false);
     }
@@ -213,6 +297,8 @@ export default function ConsultaClientePage() {
     setCpf("");
     setCliente(null);
     setError(null);
+    setCadastrosEncontrados([]);
+    setModalCadastroAberto(false);
     setIsFlipped(false);
     setAbaAtiva("carteirinha");
   };
@@ -222,9 +308,9 @@ export default function ConsultaClientePage() {
     isLoading: isLoadingFinanceiro,
     refetch: refetchFinanceiro,
   } = useQuery({
-    queryKey: ["cliente-financeiro", cliente?.titularId],
+    queryKey: ["cliente-financeiro", tenantAtivo, cliente?.titularId],
     queryFn: () => listarContasDoCliente(cliente!.titularId!),
-    enabled: Boolean(cliente?.titularId),
+    enabled: Boolean(cliente?.titularId && tenantAtivo),
     staleTime: 30 * 1000,
   });
 
@@ -232,7 +318,7 @@ export default function ConsultaClientePage() {
     diasSuspensao?: number | null;
     diasPosSuspensao?: number | null;
   } | null>({
-    queryKey: ["cliente-regras-notificacao"],
+    queryKey: ["cliente-regras-notificacao", tenantAtivo],
     queryFn: async () => {
       const { data } = await api.get("/regras");
       if (!Array.isArray(data) || data.length === 0) return null;
@@ -244,6 +330,7 @@ export default function ConsultaClientePage() {
           }
         : null;
     },
+    enabled: Boolean(tenantAtivo),
     staleTime: 60 * 1000,
   });
 
@@ -251,7 +338,7 @@ export default function ConsultaClientePage() {
     if (cliente?.titularId) {
       refetchFinanceiro();
     }
-  }, [cliente?.titularId, refetchFinanceiro]);
+  }, [cliente?.titularId, tenantAtivo, refetchFinanceiro]);
 
   const maxDiasAtrasoFinanceiro = useMemo(() => {
     if (!Array.isArray(contasFinanceiras) || contasFinanceiras.length === 0)
@@ -350,9 +437,9 @@ export default function ConsultaClientePage() {
     isLoading: isLoadingAssinaturas,
     refetch: refetchAssinaturas,
   } = useQuery<AssinaturaDigital[]>({
-    queryKey: ["cliente-assinaturas", cliente?.titularId],
+    queryKey: ["cliente-assinaturas", tenantAtivo, cliente?.titularId],
     queryFn: () => listarAssinaturas(cliente!.titularId!),
-    enabled: Boolean(cliente?.titularId),
+    enabled: Boolean(cliente?.titularId && tenantAtivo),
     staleTime: 30 * 1000,
   });
 
@@ -971,6 +1058,32 @@ export default function ConsultaClientePage() {
           </div>
         )}
       </div>
+      <Dialog open={modalCadastroAberto} onOpenChange={setModalCadastroAberto}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Escolha um cadastro para acessar</DialogTitle>
+            <DialogDescription>
+              Este CPF foi encontrado em mais de uma unidade.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            {cadastrosEncontrados.map((cadastro) => (
+              <Button
+                key={cadastro.tenant.slug}
+                type="button"
+                variant="outline"
+                className="w-full justify-between"
+                onClick={() => handleSelecionarCadastro(cadastro)}
+              >
+                <span>{cadastro.tenant.label}</span>
+                <span className="text-xs text-slate-500">
+                  {cadastro.cliente.nome}
+                </span>
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

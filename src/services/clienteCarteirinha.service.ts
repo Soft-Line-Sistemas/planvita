@@ -103,6 +103,7 @@ const mapTitularToCarteirinha = (titular: TitularResponse): ClientePlano => {
 
 export const consultarClientePorCpf = async (
   cpf: string,
+  options?: { tenant?: string },
 ): Promise<ClientePlano> => {
   const normalized = normalizeCpf(cpf);
   if (normalized.length !== 11) {
@@ -112,7 +113,15 @@ export const consultarClientePorCpf = async (
   const searchResponse = await api.get("/titular/public/search", {
     params: {
       cpf: normalized,
+      ...(options?.tenant ? { tenant: options.tenant } : {}),
     },
+    ...(options?.tenant
+      ? {
+          headers: {
+            "X-Tenant": options.tenant,
+          },
+        }
+      : {}),
   });
 
   const candidato = searchResponse.data;

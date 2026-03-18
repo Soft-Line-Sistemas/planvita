@@ -24,7 +24,7 @@ export function proxy(req: NextRequest) {
 
   if (pathname === "/") {
     const url = req.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = "/cliente";
     return NextResponse.redirect(url);
   }
 
