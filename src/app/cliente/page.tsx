@@ -60,7 +60,6 @@ import SignaturePad, {
 import Image from "next/image";
 import { AsaasWingsMark } from "@/components/ui/AsaasWingsMark";
 import api from "@/utils/api";
-import { getSubdomainFromHost } from "@/lib/getSubdomain";
 
 const normalizeCpf = (value: string) => value.replace(/\D/g, "");
 
@@ -139,11 +138,28 @@ type TenantCadastro = {
   cliente: ClientePlano;
 };
 
+const getSubdomainFromCurrentHost = (): string | null => {
+  if (typeof window === "undefined") return null;
+  const host = window.location.hostname.toLowerCase();
+  const parts = host.split(".");
+
+  if (host === "localhost") return null;
+  if (host.endsWith(".localhost")) return parts[0] || null;
+
+  if (host.endsWith(".planvita.com.br")) {
+    if (parts.length === 3) return null;
+    if (parts.length > 3) {
+      const sub = parts.slice(0, -3).join(".");
+      return sub === "www" ? null : sub;
+    }
+  }
+
+  return null;
+};
+
 export default function ConsultaClientePage() {
   const subdomainFromHost =
-    typeof window !== "undefined"
-      ? getSubdomainFromHost(window.location.host)
-      : null;
+    typeof window !== "undefined" ? getSubdomainFromCurrentHost() : null;
   const isMainDomainClienteRoute = !subdomainFromHost;
   const [cpf, setCpf] = useState("");
   const [cliente, setCliente] = useState<ClientePlano | null>(null);
