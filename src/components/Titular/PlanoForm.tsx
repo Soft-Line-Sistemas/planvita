@@ -33,6 +33,12 @@ const normalizePlanName = (value?: string | null) =>
     .trim()
     .toLowerCase();
 
+const isBosqueSocial = (name?: string | null) =>
+  normalizePlanName(name) === "bosque social";
+
+const isBosqueEssencial = (name?: string | null) =>
+  normalizePlanName(name) === "bosque essencial";
+
 export function PlanoForm({
   form,
   planoSelecionado,
@@ -193,13 +199,81 @@ export function PlanoForm({
     [participantes],
   );
 
+  const planosLiberados = useMemo(() => {
+    if (!elegiveis || elegiveis.length === 0) return new Set<string>();
+    if (!modoCliente)
+      return new Set<string>(elegiveis.map((p) => String(p.id)));
+
+    const liberados = new Set<string>();
+
+    // Base sempre disponível no fluxo público.
+    elegiveis.forEach((plano) => {
+      if (isBosqueSocial(plano.nome) || isBosqueEssencial(plano.nome)) {
+        liberados.add(String(plano.id));
+      }
+    });
+
+    const idadeAtual = maiorIdadeParticipantes;
+    if (idadeAtual === null) return liberados;
+
+    // Interpreta "idadeMaxima" como início de faixa para liberação no fluxo público.
+    const faixas = elegiveis
+      .filter(
+        (plano) =>
+          typeof plano.idadeMaxima === "number" &&
+          Number.isFinite(plano.idadeMaxima),
+      )
+      .sort((a, b) => (a.idadeMaxima as number) - (b.idadeMaxima as number));
+
+    faixas.forEach((plano, idx) => {
+      const inicio = plano.idadeMaxima as number;
+      const proximoInicio = faixas[idx + 1]?.idadeMaxima;
+      const fim =
+        typeof proximoInicio === "number" && Number.isFinite(proximoInicio)
+          ? proximoInicio - 1
+          : Number.POSITIVE_INFINITY;
+
+      if (idadeAtual >= inicio && idadeAtual <= fim) {
+        liberados.add(String(plano.id));
+      }
+    });
+
+    return liberados;
+  }, [elegiveis, modoCliente, maiorIdadeParticipantes]);
+
   const planoPadrao = useMemo<Plano | null>(() => {
     if (planoSelecionado) return planoSelecionado;
     if (elegiveis && elegiveis.length > 0) {
+      if (modoCliente) {
+        const liberados = elegiveis.filter((p) =>
+          planosLiberados.has(String(p.id)),
+        );
+        if (liberados.length === 0) return null;
+
+        const foraBase = liberados.filter(
+          (p) => !isBosqueSocial(p.nome) && !isBosqueEssencial(p.nome),
+        );
+        if (foraBase.length > 0) return foraBase[0];
+
+        const social = liberados.find((p) => isBosqueSocial(p.nome));
+        if (social) return social;
+
+        const essencial = liberados.find((p) => isBosqueEssencial(p.nome));
+        if (essencial) return essencial;
+
+        return liberados[0];
+      }
+
       return selecionarPlanoPorMaiorIdade(elegiveis, maiorIdadeParticipantes);
     }
     return null;
-  }, [planoSelecionado, elegiveis, maiorIdadeParticipantes]);
+  }, [
+    planoSelecionado,
+    elegiveis,
+    maiorIdadeParticipantes,
+    modoCliente,
+    planosLiberados,
+  ]);
 
   useEffect(() => {
     const idStr = planoPadrao?.id != null ? String(planoPadrao.id) : null;
@@ -215,24 +289,6 @@ export function PlanoForm({
     setSelectedId(idStr);
     form.setValue("planoId", Number(idStr), { shouldDirty: true });
   };
-
-  const planosLiberados = useMemo(() => {
-    if (!modoCliente || !elegiveis || elegiveis.length === 0 || !planoPadrao) {
-      return new Set<string>(elegiveis?.map((p) => String(p.id)) ?? []);
-    }
-
-    const liberados = new Set<string>([String(planoPadrao.id)]);
-    const planoPadraoNome = normalizePlanName(planoPadrao.nome);
-
-    if (planoPadraoNome === "bosque social") {
-      const bosqueEssencial = elegiveis.find(
-        (p) => normalizePlanName(p.nome) === "bosque essencial",
-      );
-      if (bosqueEssencial) liberados.add(String(bosqueEssencial.id));
-    }
-
-    return liberados;
-  }, [modoCliente, elegiveis, planoPadrao]);
 
   // ----- Card de opção -----
   const PlanoOption = ({ plano }: { plano: Plano }) => {
@@ -273,7 +329,8 @@ export function PlanoForm({
           {renderBeneficiarios(plano)}
           {bloqueado && (
             <p className="mt-2 text-xs text-red-600">
-              Em caso de dúvidas, entre em contato conosco.
+              Plano bloqueado para seleção. Em caso de dúvidas, entre em contato
+              conosco.
             </p>
           )}
         </div>
