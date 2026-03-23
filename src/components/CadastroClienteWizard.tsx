@@ -405,6 +405,7 @@ export function CadastroClienteWizard({
             form={planoForm}
             planoSelecionado={null}
             participantes={participantesList}
+            modoCliente={isPublic}
           />
         );
       }

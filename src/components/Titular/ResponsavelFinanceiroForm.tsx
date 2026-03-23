@@ -145,7 +145,7 @@ export const ResponsavelFinanceiroForm = ({
             <div className="space-y-1">
               <Label htmlFor="telefoneResp" className="flex items-center gap-1">
                 <Phone className="w-4 h-4 mr-1" />
-                Telefone
+                Telefone/Celular
                 <span className="text-red-500">*</span>
               </Label>
               <Input
@@ -154,6 +154,16 @@ export const ResponsavelFinanceiroForm = ({
                 onChange={(e) =>
                   form.setValue("telefone", formatPhone(e.target.value))
                 }
+                onBlur={() => {
+                  const digits = form.watch("telefone")?.replace(/\D/g, "");
+                  if (digits?.length === 11) {
+                    const whatsapp =
+                      digits[2] === "9"
+                        ? digits.slice(0, 2) + digits.slice(3)
+                        : digits.slice(0, 10);
+                    form.setValue("whatsapp", formatWhatsApp(whatsapp));
+                  }
+                }}
               />
             </div>
             <div className="space-y-1">

@@ -23,12 +23,21 @@ interface PlanoFormProps {
   form: UseFormReturn<PlanoFormFields>;
   planoSelecionado: Plano | null;
   participantes: ParticipanteMin[];
+  modoCliente?: boolean;
 }
+
+const normalizePlanName = (value?: string | null) =>
+  (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
 
 export function PlanoForm({
   form,
   planoSelecionado,
   participantes,
+  modoCliente = false,
 }: PlanoFormProps) {
   // ----- Helpers -----
   const formatCurrency = (n: number) =>
@@ -207,22 +216,46 @@ export function PlanoForm({
     form.setValue("planoId", Number(idStr), { shouldDirty: true });
   };
 
+  const planosLiberados = useMemo(() => {
+    if (!modoCliente || !elegiveis || elegiveis.length === 0 || !planoPadrao) {
+      return new Set<string>(elegiveis?.map((p) => String(p.id)) ?? []);
+    }
+
+    const liberados = new Set<string>([String(planoPadrao.id)]);
+    const planoPadraoNome = normalizePlanName(planoPadrao.nome);
+
+    if (planoPadraoNome === "bosque social") {
+      const bosqueEssencial = elegiveis.find(
+        (p) => normalizePlanName(p.nome) === "bosque essencial",
+      );
+      if (bosqueEssencial) liberados.add(String(bosqueEssencial.id));
+    }
+
+    return liberados;
+  }, [modoCliente, elegiveis, planoPadrao]);
+
   // ----- Card de opção -----
   const PlanoOption = ({ plano }: { plano: Plano }) => {
     const idStr = String(plano.id);
     const checked = selectedId === idStr;
+    const bloqueado = !planosLiberados.has(idStr);
 
     return (
       <label
         className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition
-        ${checked ? "border-green-600 bg-green-50" : "border-gray-200 hover:bg-gray-50"}`}
+        ${checked ? "border-green-600 bg-green-50" : "border-gray-200 hover:bg-gray-50"}
+        ${bloqueado ? "opacity-80" : ""}`}
       >
         <input
           type="radio"
           name="plano-escolhido"
           className="mt-1 h-4 w-4 cursor-pointer"
           checked={checked}
-          onChange={() => onSelectPlano(idStr)}
+          disabled={bloqueado}
+          onChange={() => {
+            if (bloqueado) return;
+            onSelectPlano(idStr);
+          }}
         />
         <div className="flex-1">
           <div className="flex items-center justify-between">
@@ -238,6 +271,11 @@ export function PlanoForm({
           {renderBeneficios(plano)}
           {renderCoberturas(plano)}
           {renderBeneficiarios(plano)}
+          {bloqueado && (
+            <p className="mt-2 text-xs text-red-600">
+              Em caso de dúvidas, entre em contato conosco.
+            </p>
+          )}
         </div>
       </label>
     );
