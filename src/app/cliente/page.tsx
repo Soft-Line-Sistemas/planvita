@@ -47,7 +47,10 @@ import {
 } from "@/components/ui/dialog";
 import { formatCPF } from "@/helpers/formHelpers";
 import type { ClientePlano } from "@/types/ClientePlano";
-import { consultarClientePorCpf } from "@/services/clienteCarteirinha.service";
+import {
+  consultarClientePorCpf,
+  mapTitularToCarteirinha,
+} from "@/services/clienteCarteirinha.service";
 import CarteirinhaAsImage from "@/components/CarteirinhaAsImage";
 import { useQuery } from "@tanstack/react-query";
 import { listarContasDoCliente } from "@/services/financeiro/contasCliente.service";
@@ -94,6 +97,18 @@ const validateCPF = (cpf: string): boolean => {
   if (resto !== parseInt(strCPF.substring(10, 11))) return false;
 
   return true;
+};
+
+const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+const validatePassword = (value: string): string | null => {
+  if (!value || value.length < 8)
+    return "A senha deve ter no mínimo 8 caracteres.";
+  if (!/[A-Za-z]/.test(value)) return "A senha deve ter pelo menos 1 letra.";
+  if (!/\d/.test(value)) return "A senha deve ter pelo menos 1 número.";
+  if (!/[^A-Za-z0-9]/.test(value))
+    return "A senha deve ter pelo menos 1 caractere especial.";
+  return null;
 };
 
 const formatCurrency = (value: number) =>
@@ -217,6 +232,41 @@ export default function ConsultaClientePage() {
   );
   const autoBuscaExecutadaRef = useRef(false);
   const tenantAtivo = tenantSelecionado || getTenantFromHost();
+  const [authChecked, setAuthChecked] = useState(false);
+  const [loginValue, setLoginValue] = useState("");
+  const [senhaValue, setSenhaValue] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [mostrarAcessoRapido, setMostrarAcessoRapido] = useState(false);
+
+  const [firstAccessOpen, setFirstAccessOpen] = useState(false);
+  const [firstAccessStep, setFirstAccessStep] = useState<
+    "request" | "verify" | "setPassword"
+  >("request");
+  const [firstAccessLogin, setFirstAccessLogin] = useState("");
+  const [firstAccessOtp, setFirstAccessOtp] = useState("");
+  const [firstAccessVerificationToken, setFirstAccessVerificationToken] =
+    useState<string>("");
+  const [firstAccessPassword, setFirstAccessPassword] = useState("");
+  const [firstAccessPasswordConfirm, setFirstAccessPasswordConfirm] =
+    useState("");
+  const [firstAccessInfo, setFirstAccessInfo] = useState<string | null>(null);
+  const [firstAccessError, setFirstAccessError] = useState<string | null>(null);
+  const [firstAccessLoading, setFirstAccessLoading] = useState(false);
+
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotStep, setForgotStep] = useState<
+    "request" | "verify" | "setPassword"
+  >("request");
+  const [forgotLogin, setForgotLogin] = useState("");
+  const [forgotOtp, setForgotOtp] = useState("");
+  const [forgotVerificationToken, setForgotVerificationToken] =
+    useState<string>("");
+  const [forgotPassword, setForgotPassword] = useState("");
+  const [forgotPasswordConfirm, setForgotPasswordConfirm] = useState("");
+  const [forgotInfo, setForgotInfo] = useState<string | null>(null);
+  const [forgotError, setForgotError] = useState<string | null>(null);
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   // Filtros Financeiro
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
@@ -236,6 +286,50 @@ export default function ConsultaClientePage() {
       setTenantSelecionado(subdomainFromHost);
     }
   }, [subdomainFromHost]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const modo = params.get("modo");
+    const loginHint = params.get("login") || "";
+
+    if (modo === "primeiro-acesso") {
+      setFirstAccessOpen(true);
+      setFirstAccessStep("request");
+      if (loginHint) setFirstAccessLogin(loginHint);
+    }
+
+    if (modo === "reset") {
+      setForgotOpen(true);
+      setForgotStep("request");
+      if (loginHint) setForgotLogin(loginHint);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!tenantAtivo) return;
+    let ativo = true;
+    setAuthChecked(false);
+
+    api
+      .get("/titular/me")
+      .then((res) => {
+        if (!ativo) return;
+        const mapped = mapTitularToCarteirinha(res.data);
+        setCliente(mapped);
+        setCpf(mapped.cpf);
+      })
+      .catch(() => {
+        if (!ativo) return;
+      })
+      .finally(() => {
+        if (ativo) setAuthChecked(true);
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [tenantAtivo]);
 
   const buildAssinaturaUrl = useCallback(
     (
@@ -360,6 +454,311 @@ export default function ConsultaClientePage() {
     [handleSelecionarCadastro, isMainDomainClienteRoute],
   );
 
+  const validarLoginCliente = (value: string): string | null => {
+    const trimmed = String(value ?? "").trim();
+    if (!trimmed) return "Informe CPF ou e-mail.";
+    if (isEmail(trimmed)) return null;
+    const cpfDigits = normalizeCpf(trimmed);
+    if (validateCPF(cpfDigits)) return null;
+    return "Informe um CPF válido (11 dígitos) ou um e-mail válido.";
+  };
+
+  const carregarClienteAutenticado = async () => {
+    const { data } = await api.get("/titular/me");
+    const mapped = mapTitularToCarteirinha(data);
+    setCliente(mapped);
+    setCpf(mapped.cpf);
+    setAbaAtiva("carteirinha");
+  };
+
+  const handleLoginSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAuthError(null);
+
+    const loginError = validarLoginCliente(loginValue);
+    if (loginError) {
+      setAuthError(loginError);
+      return;
+    }
+
+    if (!senhaValue) {
+      setAuthError("Informe sua senha.");
+      return;
+    }
+
+    setAuthLoading(true);
+    try {
+      await api.post("/auth/login", {
+        login: loginValue.trim(),
+        password: senhaValue,
+        audience: "cliente",
+      });
+
+      await carregarClienteAutenticado();
+      setMostrarAcessoRapido(false);
+    } catch (err: unknown) {
+      const errorObject = err as {
+        response?: {
+          status?: number;
+          data?: { message?: unknown; code?: unknown };
+        };
+      };
+      const status = errorObject?.response?.status;
+      const serverMessage =
+        typeof errorObject?.response?.data?.message === "string"
+          ? errorObject.response.data.message
+          : null;
+      const code =
+        typeof errorObject?.response?.data?.code === "string"
+          ? errorObject.response.data.code
+          : null;
+
+      if (status === 428 && code === "FIRST_ACCESS_REQUIRED") {
+        setFirstAccessOpen(true);
+        setFirstAccessStep("request");
+        setFirstAccessLogin(loginValue.trim());
+        setFirstAccessInfo(
+          "Seu cadastro ainda não possui senha. Vamos validar seu acesso e criar sua senha.",
+        );
+        return;
+      }
+
+      setAuthError(
+        serverMessage ||
+          "Não foi possível entrar. Verifique seu login e senha.",
+      );
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const startFirstAccess = async () => {
+    setFirstAccessError(null);
+    setFirstAccessInfo(null);
+    const loginError = validarLoginCliente(firstAccessLogin);
+    if (loginError) {
+      setFirstAccessError(loginError);
+      return;
+    }
+
+    setFirstAccessLoading(true);
+    try {
+      const { data } = await api.post("/auth/first-access", {
+        login: firstAccessLogin.trim(),
+      });
+      const destination =
+        data?.start?.destinationMasked || data?.start?.channel || "seu contato";
+      const devOtp = data?.start?.dev?.otp;
+      setFirstAccessInfo(
+        `Enviamos um código para ${destination}.${devOtp ? ` Código (dev): ${devOtp}` : ""}`,
+      );
+      setFirstAccessStep("verify");
+    } catch (err: unknown) {
+      const errorObject = err as {
+        response?: { data?: { message?: unknown } };
+      };
+      const serverMessage =
+        typeof errorObject?.response?.data?.message === "string"
+          ? errorObject.response.data.message
+          : null;
+      setFirstAccessError(serverMessage || "Não foi possível enviar o código.");
+    } finally {
+      setFirstAccessLoading(false);
+    }
+  };
+
+  const verifyFirstAccessOtp = async () => {
+    setFirstAccessError(null);
+    setFirstAccessInfo(null);
+    if (!firstAccessOtp.trim()) {
+      setFirstAccessError("Informe o código recebido.");
+      return;
+    }
+
+    setFirstAccessLoading(true);
+    try {
+      const { data } = await api.post("/auth/verify", {
+        login: firstAccessLogin.trim(),
+        otp: firstAccessOtp.trim(),
+        purpose: "FIRST_ACCESS",
+      });
+      const token = String(data?.verificationToken ?? "");
+      if (!token) {
+        setFirstAccessError("Não foi possível validar o código.");
+        return;
+      }
+      setFirstAccessVerificationToken(token);
+      setFirstAccessStep("setPassword");
+    } catch (err: unknown) {
+      const errorObject = err as {
+        response?: { data?: { message?: unknown } };
+      };
+      const serverMessage =
+        typeof errorObject?.response?.data?.message === "string"
+          ? errorObject.response.data.message
+          : null;
+      setFirstAccessError(serverMessage || "Código inválido ou expirado.");
+    } finally {
+      setFirstAccessLoading(false);
+    }
+  };
+
+  const completeFirstAccess = async () => {
+    setFirstAccessError(null);
+    setFirstAccessInfo(null);
+
+    const passwordValidation = validatePassword(firstAccessPassword);
+    if (passwordValidation) {
+      setFirstAccessError(passwordValidation);
+      return;
+    }
+    if (firstAccessPassword !== firstAccessPasswordConfirm) {
+      setFirstAccessError("As senhas não conferem.");
+      return;
+    }
+
+    setFirstAccessLoading(true);
+    try {
+      await api.post("/auth/first-access", {
+        verificationToken: firstAccessVerificationToken,
+        password: firstAccessPassword,
+      });
+
+      setFirstAccessInfo("Senha criada com sucesso. Entrando...");
+      await api.post("/auth/login", {
+        login: firstAccessLogin.trim(),
+        password: firstAccessPassword,
+        audience: "cliente",
+      });
+      await carregarClienteAutenticado();
+      setFirstAccessOpen(false);
+    } catch (err: unknown) {
+      const errorObject = err as {
+        response?: { data?: { message?: unknown } };
+      };
+      const serverMessage =
+        typeof errorObject?.response?.data?.message === "string"
+          ? errorObject.response.data.message
+          : null;
+      setFirstAccessError(
+        serverMessage || "Não foi possível concluir o primeiro acesso.",
+      );
+    } finally {
+      setFirstAccessLoading(false);
+    }
+  };
+
+  const startForgotPassword = async () => {
+    setForgotError(null);
+    setForgotInfo(null);
+    const loginError = validarLoginCliente(forgotLogin);
+    if (loginError) {
+      setForgotError(loginError);
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      const { data } = await api.post("/auth/forgot-password", {
+        login: forgotLogin.trim(),
+      });
+      const destination =
+        data?.start?.destinationMasked || data?.start?.channel || "seu contato";
+      const devOtp = data?.start?.dev?.otp;
+      setForgotInfo(
+        `Enviamos um código para ${destination}.${devOtp ? ` Código (dev): ${devOtp}` : ""}`,
+      );
+      setForgotStep("verify");
+    } catch (err: unknown) {
+      const errorObject = err as {
+        response?: { data?: { message?: unknown } };
+      };
+      const serverMessage =
+        typeof errorObject?.response?.data?.message === "string"
+          ? errorObject.response.data.message
+          : null;
+      setForgotError(
+        serverMessage || "Não foi possível iniciar a recuperação.",
+      );
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const verifyForgotOtp = async () => {
+    setForgotError(null);
+    setForgotInfo(null);
+    if (!forgotOtp.trim()) {
+      setForgotError("Informe o código recebido.");
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      const { data } = await api.post("/auth/verify", {
+        login: forgotLogin.trim(),
+        otp: forgotOtp.trim(),
+        purpose: "RESET_PASSWORD",
+      });
+      const token = String(data?.verificationToken ?? "");
+      if (!token) {
+        setForgotError("Não foi possível validar o código.");
+        return;
+      }
+      setForgotVerificationToken(token);
+      setForgotStep("setPassword");
+    } catch (err: unknown) {
+      const errorObject = err as {
+        response?: { data?: { message?: unknown } };
+      };
+      const serverMessage =
+        typeof errorObject?.response?.data?.message === "string"
+          ? errorObject.response.data.message
+          : null;
+      setForgotError(serverMessage || "Código inválido ou expirado.");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const completeForgotPassword = async () => {
+    setForgotError(null);
+    setForgotInfo(null);
+
+    const passwordValidation = validatePassword(forgotPassword);
+    if (passwordValidation) {
+      setForgotError(passwordValidation);
+      return;
+    }
+    if (forgotPassword !== forgotPasswordConfirm) {
+      setForgotError("As senhas não conferem.");
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      await api.post("/auth/reset-password", {
+        verificationToken: forgotVerificationToken,
+        password: forgotPassword,
+      });
+      setForgotInfo("Senha alterada com sucesso.");
+      setForgotOpen(false);
+      setLoginValue(forgotLogin.trim());
+      setSenhaValue("");
+    } catch (err: unknown) {
+      const errorObject = err as {
+        response?: { data?: { message?: unknown } };
+      };
+      const serverMessage =
+        typeof errorObject?.response?.data?.message === "string"
+          ? errorObject.response.data.message
+          : null;
+      setForgotError(serverMessage || "Não foi possível alterar a senha.");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -386,9 +785,12 @@ export default function ConsultaClientePage() {
   }, [consultarCpf, isMainDomainClienteRoute]);
 
   const handleReset = () => {
+    api.post("/auth/logout").catch(() => {});
     setCpf("");
     setCliente(null);
     setError(null);
+    setAuthError(null);
+    setSenhaValue("");
     setCadastrosEncontrados([]);
     setModalCadastroAberto(false);
     setIsFlipped(false);
@@ -644,72 +1046,537 @@ export default function ConsultaClientePage() {
             Área do Cliente
           </h1>
           <p className="text-base text-slate-600 md:text-lg">
-            Informe o CPF do titular para acessar sua carteirinha, boletos e
-            plano.
+            Entre com seu CPF ou e-mail e sua senha para acessar sua
+            carteirinha, boletos e plano.
           </p>
         </header>
 
-        {!cliente && (
-          <Card className="mx-auto w-full max-w-lg shadow-lg border-slate-200">
-            <CardHeader>
-              <CardTitle>Acesso Seguro</CardTitle>
-              <CardDescription>
-                Digite seu CPF para consultar seus dados.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="cpf"
-                    className="text-sm font-medium text-slate-700"
+        <Dialog
+          open={firstAccessOpen}
+          onOpenChange={(open) => {
+            setFirstAccessOpen(open);
+            if (!open) {
+              setFirstAccessStep("request");
+              setFirstAccessOtp("");
+              setFirstAccessPassword("");
+              setFirstAccessPasswordConfirm("");
+              setFirstAccessInfo(null);
+              setFirstAccessError(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Primeiro acesso</DialogTitle>
+              <DialogDescription>
+                Valide sua identidade com um código e crie sua senha.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              {firstAccessStep === "request" && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      CPF ou e-mail
+                    </label>
+                    <Input
+                      value={firstAccessLogin}
+                      onChange={(e) => setFirstAccessLogin(e.target.value)}
+                      placeholder="CPF ou e-mail"
+                      autoComplete="username"
+                    />
+                  </div>
+                  {firstAccessInfo && (
+                    <Alert>
+                      <AlertTitle>Info</AlertTitle>
+                      <AlertDescription>{firstAccessInfo}</AlertDescription>
+                    </Alert>
+                  )}
+                  {firstAccessError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Erro</AlertTitle>
+                      <AlertDescription>{firstAccessError}</AlertDescription>
+                    </Alert>
+                  )}
+                  <Button
+                    onClick={startFirstAccess}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                    disabled={firstAccessLoading}
                   >
-                    CPF do titular
-                  </label>
-                  <Input
-                    id="cpf"
-                    name="cpf"
-                    inputMode="numeric"
-                    placeholder="000.000.000-00"
-                    value={cpf}
-                    onChange={(event) => setCpf(formatCPF(event.target.value))}
-                    maxLength={14}
-                    className={error ? "border-red-500" : ""}
-                  />
-                </div>
+                    {firstAccessLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      "Enviar código"
+                    )}
+                  </Button>
+                </>
+              )}
 
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Erro</AlertTitle>
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
+              {firstAccessStep === "verify" && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      Código (OTP)
+                    </label>
+                    <Input
+                      value={firstAccessOtp}
+                      onChange={(e) => setFirstAccessOtp(e.target.value)}
+                      placeholder="000000"
+                      inputMode="numeric"
+                      maxLength={6}
+                    />
+                  </div>
+                  {firstAccessInfo && (
+                    <Alert>
+                      <AlertTitle>Info</AlertTitle>
+                      <AlertDescription>{firstAccessInfo}</AlertDescription>
+                    </Alert>
+                  )}
+                  {firstAccessError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Erro</AlertTitle>
+                      <AlertDescription>{firstAccessError}</AlertDescription>
+                    </Alert>
+                  )}
+                  <Button
+                    onClick={verifyFirstAccessOtp}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                    disabled={firstAccessLoading}
+                  >
+                    {firstAccessLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Validando...
+                      </>
+                    ) : (
+                      "Validar código"
+                    )}
+                  </Button>
+                </>
+              )}
 
-                <div className="flex gap-2 pt-2">
+              {firstAccessStep === "setPassword" && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      Nova senha
+                    </label>
+                    <Input
+                      type="password"
+                      value={firstAccessPassword}
+                      onChange={(e) => setFirstAccessPassword(e.target.value)}
+                      placeholder="Mín. 8 caracteres"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      Confirmar senha
+                    </label>
+                    <Input
+                      type="password"
+                      value={firstAccessPasswordConfirm}
+                      onChange={(e) =>
+                        setFirstAccessPasswordConfirm(e.target.value)
+                      }
+                      placeholder="Repita a senha"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  {firstAccessInfo && (
+                    <Alert>
+                      <AlertTitle>Info</AlertTitle>
+                      <AlertDescription>{firstAccessInfo}</AlertDescription>
+                    </Alert>
+                  )}
+                  {firstAccessError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Erro</AlertTitle>
+                      <AlertDescription>{firstAccessError}</AlertDescription>
+                    </Alert>
+                  )}
+                  <Button
+                    onClick={completeFirstAccess}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                    disabled={firstAccessLoading}
+                  >
+                    {firstAccessLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      "Criar senha e entrar"
+                    )}
+                  </Button>
+                </>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={forgotOpen}
+          onOpenChange={(open) => {
+            setForgotOpen(open);
+            if (!open) {
+              setForgotStep("request");
+              setForgotOtp("");
+              setForgotPassword("");
+              setForgotPasswordConfirm("");
+              setForgotInfo(null);
+              setForgotError(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Recuperar senha</DialogTitle>
+              <DialogDescription>
+                Envie um código, valide e defina uma nova senha.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              {forgotStep === "request" && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      CPF ou e-mail
+                    </label>
+                    <Input
+                      value={forgotLogin}
+                      onChange={(e) => setForgotLogin(e.target.value)}
+                      placeholder="CPF ou e-mail"
+                      autoComplete="username"
+                    />
+                  </div>
+                  {forgotInfo && (
+                    <Alert>
+                      <AlertTitle>Info</AlertTitle>
+                      <AlertDescription>{forgotInfo}</AlertDescription>
+                    </Alert>
+                  )}
+                  {forgotError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Erro</AlertTitle>
+                      <AlertDescription>{forgotError}</AlertDescription>
+                    </Alert>
+                  )}
+                  <Button
+                    onClick={startForgotPassword}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                    disabled={forgotLoading}
+                  >
+                    {forgotLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      "Enviar código"
+                    )}
+                  </Button>
+                </>
+              )}
+
+              {forgotStep === "verify" && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      Código (OTP)
+                    </label>
+                    <Input
+                      value={forgotOtp}
+                      onChange={(e) => setForgotOtp(e.target.value)}
+                      placeholder="000000"
+                      inputMode="numeric"
+                      maxLength={6}
+                    />
+                  </div>
+                  {forgotInfo && (
+                    <Alert>
+                      <AlertTitle>Info</AlertTitle>
+                      <AlertDescription>{forgotInfo}</AlertDescription>
+                    </Alert>
+                  )}
+                  {forgotError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Erro</AlertTitle>
+                      <AlertDescription>{forgotError}</AlertDescription>
+                    </Alert>
+                  )}
+                  <Button
+                    onClick={verifyForgotOtp}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                    disabled={forgotLoading}
+                  >
+                    {forgotLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Validando...
+                      </>
+                    ) : (
+                      "Validar código"
+                    )}
+                  </Button>
+                </>
+              )}
+
+              {forgotStep === "setPassword" && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      Nova senha
+                    </label>
+                    <Input
+                      type="password"
+                      value={forgotPassword}
+                      onChange={(e) => setForgotPassword(e.target.value)}
+                      placeholder="Mín. 8 caracteres"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      Confirmar senha
+                    </label>
+                    <Input
+                      type="password"
+                      value={forgotPasswordConfirm}
+                      onChange={(e) => setForgotPasswordConfirm(e.target.value)}
+                      placeholder="Repita a senha"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  {forgotInfo && (
+                    <Alert>
+                      <AlertTitle>Info</AlertTitle>
+                      <AlertDescription>{forgotInfo}</AlertDescription>
+                    </Alert>
+                  )}
+                  {forgotError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Erro</AlertTitle>
+                      <AlertDescription>{forgotError}</AlertDescription>
+                    </Alert>
+                  )}
+                  <Button
+                    onClick={completeForgotPassword}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                    disabled={forgotLoading}
+                  >
+                    {forgotLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      "Alterar senha"
+                    )}
+                  </Button>
+                </>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {!cliente && !authChecked && (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
+          </div>
+        )}
+
+        {!cliente && authChecked && (
+          <div className="mx-auto w-full max-w-lg space-y-6">
+            <Card className="shadow-lg border-slate-200">
+              <CardHeader>
+                <CardTitle>Login</CardTitle>
+                <CardDescription>
+                  Use seu CPF ou e-mail. Se for seu primeiro acesso, crie sua
+                  senha.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleLoginSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="login"
+                      className="text-sm font-medium text-slate-700"
+                    >
+                      Login (CPF ou e-mail)
+                    </label>
+                    <Input
+                      id="login"
+                      name="login"
+                      placeholder="CPF ou e-mail"
+                      value={loginValue}
+                      onChange={(event) => setLoginValue(event.target.value)}
+                      className={authError ? "border-red-500" : ""}
+                      autoComplete="username"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="senha"
+                      className="text-sm font-medium text-slate-700"
+                    >
+                      Senha
+                    </label>
+                    <Input
+                      id="senha"
+                      name="senha"
+                      type="password"
+                      placeholder="Sua senha"
+                      value={senhaValue}
+                      onChange={(event) => setSenhaValue(event.target.value)}
+                      className={authError ? "border-red-500" : ""}
+                      autoComplete="current-password"
+                    />
+                  </div>
+
+                  {authError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Erro</AlertTitle>
+                      <AlertDescription>{authError}</AlertDescription>
+                    </Alert>
+                  )}
+
                   <Button
                     type="submit"
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                    disabled={isLoading}
+                    disabled={authLoading}
                   >
-                    {isLoading ? (
+                    {authLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Consultando...
+                        Entrando...
                       </>
                     ) : (
-                      "Consultar"
+                      "Entrar"
                     )}
                   </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
 
-        {isLoading && !cliente && (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
+                  <div className="flex flex-col gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="justify-start px-0 text-slate-600 hover:text-slate-900"
+                      onClick={() => {
+                        setForgotOpen(true);
+                        setForgotStep("request");
+                        setForgotLogin(loginValue.trim());
+                        setForgotOtp("");
+                        setForgotPassword("");
+                        setForgotPasswordConfirm("");
+                        setForgotInfo(null);
+                        setForgotError(null);
+                      }}
+                    >
+                      Esqueci minha senha
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="justify-start px-0 text-slate-600 hover:text-slate-900"
+                      onClick={() => {
+                        setFirstAccessOpen(true);
+                        setFirstAccessStep("request");
+                        setFirstAccessLogin(loginValue.trim());
+                        setFirstAccessOtp("");
+                        setFirstAccessPassword("");
+                        setFirstAccessPasswordConfirm("");
+                        setFirstAccessInfo(null);
+                        setFirstAccessError(null);
+                      }}
+                    >
+                      Primeiro acesso / Criar senha
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="justify-start px-0 text-slate-600 hover:text-slate-900"
+                      onClick={() => setMostrarAcessoRapido((prev) => !prev)}
+                    >
+                      {mostrarAcessoRapido
+                        ? "Ocultar acesso rápido"
+                        : "Acesso rápido (legado) por CPF"}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+
+            {mostrarAcessoRapido && (
+              <Card className="shadow-lg border-slate-200">
+                <CardHeader>
+                  <CardTitle>Acesso rápido (legado)</CardTitle>
+                  <CardDescription>
+                    Consulta direta por CPF (modo compatível com o sistema
+                    atual).
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="cpf"
+                        className="text-sm font-medium text-slate-700"
+                      >
+                        CPF do titular
+                      </label>
+                      <Input
+                        id="cpf"
+                        name="cpf"
+                        inputMode="numeric"
+                        placeholder="000.000.000-00"
+                        value={cpf}
+                        onChange={(event) =>
+                          setCpf(formatCPF(event.target.value))
+                        }
+                        maxLength={14}
+                        className={error ? "border-red-500" : ""}
+                      />
+                    </div>
+
+                    {error && (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Erro</AlertTitle>
+                        <AlertDescription>{error}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <Button
+                      type="submit"
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Consultando...
+                        </>
+                      ) : (
+                        "Consultar"
+                      )}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
 
