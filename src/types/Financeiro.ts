@@ -53,9 +53,14 @@ export type ContaFinanceira = ContaFinanceiraBase & {
 };
 
 export interface RecorrenciaFinanceira {
-  asaasSubscriptionId: string;
-  clienteId: number | null;
+  titularId: number;
   clienteNome: string;
+  referenciaExterna: string;
+  asaasSubscriptionId: string | null;
+  asaasSubscriptionIdLocal: string | null;
+  asaasSubscriptionIdProvider: string | null;
+  temReferenciaLocal: boolean;
+  temReferenciaAsaas: boolean;
   statusAtual: string;
   valorAtual: number;
   proximoVencimento: string | null;
