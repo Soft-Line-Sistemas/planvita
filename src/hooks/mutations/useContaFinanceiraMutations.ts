@@ -6,6 +6,7 @@ import {
   NovaContaPagarPayload,
   NovaContaReceberPayload,
   reconsultarContaReceber,
+  sincronizarRecorrenciasFinanceiras,
   atualizarContaFinanceira,
   deleteContaFinanceira,
 } from "@/services/financeiro/contas.service";
@@ -139,6 +140,26 @@ export const useDeletarContaFinanceira = () => {
     },
     onError: () => {
       toast.error("Não foi possível excluir a conta");
+    },
+  });
+};
+
+export const useSincronizarRecorrenciasFinanceiras = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => sincronizarRecorrenciasFinanceiras(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["financeiro", "recorrencias"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["financeiro", "contas"],
+      });
+      toast.success("Recorrências sincronizadas com sucesso");
+    },
+    onError: () => {
+      toast.error("Não foi possível sincronizar recorrências");
     },
   });
 };

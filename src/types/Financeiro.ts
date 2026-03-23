@@ -52,6 +52,18 @@ export type ContaFinanceira = ContaFinanceiraBase & {
   tipo: "Pagar" | "Receber";
 };
 
+export interface RecorrenciaFinanceira {
+  asaasSubscriptionId: string;
+  clienteId: number | null;
+  clienteNome: string;
+  statusAtual: string;
+  valorAtual: number;
+  proximoVencimento: string | null;
+  ultimaLiquidacao: string | null;
+  aberto: boolean;
+  totalPagas: number;
+}
+
 export const getStatusConta = (conta: ContaFinanceira): StatusFinanceiro =>
   conta.status;
 

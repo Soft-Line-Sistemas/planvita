@@ -1,5 +1,37 @@
-const PAYMENT_API_URL =
-  process.env.NEXT_PUBLIC_PAYMENT_API_URL ?? "http://localhost:4008/api/v1";
+import { API_VERSION, getApiUrl } from "@/config/api-config";
+
+const isProductionRuntime =
+  process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
+
+const isLocalhostUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.hostname === "localhost" ||
+      parsed.hostname === "127.0.0.1" ||
+      parsed.hostname.endsWith(".localhost")
+    );
+  } catch {
+    return false;
+  }
+};
+
+const buildDefaultPaymentApiUrl = () =>
+  `${getApiUrl().replace(/\/$/, "")}/${API_VERSION}`;
+
+const resolvePaymentApiUrl = (): string => {
+  const envUrl = process.env.NEXT_PUBLIC_PAYMENT_API_URL?.trim();
+  if (envUrl) {
+    if (isProductionRuntime && isLocalhostUrl(envUrl)) {
+      return buildDefaultPaymentApiUrl();
+    }
+    return envUrl;
+  }
+
+  return buildDefaultPaymentApiUrl();
+};
+
+const PAYMENT_API_URL = resolvePaymentApiUrl();
 const PAYMENT_CLIENT_ID =
   process.env.NEXT_PUBLIC_PAYMENT_CLIENT_ID ??
   "e5efcd00-8302-429f-8fcd-61c883e7d616";
