@@ -142,11 +142,17 @@ export default function NotificacoesRecorrentesPage() {
 
       if (flow === "pendencia-periodica") {
         assunto = "Lembrete de pendência financeira";
+        const mensagemCobranca = [
+          "Olá, {{nomeCliente}}",
+          "Sua cobrança gerada por {{nomeEmpresa}} no valor de {{valor}} vence em {{vencimento}}.",
+          "Descrição: {{descricao}}.",
+          "Visualize/regularize em: {{linkCobranca}}",
+        ].join("\n");
         if (canal === "email") {
-          html = `<p>Olá, ${nomeEmpresa} informa: Consta em nosso sistema uma pendência financeira.</p>`;
-          text = `Olá, ${nomeEmpresa} informa: Consta em nosso sistema uma pendência financeira.`;
+          html = mensagemCobranca.replace(/\n/g, "<br />");
+          text = mensagemCobranca;
         } else {
-          text = `Olá, ${nomeEmpresa} informa: Consta em nosso sistema uma pendência financeira.`;
+          text = mensagemCobranca;
         }
       } else if (flow === "aviso-vencimento") {
         assunto = "Aviso de vencimento próximo";

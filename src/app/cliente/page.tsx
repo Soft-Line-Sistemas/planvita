@@ -12,6 +12,9 @@ import {
   Filter,
   History,
   Barcode,
+  Copy,
+  QrCode,
+  ExternalLink,
   Calendar as CalendarIcon,
   PenTool,
   Save,
@@ -218,6 +221,15 @@ export default function ConsultaClientePage() {
   // Filtros Financeiro
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const [filtroPeriodo, setFiltroPeriodo] = useState<string>("todos");
+  const [mensagemFinanceiro, setMensagemFinanceiro] = useState<string | null>(
+    null,
+  );
+  const [pixSelecionado, setPixSelecionado] = useState<{
+    descricao: string;
+    valor: number;
+    vencimento: string;
+    codigo: string;
+  } | null>(null);
 
   useEffect(() => {
     if (subdomainFromHost) {
@@ -600,6 +612,27 @@ export default function ConsultaClientePage() {
     }
   };
 
+  const getPixQrImageSrc = (codigoPix: string) => {
+    if (!codigoPix) return "";
+    if (codigoPix.startsWith("data:image/")) return codigoPix;
+    if (/^https?:\/\//i.test(codigoPix)) return codigoPix;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(
+      codigoPix,
+    )}`;
+  };
+
+  const copiarCodigoPix = async (codigoPix: string) => {
+    if (!codigoPix) return;
+    try {
+      await navigator.clipboard.writeText(codigoPix);
+      setMensagemFinanceiro("Código PIX copiado com sucesso.");
+      setTimeout(() => setMensagemFinanceiro(null), 3000);
+    } catch {
+      setMensagemFinanceiro("Não foi possível copiar o código PIX.");
+      setTimeout(() => setMensagemFinanceiro(null), 3000);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-linear-to-br from-slate-100 via-white to-slate-100 pb-16">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 pt-16">
@@ -971,6 +1004,11 @@ export default function ConsultaClientePage() {
                   </div>
                 </CardHeader>
                 <CardContent>
+                  {mensagemFinanceiro ? (
+                    <Alert className="mb-4">
+                      <AlertDescription>{mensagemFinanceiro}</AlertDescription>
+                    </Alert>
+                  ) : null}
                   {isLoadingFinanceiro ? (
                     <div className="flex flex-col items-center justify-center py-10 gap-3 text-gray-500">
                       <Loader2 className="h-8 w-8 animate-spin" />
@@ -985,6 +1023,7 @@ export default function ConsultaClientePage() {
                             <th className="px-4 py-2 text-left">Vencimento</th>
                             <th className="px-4 py-2 text-left">Valor</th>
                             <th className="px-4 py-2 text-left">Status</th>
+                            <th className="px-4 py-2 text-right">Ações</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1009,26 +1048,62 @@ export default function ConsultaClientePage() {
                                 {getStatusBadge(conta.status)}
                               </td>
                               <td className="px-4 py-2 text-right">
-                                {conta.paymentUrl ? (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="gap-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                                    onClick={() =>
-                                      window.open(conta.paymentUrl!, "_blank")
-                                    }
-                                  >
-                                    <Barcode className="h-4 w-4" />
-                                    {conta.status === "PENDENTE" ||
-                                    conta.status === "ATRASADO"
-                                      ? "Pagar Boleto"
-                                      : "Ver Recibo"}
-                                  </Button>
-                                ) : (
-                                  <span className="text-xs text-gray-400">
-                                    Indisponível
-                                  </span>
-                                )}
+                                <div className="flex justify-end gap-2 flex-wrap">
+                                  {conta.paymentUrl ? (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="gap-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                                      onClick={() =>
+                                        window.open(conta.paymentUrl!, "_blank")
+                                      }
+                                    >
+                                      <Barcode className="h-4 w-4" />
+                                      {conta.status === "PENDENTE" ||
+                                      conta.status === "ATRASADO"
+                                        ? "Pagar Boleto"
+                                        : "Ver Recibo"}
+                                    </Button>
+                                  ) : null}
+
+                                  {conta.pixQrCode ? (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-2 text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+                                        onClick={() =>
+                                          setPixSelecionado({
+                                            descricao: conta.descricao,
+                                            valor: conta.valor,
+                                            vencimento: conta.vencimento,
+                                            codigo: conta.pixQrCode!,
+                                          })
+                                        }
+                                      >
+                                        <QrCode className="h-4 w-4" />
+                                        Ver QR Code PIX
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-2 text-sky-700 border-sky-200 hover:bg-sky-50"
+                                        onClick={() =>
+                                          copiarCodigoPix(conta.pixQrCode!)
+                                        }
+                                      >
+                                        <Copy className="h-4 w-4" />
+                                        Copiar PIX
+                                      </Button>
+                                    </>
+                                  ) : null}
+
+                                  {!conta.paymentUrl && !conta.pixQrCode ? (
+                                    <span className="text-xs text-gray-400">
+                                      Indisponível
+                                    </span>
+                                  ) : null}
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -1138,6 +1213,79 @@ export default function ConsultaClientePage() {
           </div>
         )}
       </div>
+      <Dialog
+        open={Boolean(pixSelecionado)}
+        onOpenChange={(open) => {
+          if (!open) setPixSelecionado(null);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pagamento via PIX</DialogTitle>
+            <DialogDescription>
+              QR Code e código copia e cola da cobrança Asaas.
+            </DialogDescription>
+          </DialogHeader>
+          {pixSelecionado ? (
+            <div className="space-y-4">
+              <div className="rounded-md border bg-slate-50 p-3 text-sm space-y-1">
+                <p className="font-semibold text-slate-800">
+                  {pixSelecionado.descricao}
+                </p>
+                <p className="text-slate-600">
+                  Valor: {formatCurrency(pixSelecionado.valor)}
+                </p>
+                <p className="text-slate-600">
+                  Vencimento: {formatDate(pixSelecionado.vencimento)}
+                </p>
+              </div>
+
+              <div className="flex justify-center rounded-md border bg-white p-3">
+                {/* Se o Asaas já retornar imagem/base64, usa direto; se retornar payload, gera QR visual */}
+                <img
+                  src={getPixQrImageSrc(pixSelecionado.codigo)}
+                  alt="QR Code PIX"
+                  className="h-64 w-64 object-contain"
+                />
+              </div>
+
+              <div className="rounded-md border bg-slate-50 p-3">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Código PIX (copia e cola)
+                </p>
+                <p className="text-xs break-all text-slate-700">
+                  {pixSelecionado.codigo}
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  className="flex-1 gap-2"
+                  onClick={() => copiarCodigoPix(pixSelecionado.codigo)}
+                >
+                  <Copy className="h-4 w-4" />
+                  Copiar código PIX
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => {
+                    if (pixSelecionado.codigo.startsWith("http")) {
+                      window.open(pixSelecionado.codigo, "_blank");
+                    }
+                  }}
+                  disabled={!pixSelecionado.codigo.startsWith("http")}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Abrir
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
       <Dialog open={modalCadastroAberto} onOpenChange={setModalCadastroAberto}>
         <DialogContent className="max-w-md">
           <DialogHeader>

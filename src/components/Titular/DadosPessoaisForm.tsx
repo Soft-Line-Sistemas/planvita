@@ -82,7 +82,9 @@ export const DadosPessoaisForm = ({ form }: Props) => (
             const digits = form.watch("telefone")?.replace(/\D/g, "");
             if (digits?.length === 11) {
               const whatsapp =
-                digits[0] + digits[1] + digits[2] + digits.slice(3 + 1);
+                digits[2] === "9"
+                  ? digits.slice(0, 2) + digits.slice(3)
+                  : digits.slice(0, 10);
               form.setValue("whatsapp", formatWhatsApp(whatsapp));
             }
           }}
