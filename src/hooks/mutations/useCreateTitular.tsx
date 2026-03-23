@@ -32,11 +32,15 @@ export type CreateTitularInput = {
 
 export type CreateTitularOutput = unknown;
 
-export function useCreateTitular() {
+export function useCreateTitular(options?: {
+  variant?: "dashboard" | "public";
+}) {
   const router = useRouter();
   return useMutation<CreateTitularOutput, unknown, CreateTitularInput>({
     mutationFn: async (payload) => {
-      const { data } = await api.post("/titular/full", payload);
+      const endpoint =
+        options?.variant === "public" ? "/auth/register" : "/titular/full";
+      const { data } = await api.post(endpoint, payload);
       return data;
     },
     onError: (err) => {
@@ -78,7 +82,21 @@ export function useCreateTitular() {
         duration: 6000,
       });
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      if (options?.variant === "public") {
+        toast.success("Cadastro concluído!", {
+          description:
+            "Agora valide seu acesso (código) e crie sua senha para entrar.",
+        });
+        const loginHint =
+          variables.step1?.email?.trim() || variables.step1?.cpf?.trim() || "";
+        const params = new URLSearchParams();
+        params.set("modo", "primeiro-acesso");
+        if (loginHint) params.set("login", loginHint);
+        router.push(`/cliente?${params.toString()}`);
+        return;
+      }
+
       toast.success("Titular criado com sucesso!", {
         description: "Cadastro concluído e vinculado ao plano.",
       });

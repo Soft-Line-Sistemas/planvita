@@ -44,7 +44,9 @@ type TitularResponse = {
   }> | null;
 };
 
-const mapTitularToCarteirinha = (titular: TitularResponse): ClientePlano => {
+export const mapTitularToCarteirinha = (
+  titular: TitularResponse,
+): ClientePlano => {
   const plano = titular?.plano ?? null;
   const cobertura =
     plano?.coberturas?.map(

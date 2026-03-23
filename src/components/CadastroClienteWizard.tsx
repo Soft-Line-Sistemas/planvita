@@ -86,7 +86,7 @@ export function CadastroClienteWizard({
   const [selectedConsultorId, setSelectedConsultorId] = useState<
     number | undefined
   >();
-  const { mutateAsync, isPending } = useCreateTitular();
+  const { mutateAsync, isPending } = useCreateTitular({ variant });
   const steps = [
     { id: 1, title: "Dados pessoais", icon: User },
     { id: 2, title: "Endereço", icon: MapPin },
