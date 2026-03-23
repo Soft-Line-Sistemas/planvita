@@ -1125,7 +1125,10 @@ export default function ConsultaClientePage() {
             <DialogHeader>
               <DialogTitle>Primeiro acesso</DialogTitle>
               <DialogDescription>
-                Valide sua identidade com um código e crie sua senha.
+                {firstAccessStep === "setPassword" &&
+                firstAccessVerificationToken
+                  ? "Link validado. Defina sua senha para concluir o primeiro acesso."
+                  : "Valide sua identidade com um código e crie sua senha."}
               </DialogDescription>
             </DialogHeader>
 
@@ -1298,7 +1301,9 @@ export default function ConsultaClientePage() {
             <DialogHeader>
               <DialogTitle>Recuperar senha</DialogTitle>
               <DialogDescription>
-                Envie um código, valide e defina uma nova senha.
+                {forgotStep === "setPassword" && forgotVerificationToken
+                  ? "Link validado. Defina sua nova senha."
+                  : "Envie um código, valide e defina uma nova senha."}
               </DialogDescription>
             </DialogHeader>
 
