@@ -251,6 +251,9 @@ export default function ConsultaClientePage() {
   const [firstAccessPasswordConfirm, setFirstAccessPasswordConfirm] =
     useState("");
   const [firstAccessInfo, setFirstAccessInfo] = useState<string | null>(null);
+  const [firstAccessDestination, setFirstAccessDestination] = useState<
+    string | null
+  >(null);
   const [firstAccessError, setFirstAccessError] = useState<string | null>(null);
   const [firstAccessLoading, setFirstAccessLoading] = useState(false);
 
@@ -265,6 +268,9 @@ export default function ConsultaClientePage() {
   const [forgotPassword, setForgotPassword] = useState("");
   const [forgotPasswordConfirm, setForgotPasswordConfirm] = useState("");
   const [forgotInfo, setForgotInfo] = useState<string | null>(null);
+  const [forgotDestination, setForgotDestination] = useState<string | null>(
+    null,
+  );
   const [forgotError, setForgotError] = useState<string | null>(null);
   const [forgotLoading, setForgotLoading] = useState(false);
 
@@ -308,6 +314,20 @@ export default function ConsultaClientePage() {
 
   useEffect(() => {
     if (!tenantAtivo) return;
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const modo = params.get("modo");
+      const hasRecoveryContext =
+        modo === "reset" ||
+        modo === "primeiro-acesso" ||
+        Boolean(params.get("token"));
+
+      if (hasRecoveryContext) {
+        setAuthChecked(true);
+        return;
+      }
+    }
+
     let ativo = true;
     setAuthChecked(false);
 
@@ -517,6 +537,7 @@ export default function ConsultaClientePage() {
         setFirstAccessOpen(true);
         setFirstAccessStep("request");
         setFirstAccessLogin(loginValue.trim());
+        setFirstAccessDestination(null);
         setFirstAccessInfo(
           "Seu cadastro ainda não possui senha. Vamos validar seu acesso e criar sua senha.",
         );
@@ -535,6 +556,7 @@ export default function ConsultaClientePage() {
   const startFirstAccess = async () => {
     setFirstAccessError(null);
     setFirstAccessInfo(null);
+    setFirstAccessDestination(null);
     const loginError = validarLoginCliente(firstAccessLogin);
     if (loginError) {
       setFirstAccessError(loginError);
@@ -548,6 +570,7 @@ export default function ConsultaClientePage() {
       });
       const destination =
         data?.start?.destinationMasked || data?.start?.channel || "seu contato";
+      setFirstAccessDestination(destination);
       const devOtp = data?.start?.dev?.otp;
       setFirstAccessInfo(
         `Enviamos um código para ${destination}.${devOtp ? ` Código (dev): ${devOtp}` : ""}`,
@@ -651,6 +674,7 @@ export default function ConsultaClientePage() {
   const startForgotPassword = async () => {
     setForgotError(null);
     setForgotInfo(null);
+    setForgotDestination(null);
     const loginError = validarLoginCliente(forgotLogin);
     if (loginError) {
       setForgotError(loginError);
@@ -664,6 +688,7 @@ export default function ConsultaClientePage() {
       });
       const destination =
         data?.start?.destinationMasked || data?.start?.channel || "seu contato";
+      setForgotDestination(destination);
       const devOtp = data?.start?.dev?.otp;
       setForgotInfo(
         `Enviamos um código para ${destination}.${devOtp ? ` Código (dev): ${devOtp}` : ""}`,
@@ -1060,6 +1085,7 @@ export default function ConsultaClientePage() {
               setFirstAccessOtp("");
               setFirstAccessPassword("");
               setFirstAccessPasswordConfirm("");
+              setFirstAccessDestination(null);
               setFirstAccessInfo(null);
               setFirstAccessError(null);
             }
@@ -1121,7 +1147,7 @@ export default function ConsultaClientePage() {
                 <>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700">
-                      Código (OTP)
+                      {`Código enviado para ${firstAccessDestination || "seu contato"}`}
                     </label>
                     <Input
                       value={firstAccessOtp}
@@ -1231,6 +1257,7 @@ export default function ConsultaClientePage() {
               setForgotOtp("");
               setForgotPassword("");
               setForgotPasswordConfirm("");
+              setForgotDestination(null);
               setForgotInfo(null);
               setForgotError(null);
             }
@@ -1292,7 +1319,7 @@ export default function ConsultaClientePage() {
                 <>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700">
-                      Código (OTP)
+                      {`Código enviado para ${forgotDestination || "seu contato"}`}
                     </label>
                     <Input
                       value={forgotOtp}
@@ -1469,11 +1496,11 @@ export default function ConsultaClientePage() {
                     )}
                   </Button>
 
-                  <div className="flex flex-col gap-2 pt-1">
+                  <div className="flex flex-col items-center gap-2 pt-1">
                     <Button
                       type="button"
                       variant="ghost"
-                      className="justify-start px-0 text-slate-600 hover:text-slate-900"
+                      className="w-full justify-center text-center text-slate-600 hover:text-slate-900"
                       onClick={() => {
                         setForgotOpen(true);
                         setForgotStep("request");
@@ -1481,6 +1508,7 @@ export default function ConsultaClientePage() {
                         setForgotOtp("");
                         setForgotPassword("");
                         setForgotPasswordConfirm("");
+                        setForgotDestination(null);
                         setForgotInfo(null);
                         setForgotError(null);
                       }}
@@ -1490,7 +1518,7 @@ export default function ConsultaClientePage() {
                     <Button
                       type="button"
                       variant="ghost"
-                      className="justify-start px-0 text-slate-600 hover:text-slate-900"
+                      className="w-full justify-center text-center text-slate-600 hover:text-slate-900"
                       onClick={() => {
                         setFirstAccessOpen(true);
                         setFirstAccessStep("request");
@@ -1498,6 +1526,7 @@ export default function ConsultaClientePage() {
                         setFirstAccessOtp("");
                         setFirstAccessPassword("");
                         setFirstAccessPasswordConfirm("");
+                        setFirstAccessDestination(null);
                         setFirstAccessInfo(null);
                         setFirstAccessError(null);
                       }}
@@ -1507,7 +1536,7 @@ export default function ConsultaClientePage() {
                     <Button
                       type="button"
                       variant="ghost"
-                      className="justify-start px-0 text-slate-600 hover:text-slate-900"
+                      className="w-full justify-center text-center text-slate-600 hover:text-slate-900"
                       onClick={() => setMostrarAcessoRapido((prev) => !prev)}
                     >
                       {mostrarAcessoRapido
