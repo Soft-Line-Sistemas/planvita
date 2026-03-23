@@ -140,6 +140,8 @@ const CONTRATO_URL = "/docs/contrato.docx";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
 const API_VERSION =
   process.env.NEXT_PUBLIC_API_VERSION || process.env.API_VERSION || "v1";
+const ENABLE_LEGACY_QUICK_ACCESS =
+  process.env.NEXT_PUBLIC_ENABLE_LEGACY_QUICK_ACCESS === "true";
 const ASSINATURA_API_BASE = API_BASE_URL
   ? `${API_BASE_URL}/${API_VERSION}`
   : undefined;
@@ -297,18 +299,39 @@ export default function ConsultaClientePage() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const modo = params.get("modo");
-    const loginHint = params.get("login") || "";
+    const loginHint = (params.get("login") || "").trim();
+    const tokenFromUrl = (params.get("token") || "").trim();
+    const tenantFromUrl = (params.get("tenant") || "").trim().toLowerCase();
+
+    if (tenantFromUrl) {
+      setTenantSelecionado(tenantFromUrl);
+      document.cookie = `tenant=${tenantFromUrl}; path=/; max-age=31536000; SameSite=Lax`;
+    }
 
     if (modo === "primeiro-acesso") {
       setFirstAccessOpen(true);
-      setFirstAccessStep("request");
-      if (loginHint) setFirstAccessLogin(loginHint);
+      setFirstAccessStep(tokenFromUrl ? "setPassword" : "request");
+      if (tokenFromUrl) {
+        setFirstAccessVerificationToken(tokenFromUrl);
+        setFirstAccessInfo("Link validado. Defina sua nova senha.");
+      }
+      if (loginHint) {
+        setFirstAccessLogin(loginHint);
+        setLoginValue(loginHint);
+      }
     }
 
     if (modo === "reset") {
       setForgotOpen(true);
-      setForgotStep("request");
-      if (loginHint) setForgotLogin(loginHint);
+      setForgotStep(tokenFromUrl ? "setPassword" : "request");
+      if (tokenFromUrl) {
+        setForgotVerificationToken(tokenFromUrl);
+        setForgotInfo("Link validado. Defina sua nova senha.");
+      }
+      if (loginHint) {
+        setForgotLogin(loginHint);
+        setLoginValue(loginHint);
+      }
     }
   }, []);
 
@@ -647,13 +670,19 @@ export default function ConsultaClientePage() {
         password: firstAccessPassword,
       });
 
-      setFirstAccessInfo("Senha criada com sucesso. Entrando...");
-      await api.post("/auth/login", {
-        login: firstAccessLogin.trim(),
-        password: firstAccessPassword,
-        audience: "cliente",
-      });
-      await carregarClienteAutenticado();
+      const loginForAutoLogin = firstAccessLogin.trim();
+      if (loginForAutoLogin) {
+        setFirstAccessInfo("Senha criada com sucesso. Entrando...");
+        await api.post("/auth/login", {
+          login: loginForAutoLogin,
+          password: firstAccessPassword,
+          audience: "cliente",
+        });
+        await carregarClienteAutenticado();
+      } else {
+        setLoginValue("");
+        setSenhaValue("");
+      }
       setFirstAccessOpen(false);
     } catch (err: unknown) {
       const errorObject = err as {
@@ -1083,6 +1112,7 @@ export default function ConsultaClientePage() {
             if (!open) {
               setFirstAccessStep("request");
               setFirstAccessOtp("");
+              setFirstAccessVerificationToken("");
               setFirstAccessPassword("");
               setFirstAccessPasswordConfirm("");
               setFirstAccessDestination(null);
@@ -1255,6 +1285,7 @@ export default function ConsultaClientePage() {
             if (!open) {
               setForgotStep("request");
               setForgotOtp("");
+              setForgotVerificationToken("");
               setForgotPassword("");
               setForgotPasswordConfirm("");
               setForgotDestination(null);
@@ -1533,22 +1564,24 @@ export default function ConsultaClientePage() {
                     >
                       Primeiro acesso / Criar senha
                     </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="w-full justify-center text-center text-slate-600 hover:text-slate-900"
-                      onClick={() => setMostrarAcessoRapido((prev) => !prev)}
-                    >
-                      {mostrarAcessoRapido
-                        ? "Ocultar acesso rápido"
-                        : "Acesso rápido (legado) por CPF"}
-                    </Button>
+                    {ENABLE_LEGACY_QUICK_ACCESS && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="w-full justify-center text-center text-slate-600 hover:text-slate-900"
+                        onClick={() => setMostrarAcessoRapido((prev) => !prev)}
+                      >
+                        {mostrarAcessoRapido
+                          ? "Ocultar acesso rápido"
+                          : "Acesso rápido (legado) por CPF"}
+                      </Button>
+                    )}
                   </div>
                 </form>
               </CardContent>
             </Card>
 
-            {mostrarAcessoRapido && (
+            {ENABLE_LEGACY_QUICK_ACCESS && mostrarAcessoRapido && (
               <Card className="shadow-lg border-slate-200">
                 <CardHeader>
                   <CardTitle>Acesso rápido (legado)</CardTitle>

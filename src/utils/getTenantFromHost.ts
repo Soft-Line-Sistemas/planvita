@@ -16,11 +16,7 @@ export default function getTenantFromHost(): string | null {
       const subdomain = parts.slice(0, -3).join(".");
       return subdomain === "www" ? null : subdomain;
     }
-    return null;
   }
-
-  // domínio sem subdomínio explícito
-  if (host === "localhost") return null;
 
   const urlParams = new URLSearchParams(window.location.search);
   const tenantParam = urlParams.get("tenant");
