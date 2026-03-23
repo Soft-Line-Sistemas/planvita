@@ -101,6 +101,9 @@ const ContasFinanceiro: React.FC = () => {
 
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>("todas");
   const [filtroTipo, setFiltroTipo] = useState<TipoConta | "todas">("todas");
+  const [filtroPeriodo, setFiltroPeriodo] = useState<"mensal" | "anual">(
+    "mensal",
+  );
   const [mostrarModalNovaConta, setMostrarModalNovaConta] = useState(false);
   const [tipoContaNova, setTipoContaNova] = useState<TipoConta>("Pagar");
   const [modoModalConta, setModoModalConta] = useState<"criar" | "editar">(
@@ -176,6 +179,15 @@ const ContasFinanceiro: React.FC = () => {
       }
       if (!matchStatus) return false;
 
+      const vencimento = new Date(conta.dataVencimento);
+      const hoje = new Date();
+      const matchPeriodo =
+        filtroPeriodo === "mensal"
+          ? vencimento.getMonth() === hoje.getMonth() &&
+            vencimento.getFullYear() === hoje.getFullYear()
+          : vencimento.getFullYear() === hoje.getFullYear();
+      if (!matchPeriodo) return false;
+
       // Busca Textual
       if (termoBusca) {
         const termo = termoBusca.toLowerCase();
@@ -203,7 +215,7 @@ const ContasFinanceiro: React.FC = () => {
     });
 
     return resultado;
-  }, [contas, filtroStatus, filtroTipo, termoBusca, ordenacao]);
+  }, [contas, filtroStatus, filtroTipo, filtroPeriodo, termoBusca, ordenacao]);
 
   // Paginação
   const totalPaginas = Math.ceil(contasFiltradas.length / itensPorPagina);
@@ -754,7 +766,22 @@ const ContasFinanceiro: React.FC = () => {
         </div>
 
         {/* Filtro tipo */}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3 items-center justify-between">
+          <div className="flex flex-wrap gap-3">
+            {(["mensal", "anual"] as const).map((periodo) => (
+              <button
+                key={periodo}
+                onClick={() => setFiltroPeriodo(periodo)}
+                className={`px-4 py-1.5 rounded-full text-sm border transition ${
+                  filtroPeriodo === periodo
+                    ? "bg-sky-600 text-white border-sky-600"
+                    : "border-gray-200 text-gray-600 bg-white hover:bg-gray-50"
+                }`}
+              >
+                {periodo === "mensal" ? "Mensal" : "Anual"}
+              </button>
+            ))}
+          </div>
           {(["todas", "Pagar", "Receber"] as const).map((tipo) => (
             <button
               key={tipo}

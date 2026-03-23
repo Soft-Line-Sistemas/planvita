@@ -1,6 +1,7 @@
 import api from "@/utils/api";
 import {
   ContaFinanceira,
+  RecorrenciaFinanceira,
   StatusFinanceiro,
   TipoConta,
 } from "@/types/Financeiro";
@@ -31,6 +32,18 @@ type ContaFinanceiraApi = {
   pixExpiration?: string | null;
   metodoPagamento?: string | null;
   dataVencimento?: string | null;
+};
+
+type RecorrenciaFinanceiraApi = {
+  asaasSubscriptionId: string;
+  clienteId: number | null;
+  clienteNome?: string | null;
+  statusAtual?: string | null;
+  valorAtual?: number | null;
+  proximoVencimento?: string | null;
+  ultimaLiquidacao?: string | null;
+  aberto?: boolean;
+  totalPagas?: number;
 };
 
 const normalizarStatus = (valor?: string | null): StatusFinanceiro => {
@@ -94,6 +107,20 @@ const mapContaFinanceira = (payload: ContaFinanceiraApi): ContaFinanceira => {
   };
 };
 
+const mapRecorrencia = (
+  payload: RecorrenciaFinanceiraApi,
+): RecorrenciaFinanceira => ({
+  asaasSubscriptionId: payload.asaasSubscriptionId,
+  clienteId: payload.clienteId ?? null,
+  clienteNome: payload.clienteNome ?? "Cliente não informado",
+  statusAtual: (payload.statusAtual ?? "PENDENTE").toUpperCase(),
+  valorAtual: Number(payload.valorAtual ?? 0),
+  proximoVencimento: payload.proximoVencimento ?? null,
+  ultimaLiquidacao: payload.ultimaLiquidacao ?? null,
+  aberto: Boolean(payload.aberto ?? false),
+  totalPagas: Number(payload.totalPagas ?? 0),
+});
+
 export const fetchContasFinanceiras = async (): Promise<ContaFinanceira[]> => {
   const { data } = await api.get<ContaFinanceiraApi[]>("/financeiro/contas");
   if (!Array.isArray(data)) return [];
@@ -153,6 +180,21 @@ export const reconsultarContaReceber = async (id: number | string) => {
     `/financeiro/contas/receber/${id}/reconsulta`,
   );
   return mapContaFinanceira(data);
+};
+
+export const fetchRecorrenciasFinanceiras = async (): Promise<
+  RecorrenciaFinanceira[]
+> => {
+  const { data } = await api.get<RecorrenciaFinanceiraApi[]>(
+    "/financeiro/recorrencias",
+  );
+  if (!Array.isArray(data)) return [];
+  return data.map(mapRecorrencia);
+};
+
+export const sincronizarRecorrenciasFinanceiras = async () => {
+  const { data } = await api.post("/financeiro/recorrencias/sincronizar");
+  return data as { processed: number; inserted: number; updated: number };
 };
 
 export type AtualizarContaPagarPayload = Partial<NovaContaPagarPayload>;

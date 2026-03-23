@@ -34,6 +34,7 @@ import { useRelatorioFinanceiro } from "@/hooks/queries/useRelatorioFinanceiro";
 import { gerarBoletoPDF } from "@/utils/boleto";
 import EmissaoBoleto from "@/components/Financeiro/EmissaoBoleto";
 import { AsaasWingsMark } from "@/components/ui/AsaasWingsMark";
+import RecorrenciasFinanceiro from "@/components/Financeiro/RecorrenciasFinanceiro";
 
 const GestaoFinanceira = () => {
   const {
@@ -255,6 +256,11 @@ const GestaoFinanceira = () => {
         id: "asaas",
         nome: "Integração Asaas",
         icon: CreditCard,
+      },
+      {
+        id: "recorrencias",
+        nome: "Recorrências",
+        icon: Calendar,
       },
     ];
   }, []);
@@ -935,6 +941,7 @@ const GestaoFinanceira = () => {
         {abaAtiva === "boletos" && <EmissaoBoleto />}
         {abaAtiva === "relatoriosFinanceiro" && <RelatorioFinanceiro />}
         {abaAtiva === "asaas" && <AsaasPaymentsPanel />}
+        {abaAtiva === "recorrencias" && <RecorrenciasFinanceiro />}
       </div>
 
       {/* Modal de Detalhes do Pagamento */}
