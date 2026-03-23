@@ -35,9 +35,14 @@ type ContaFinanceiraApi = {
 };
 
 type RecorrenciaFinanceiraApi = {
-  asaasSubscriptionId: string;
-  clienteId: number | null;
+  titularId: number;
   clienteNome?: string | null;
+  referenciaExterna?: string | null;
+  asaasSubscriptionId?: string | null;
+  asaasSubscriptionIdLocal?: string | null;
+  asaasSubscriptionIdProvider?: string | null;
+  temReferenciaLocal?: boolean;
+  temReferenciaAsaas?: boolean;
   statusAtual?: string | null;
   valorAtual?: number | null;
   proximoVencimento?: string | null;
@@ -110,9 +115,15 @@ const mapContaFinanceira = (payload: ContaFinanceiraApi): ContaFinanceira => {
 const mapRecorrencia = (
   payload: RecorrenciaFinanceiraApi,
 ): RecorrenciaFinanceira => ({
-  asaasSubscriptionId: payload.asaasSubscriptionId,
-  clienteId: payload.clienteId ?? null,
+  titularId: Number(payload.titularId),
   clienteNome: payload.clienteNome ?? "Cliente não informado",
+  referenciaExterna:
+    payload.referenciaExterna ?? `titular-${payload.titularId}`,
+  asaasSubscriptionId: payload.asaasSubscriptionId ?? null,
+  asaasSubscriptionIdLocal: payload.asaasSubscriptionIdLocal ?? null,
+  asaasSubscriptionIdProvider: payload.asaasSubscriptionIdProvider ?? null,
+  temReferenciaLocal: Boolean(payload.temReferenciaLocal ?? false),
+  temReferenciaAsaas: Boolean(payload.temReferenciaAsaas ?? false),
   statusAtual: (payload.statusAtual ?? "PENDENTE").toUpperCase(),
   valorAtual: Number(payload.valorAtual ?? 0),
   proximoVencimento: payload.proximoVencimento ?? null,
@@ -195,6 +206,13 @@ export const fetchRecorrenciasFinanceiras = async (): Promise<
 export const sincronizarRecorrenciasFinanceiras = async () => {
   const { data } = await api.post("/financeiro/recorrencias/sincronizar");
   return data as { processed: number; inserted: number; updated: number };
+};
+
+export const gerarRecorrenciaParaTitular = async (titularId: number) => {
+  const { data } = await api.post(
+    `/financeiro/recorrencias/titular/${titularId}/gerar`,
+  );
+  return data as { titularId: number; asaasSubscriptionId: string | null };
 };
 
 export type AtualizarContaPagarPayload = Partial<NovaContaPagarPayload>;

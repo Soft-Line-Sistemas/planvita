@@ -3,7 +3,10 @@
 import { useMemo } from "react";
 import { Loader2, RefreshCcw } from "lucide-react";
 import { useRecorrenciasFinanceiras } from "@/hooks/queries/useRecorrenciasFinanceiras";
-import { useSincronizarRecorrenciasFinanceiras } from "@/hooks/mutations/useContaFinanceiraMutations";
+import {
+  useGerarRecorrenciaTitular,
+  useSincronizarRecorrenciasFinanceiras,
+} from "@/hooks/mutations/useContaFinanceiraMutations";
 import { Button } from "@/components/ui/button";
 
 const formatDate = (value?: string | null) => {
@@ -23,6 +26,7 @@ const formatCurrency = (value: number) =>
 export default function RecorrenciasFinanceiro() {
   const { data, isLoading, isError, error } = useRecorrenciasFinanceiras();
   const syncMutation = useSincronizarRecorrenciasFinanceiras();
+  const gerarMutation = useGerarRecorrenciaTitular();
 
   const recorrencias = useMemo(() => data ?? [], [data]);
 
@@ -84,6 +88,9 @@ export default function RecorrenciasFinanceiro() {
                 Subscription
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">
+                Referência
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">
                 Status
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">
@@ -95,16 +102,48 @@ export default function RecorrenciasFinanceiro() {
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">
                 Última baixa
               </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">
+                Ação
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {recorrencias.map((item) => (
-              <tr key={item.asaasSubscriptionId}>
+              <tr key={item.titularId}>
                 <td className="px-4 py-3 text-sm text-gray-900">
                   {item.clienteNome}
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-600">
-                  {item.asaasSubscriptionId}
+                  {item.asaasSubscriptionId || "—"}
+                </td>
+                <td className="px-4 py-3 text-xs text-gray-600">
+                  <div className="space-y-1">
+                    <p>{item.referenciaExterna}</p>
+                    <p>
+                      Local:{" "}
+                      <span
+                        className={
+                          item.temReferenciaLocal
+                            ? "text-green-700 font-medium"
+                            : "text-amber-700 font-medium"
+                        }
+                      >
+                        {item.temReferenciaLocal ? "OK" : "Pendente"}
+                      </span>
+                    </p>
+                    <p>
+                      Asaas:{" "}
+                      <span
+                        className={
+                          item.temReferenciaAsaas
+                            ? "text-green-700 font-medium"
+                            : "text-amber-700 font-medium"
+                        }
+                      >
+                        {item.temReferenciaAsaas ? "OK" : "Pendente"}
+                      </span>
+                    </p>
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-sm">
                   <span
@@ -126,12 +165,29 @@ export default function RecorrenciasFinanceiro() {
                 <td className="px-4 py-3 text-sm text-gray-700">
                   {formatDate(item.ultimaLiquidacao)}
                 </td>
+                <td className="px-4 py-3 text-sm">
+                  <Button
+                    size="sm"
+                    onClick={() => gerarMutation.mutate(item.titularId)}
+                    disabled={
+                      gerarMutation.isPending ||
+                      item.temReferenciaAsaas ||
+                      item.temReferenciaLocal
+                    }
+                  >
+                    {gerarMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      "Gerar recorrência"
+                    )}
+                  </Button>
+                </td>
               </tr>
             ))}
             {!recorrencias.length && (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={8}
                   className="px-4 py-8 text-center text-sm text-gray-500"
                 >
                   Nenhuma recorrência encontrada.

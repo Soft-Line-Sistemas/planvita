@@ -7,6 +7,7 @@ import {
   NovaContaReceberPayload,
   reconsultarContaReceber,
   sincronizarRecorrenciasFinanceiras,
+  gerarRecorrenciaParaTitular,
   atualizarContaFinanceira,
   deleteContaFinanceira,
 } from "@/services/financeiro/contas.service";
@@ -160,6 +161,30 @@ export const useSincronizarRecorrenciasFinanceiras = () => {
     },
     onError: () => {
       toast.error("Não foi possível sincronizar recorrências");
+    },
+  });
+};
+
+export const useGerarRecorrenciaTitular = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (titularId: number) => gerarRecorrenciaParaTitular(titularId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["financeiro", "recorrencias"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["financeiro", "contas"],
+      });
+      toast.success("Recorrência gerada com sucesso");
+    },
+    onError: (error: unknown) => {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Não foi possível gerar recorrência";
+      toast.error(message);
     },
   });
 };
