@@ -2,6 +2,7 @@ import api from "@/utils/api";
 
 export type ContaFinanceira = {
   paymentUrl: string | null;
+  pixQrCode: string | null;
   id: number;
   descricao: string;
   valor: number;
@@ -33,6 +34,7 @@ export const listarContasDoCliente = async (
       status: conta.status ?? "PENDENTE",
       tipo: conta.tipo,
       paymentUrl: conta.paymentUrl ?? null,
+      pixQrCode: conta.pixQrCode ?? null,
       asaasPaymentId: conta.asaasPaymentId,
       asaasSubscriptionId: conta.asaasSubscriptionId,
     }));
