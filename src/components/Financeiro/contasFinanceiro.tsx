@@ -119,6 +119,7 @@ const ContasFinanceiro: React.FC = () => {
     fornecedor: "",
     clienteId: "",
     clienteNome: "",
+    integrarAsaas: false,
   });
   const [acaoAsaasConfirmacao, setAcaoAsaasConfirmacao] = useState<{
     conta: ContaFinanceira;
@@ -360,6 +361,7 @@ const ContasFinanceiro: React.FC = () => {
       fornecedor: "",
       clienteId: "",
       clienteNome: "",
+      integrarAsaas: false,
     });
   };
 
@@ -412,6 +414,7 @@ const ContasFinanceiro: React.FC = () => {
             valor: valorNumerico,
             vencimento: formNovaConta.vencimento,
             clienteId,
+            integrarAsaas: formNovaConta.integrarAsaas,
           },
         },
         {
@@ -437,6 +440,7 @@ const ContasFinanceiro: React.FC = () => {
       clienteId:
         conta.tipo === "Receber" ? conta.clienteId?.toString() || "" : "",
       clienteNome: conta.tipo === "Receber" ? conta.cliente?.nome || "" : "",
+      integrarAsaas: Boolean(conta.asaasPaymentId || conta.asaasSubscriptionId),
     });
   };
 
@@ -782,21 +786,25 @@ const ContasFinanceiro: React.FC = () => {
               </button>
             ))}
           </div>
-          {(["todas", "Pagar", "Receber"] as const).map((tipo) => (
-            <button
-              key={tipo}
-              onClick={() =>
-                setFiltroTipo(tipo === "todas" ? "todas" : (tipo as TipoConta))
-              }
-              className={`px-4 py-1.5 rounded-full text-sm border transition ${
-                filtroTipo === tipo
-                  ? "bg-green-600 text-white border-green-600"
-                  : "border-gray-200 text-gray-600 bg-white hover:bg-gray-50"
-              }`}
-            >
-              {tipo === "todas" ? "Todas as contas" : `Contas a ${tipo}`}
-            </button>
-          ))}
+          <div className="flex flex-wrap gap-3 justify-end">
+            {(["todas", "Pagar", "Receber"] as const).map((tipo) => (
+              <button
+                key={tipo}
+                onClick={() =>
+                  setFiltroTipo(
+                    tipo === "todas" ? "todas" : (tipo as TipoConta),
+                  )
+                }
+                className={`px-4 py-1.5 rounded-full text-sm border transition ${
+                  filtroTipo === tipo
+                    ? "bg-green-600 text-white border-green-600"
+                    : "border-gray-200 text-gray-600 bg-white hover:bg-gray-50"
+                }`}
+              >
+                {tipo === "todas" ? "Todas as contas" : `Contas a ${tipo}`}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Tabela */}
@@ -1161,6 +1169,7 @@ const ContasFinanceiro: React.FC = () => {
           isLoadingClientes={carregandoClientes}
           buscaCliente={buscaCliente}
           onChangeBuscaCliente={setBuscaCliente}
+          mostrarIntegracaoAsaas={modoModalConta === "criar"}
           erro={erroNovaConta}
           onClearErro={() => setErroNovaConta(null)}
         />
@@ -1251,6 +1260,7 @@ const ModalNovaConta = ({
   isLoadingClientes,
   buscaCliente,
   onChangeBuscaCliente,
+  mostrarIntegracaoAsaas,
   erro,
   onClearErro,
 }: {
@@ -1264,6 +1274,7 @@ const ModalNovaConta = ({
     fornecedor: string;
     clienteId: string;
     clienteNome: string;
+    integrarAsaas: boolean;
   };
   setForm: React.Dispatch<
     React.SetStateAction<{
@@ -1273,6 +1284,7 @@ const ModalNovaConta = ({
       fornecedor: string;
       clienteId: string;
       clienteNome: string;
+      integrarAsaas: boolean;
     }>
   >;
   onClose: () => void;
@@ -1282,6 +1294,7 @@ const ModalNovaConta = ({
   isLoadingClientes: boolean;
   buscaCliente: string;
   onChangeBuscaCliente: (valor: string) => void;
+  mostrarIntegracaoAsaas: boolean;
   erro: string | null;
   onClearErro: () => void;
 }) => {
@@ -1311,7 +1324,11 @@ const ModalNovaConta = ({
                 setForm((prev) => ({
                   ...prev,
                   ...(novoTipo === "Pagar"
-                    ? { clienteId: "", clienteNome: "" }
+                    ? {
+                        clienteId: "",
+                        clienteNome: "",
+                        integrarAsaas: false,
+                      }
                     : { fornecedor: "" }),
                 }));
               }}
@@ -1427,6 +1444,22 @@ const ModalNovaConta = ({
                 <p className="text-xs text-gray-500">
                   Cliente selecionado: {form.clienteNome}
                 </p>
+              )}
+              {mostrarIntegracaoAsaas && (
+                <label className="flex items-center gap-2 text-sm text-gray-700 mt-2">
+                  <input
+                    type="checkbox"
+                    checked={form.integrarAsaas}
+                    onChange={(event) => {
+                      onClearErro();
+                      setForm((prev) => ({
+                        ...prev,
+                        integrarAsaas: event.target.checked,
+                      }));
+                    }}
+                  />
+                  Criar cobrança também no Asaas
+                </label>
               )}
             </div>
           )}
