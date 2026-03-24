@@ -2292,8 +2292,7 @@ function AssinaturaCard({
     const dataUrl = padRef.current.getDataURL();
     if (!dataUrl) return;
 
-    const base64 = dataUrl.split(",")[1];
-    await onSalvar(tipoId, base64);
+    await onSalvar(tipoId, dataUrl);
     setCapturando(false);
   };
 
