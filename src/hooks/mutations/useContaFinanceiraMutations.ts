@@ -8,6 +8,7 @@ import {
   reconsultarContaReceber,
   sincronizarRecorrenciasFinanceiras,
   gerarRecorrenciaParaTitular,
+  cancelarRecorrenciaParaTitular,
   atualizarContaFinanceira,
   deleteContaFinanceira,
 } from "@/services/financeiro/contas.service";
@@ -169,7 +170,10 @@ export const useGerarRecorrenciaTitular = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (titularId: number) => gerarRecorrenciaParaTitular(titularId),
+    mutationFn: (payload: {
+      titularId: number;
+      billingType: "PIX" | "BOLETO" | "CREDIT_CARD";
+    }) => gerarRecorrenciaParaTitular(payload.titularId, payload.billingType),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["financeiro", "recorrencias"],
@@ -184,6 +188,31 @@ export const useGerarRecorrenciaTitular = () => {
         error instanceof Error && error.message
           ? error.message
           : "Não foi possível gerar recorrência";
+      toast.error(message);
+    },
+  });
+};
+
+export const useCancelarRecorrenciaTitular = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (titularId: number) =>
+      cancelarRecorrenciaParaTitular(titularId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["financeiro", "recorrencias"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["financeiro", "contas"],
+      });
+      toast.success("Recorrência cancelada com sucesso");
+    },
+    onError: (error: unknown) => {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Não foi possível cancelar recorrência";
       toast.error(message);
     },
   });

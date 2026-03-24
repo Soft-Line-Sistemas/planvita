@@ -1209,9 +1209,10 @@ const ModalConfirmacaoAsaas = ({
           <p className="flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5" />
             <span>
-              Esta conta está sincronizada com o Asaas. Registrar a ação manual
-              aqui não altera o status no provedor. Prefira usar reconsulta
-              antes de confirmar.
+              Esta conta está sincronizada com o Asaas. Ao confirmar, o sistema
+              também tentará registrar essa ação no provedor para manter os
+              status alinhados. Se houver falha na comunicação com o Asaas, a
+              operação poderá ser rejeitada.
             </span>
           </p>
           {conta.asaasPaymentId && (

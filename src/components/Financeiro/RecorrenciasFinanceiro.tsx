@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Loader2, RefreshCcw } from "lucide-react";
 import { useRecorrenciasFinanceiras } from "@/hooks/queries/useRecorrenciasFinanceiras";
 import {
+  useCancelarRecorrenciaTitular,
   useGerarRecorrenciaTitular,
   useSincronizarRecorrenciasFinanceiras,
 } from "@/hooks/mutations/useContaFinanceiraMutations";
@@ -27,6 +28,10 @@ export default function RecorrenciasFinanceiro() {
   const { data, isLoading, isError, error } = useRecorrenciasFinanceiras();
   const syncMutation = useSincronizarRecorrenciasFinanceiras();
   const gerarMutation = useGerarRecorrenciaTitular();
+  const cancelarMutation = useCancelarRecorrenciaTitular();
+  const [billingByTitular, setBillingByTitular] = useState<
+    Record<number, "PIX" | "BOLETO" | "CREDIT_CARD">
+  >({});
 
   const recorrencias = useMemo(() => data ?? [], [data]);
 
@@ -166,21 +171,64 @@ export default function RecorrenciasFinanceiro() {
                   {formatDate(item.ultimaLiquidacao)}
                 </td>
                 <td className="px-4 py-3 text-sm">
-                  <Button
-                    size="sm"
-                    onClick={() => gerarMutation.mutate(item.titularId)}
-                    disabled={
-                      gerarMutation.isPending ||
-                      item.temReferenciaAsaas ||
-                      item.temReferenciaLocal
-                    }
-                  >
-                    {gerarMutation.isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      "Gerar recorrência"
-                    )}
-                  </Button>
+                  <div className="flex flex-col gap-2">
+                    <select
+                      className="border rounded-md px-2 py-1 text-xs"
+                      value={billingByTitular[item.titularId] ?? "PIX"}
+                      onChange={(event) =>
+                        setBillingByTitular((prev) => ({
+                          ...prev,
+                          [item.titularId]: event.target.value as
+                            | "PIX"
+                            | "BOLETO"
+                            | "CREDIT_CARD",
+                        }))
+                      }
+                      disabled={
+                        item.temReferenciaAsaas || item.temReferenciaLocal
+                      }
+                    >
+                      <option value="PIX">PIX</option>
+                      <option value="BOLETO">Boleto</option>
+                      <option value="CREDIT_CARD">Cartão de crédito</option>
+                    </select>
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        gerarMutation.mutate({
+                          titularId: item.titularId,
+                          billingType:
+                            billingByTitular[item.titularId] ?? "PIX",
+                        })
+                      }
+                      disabled={
+                        gerarMutation.isPending ||
+                        item.temReferenciaAsaas ||
+                        item.temReferenciaLocal
+                      }
+                    >
+                      {gerarMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        "Gerar recorrência"
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => cancelarMutation.mutate(item.titularId)}
+                      disabled={
+                        cancelarMutation.isPending ||
+                        (!item.temReferenciaAsaas && !item.temReferenciaLocal)
+                      }
+                    >
+                      {cancelarMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        "Cancelar recorrência"
+                      )}
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}

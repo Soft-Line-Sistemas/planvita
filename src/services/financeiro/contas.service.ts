@@ -208,11 +208,30 @@ export const sincronizarRecorrenciasFinanceiras = async () => {
   return data as { processed: number; inserted: number; updated: number };
 };
 
-export const gerarRecorrenciaParaTitular = async (titularId: number) => {
+export const gerarRecorrenciaParaTitular = async (
+  titularId: number,
+  billingType: "PIX" | "BOLETO" | "CREDIT_CARD" = "PIX",
+) => {
   const { data } = await api.post(
     `/financeiro/recorrencias/titular/${titularId}/gerar`,
+    { billingType },
   );
-  return data as { titularId: number; asaasSubscriptionId: string | null };
+  return data as {
+    titularId: number;
+    asaasSubscriptionId: string | null;
+    billingType: "PIX" | "BOLETO" | "CREDIT_CARD";
+  };
+};
+
+export const cancelarRecorrenciaParaTitular = async (titularId: number) => {
+  const { data } = await api.post(
+    `/financeiro/recorrencias/titular/${titularId}/cancelar`,
+  );
+  return data as {
+    titularId: number;
+    asaasSubscriptionId: string | null;
+    cancelled: boolean;
+  };
 };
 
 export type AtualizarContaPagarPayload = Partial<NovaContaPagarPayload>;

@@ -19,6 +19,28 @@ const STATUS_OPTIONS: Array<AsaasPaymentStatus | "all"> = [
   "FAILED",
 ];
 
+const statusLabel = (status: AsaasPaymentStatus | "all") => {
+  switch (status) {
+    case "PENDING":
+      return "Pendente";
+    case "RECEIVED":
+      return "Recebido";
+    case "CONFIRMED":
+      return "Confirmado";
+    case "OVERDUE":
+      return "Vencido";
+    case "REFUNDED":
+      return "Estornado";
+    case "CANCELLED":
+      return "Cancelado";
+    case "FAILED":
+      return "Falhou";
+    case "all":
+    default:
+      return "Todos os status";
+  }
+};
+
 const statusBadge = (status: AsaasPaymentStatus) => {
   switch (status) {
     case "RECEIVED":
@@ -167,7 +189,7 @@ export const AsaasPaymentsPanel = () => {
           >
             {STATUS_OPTIONS.map((status) => (
               <option key={status} value={status}>
-                {status === "all" ? "Todos os status" : status}
+                {statusLabel(status)}
               </option>
             ))}
           </select>
@@ -240,7 +262,7 @@ export const AsaasPaymentsPanel = () => {
                       <span
                         className={`px-3 py-1 text-xs font-semibold rounded-full inline-flex ${statusBadge(payment.status)}`}
                       >
-                        {payment.status}
+                        {statusLabel(payment.status)}
                       </span>
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600">
