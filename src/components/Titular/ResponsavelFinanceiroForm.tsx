@@ -6,6 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Phone, Mail } from "lucide-react";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   formatCPF,
   formatPhone,
   formatWhatsApp,
@@ -22,6 +29,8 @@ interface ResponsavelFormValues {
   email?: string;
   telefone?: string;
   whatsapp?: string;
+  situacaoConjugal?: string;
+  profissao?: string;
 }
 
 interface Props {
@@ -115,6 +124,57 @@ export const ResponsavelFinanceiroForm = ({
                 <span className="text-red-500">*</span>
               </Label>
               <Input id="parentesco" {...form.register("parentesco")} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label
+                htmlFor="situacaoConjugalResp"
+                className="flex items-center gap-1"
+              >
+                Situação conjugal
+                <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={form.watch("situacaoConjugal") || ""}
+                onValueChange={(value) =>
+                  form.setValue("situacaoConjugal", value)
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem>
+                  <SelectItem value="Casado(a)">Casado(a)</SelectItem>
+                  <SelectItem value="União estável">União estável</SelectItem>
+                  <SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem>
+                  <SelectItem value="Separado(a)">Separado(a)</SelectItem>
+                  <SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem>
+                </SelectContent>
+              </Select>
+              {form.formState.errors.situacaoConjugal && (
+                <p className="text-sm text-red-500 mt-1">
+                  {String(form.formState.errors.situacaoConjugal.message)}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <Label
+                htmlFor="profissaoResp"
+                className="flex items-center gap-1"
+              >
+                Profissão
+                <span className="text-red-500">*</span>
+              </Label>
+              <Input id="profissaoResp" {...form.register("profissao")} />
+              {form.formState.errors.profissao && (
+                <p className="text-sm text-red-500 mt-1">
+                  {String(form.formState.errors.profissao.message)}
+                </p>
+              )}
             </div>
           </div>
 
