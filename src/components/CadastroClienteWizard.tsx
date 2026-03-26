@@ -136,9 +136,13 @@ export function CadastroClienteWizard({
     const cpfDigits = String(dep.cpf ?? "").replace(/\D/g, "");
 
     if (!nome) errors.nome = "Nome do dependente é obrigatório";
+    else if (nome.length > 1000)
+      errors.nome = "Nome do dependente deve ter no máximo 1000 caracteres";
     if (!dataNascimento)
       errors.dataNascimento = "Data de nascimento é obrigatória";
     if (!parentesco) errors.parentesco = "Parentesco é obrigatório";
+    else if (parentesco.length > 1000)
+      errors.parentesco = "Parentesco deve ter no máximo 1000 caracteres";
     else if (!RELATIONSHIP_OPTIONS.includes(parentesco as never)) {
       errors.parentesco = "Selecione um parentesco válido";
     }

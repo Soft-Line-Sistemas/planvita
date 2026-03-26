@@ -18,14 +18,21 @@ const calcularIdade = (dataNascimento?: string): number | null => {
 const normalizeString = (value: unknown) =>
   typeof value === "string" ? value.trim() : "";
 
-const requiredText = (message: string) =>
-  z.preprocess(normalizeString, z.string().min(1, message));
+const requiredText = (message: string, max = 1000) =>
+  z.preprocess(
+    normalizeString,
+    z.string().min(1, message).max(max, `Máximo de ${max} caracteres`),
+  );
 
-const optionalText = z.preprocess((value) => {
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}, z.string().optional());
+const optionalText = (max = 1000) =>
+  z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return undefined;
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : undefined;
+    },
+    z.string().max(max, `Máximo de ${max} caracteres`).optional(),
+  );
 
 const requiredDigits = (minDigits: number, message: string) =>
   z.preprocess(
@@ -35,7 +42,7 @@ const requiredDigits = (minDigits: number, message: string) =>
     }),
   );
 
-const optionalEmail = optionalText.refine(
+const optionalEmail = optionalText(1000).refine(
   (value) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
   { message: "E-mail inválido" },
 );
@@ -46,17 +53,17 @@ const sexoField = requiredText("Sexo é obrigatório").refine(
 );
 
 const dadosPessoaisSchema = z.object({
-  nomeCompleto: requiredText("Nome completo é obrigatório"),
+  nomeCompleto: requiredText("Nome completo é obrigatório", 1000),
   cpf: requiredDigits(11, "CPF inválido"),
   dataNascimento: requiredText("Data de nascimento é obrigatória"),
   sexo: sexoField,
-  rg: requiredText("RG é obrigatório"),
-  naturalidade: requiredText("Naturalidade é obrigatória"),
-  situacaoConjugal: requiredText("Situação conjugal é obrigatória"),
-  profissao: requiredText("Profissão é obrigatória"),
+  rg: requiredText("RG é obrigatório", 50),
+  naturalidade: requiredText("Naturalidade é obrigatória", 191),
+  situacaoConjugal: requiredText("Situação conjugal é obrigatória", 191),
+  profissao: requiredText("Profissão é obrigatória", 191),
   telefone: requiredDigits(10, "Telefone inválido"),
   whatsapp: requiredDigits(10, "WhatsApp inválido"),
-  email: requiredText("E-mail é obrigatório").refine(
+  email: requiredText("E-mail é obrigatório", 1000).refine(
     (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
     { message: "E-mail inválido" },
   ),
@@ -64,41 +71,41 @@ const dadosPessoaisSchema = z.object({
 
 const enderecoSchema = z.object({
   cep: requiredDigits(8, "CEP é obrigatório"),
-  uf: requiredText("UF é obrigatória"),
-  cidade: requiredText("Cidade é obrigatória"),
-  bairro: requiredText("Bairro é obrigatório"),
-  logradouro: requiredText("Logradouro é obrigatório"),
-  complemento: z.string().optional(),
-  numero: requiredText("Número é obrigatório"),
-  pontoReferencia: requiredText("Ponto de referência é obrigatório"),
+  uf: requiredText("UF é obrigatória", 1000),
+  cidade: requiredText("Cidade é obrigatória", 1000),
+  bairro: requiredText("Bairro é obrigatório", 1000),
+  logradouro: requiredText("Logradouro é obrigatório", 1000),
+  complemento: optionalText(1000),
+  numero: requiredText("Número é obrigatório", 1000),
+  pontoReferencia: requiredText("Ponto de referência é obrigatório", 255),
 });
 
 const responsavelFinanceiroSchema = z
   .object({
     usarMesmosDados: z.boolean(),
-    nomeCompleto: optionalText,
-    cpf: optionalText,
-    rg: optionalText,
-    dataNascimento: optionalText,
-    sexo: optionalText.refine(
+    nomeCompleto: optionalText(1000),
+    cpf: optionalText(1000),
+    rg: optionalText(50),
+    dataNascimento: optionalText(10),
+    sexo: optionalText(20).refine(
       (value) => !value || value === "Masculino" || value === "Feminino",
       { message: "Selecione uma opção válida para sexo" },
     ),
-    naturalidade: optionalText,
-    parentesco: optionalText,
+    naturalidade: optionalText(191),
+    parentesco: optionalText(1000),
     email: optionalEmail,
-    telefone: optionalText,
-    whatsapp: optionalText,
-    situacaoConjugal: optionalText,
-    profissao: optionalText,
-    cep: optionalText,
-    uf: optionalText,
-    cidade: optionalText,
-    bairro: optionalText,
-    logradouro: optionalText,
-    complemento: optionalText,
-    numero: optionalText,
-    pontoReferencia: optionalText,
+    telefone: optionalText(1000),
+    whatsapp: optionalText(1000),
+    situacaoConjugal: optionalText(191),
+    profissao: optionalText(191),
+    cep: optionalText(20),
+    uf: optionalText(5),
+    cidade: optionalText(191),
+    bairro: optionalText(191),
+    logradouro: optionalText(191),
+    complemento: optionalText(191),
+    numero: optionalText(50),
+    pontoReferencia: optionalText(255),
   })
   .superRefine((data, ctx) => {
     if (data.usarMesmosDados) return;
@@ -296,11 +303,11 @@ const responsavelFinanceiroSchema = z
 const dependentesSchema = z.object({
   dependentes: z.array(
     z.object({
-      nome: z.string().min(2, "Nome é obrigatório"),
-      idade: z.string().min(1, "Idade é obrigatória"),
-      parentesco: z.string().min(1, "Parentesco é obrigatório"),
-      telefone: z.string().min(10, "Telefone é obrigatório"),
-      cpf: z.string().min(11, "CPF é obrigatório"),
+      nome: requiredText("Nome é obrigatório", 1000),
+      idade: requiredText("Idade é obrigatória", 3),
+      parentesco: requiredText("Parentesco é obrigatório", 1000),
+      telefone: requiredDigits(10, "Telefone é obrigatório"),
+      cpf: requiredDigits(11, "CPF é obrigatório"),
     }),
   ),
 });
