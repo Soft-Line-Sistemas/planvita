@@ -289,6 +289,31 @@ export default function ConsultaClientePage() {
     codigo: string;
   } | null>(null);
 
+  const resetFirstAccessState = useCallback(() => {
+    setFirstAccessStep("request");
+    setFirstAccessOtp("");
+    setFirstAccessVerificationToken("");
+    setFirstAccessPassword("");
+    setFirstAccessPasswordConfirm("");
+    setFirstAccessDestination(null);
+    setFirstAccessInfo(null);
+    setFirstAccessError(null);
+  }, []);
+
+  const clearFirstAccessQueryParams = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const modo = url.searchParams.get("modo");
+    if (modo !== "primeiro-acesso") return;
+
+    url.searchParams.delete("modo");
+    url.searchParams.delete("login");
+    url.searchParams.delete("token");
+    const query = url.searchParams.toString();
+    const nextUrl = `${url.pathname}${query ? `?${query}` : ""}${url.hash}`;
+    window.history.replaceState({}, "", nextUrl);
+  }, []);
+
   useEffect(() => {
     if (subdomainFromHost) {
       setTenantSelecionado(subdomainFromHost);
@@ -684,6 +709,8 @@ export default function ConsultaClientePage() {
         setSenhaValue("");
       }
       setFirstAccessOpen(false);
+      resetFirstAccessState();
+      clearFirstAccessQueryParams();
     } catch (err: unknown) {
       const errorObject = err as {
         response?: { data?: { message?: unknown } };
@@ -1110,14 +1137,8 @@ export default function ConsultaClientePage() {
           onOpenChange={(open) => {
             setFirstAccessOpen(open);
             if (!open) {
-              setFirstAccessStep("request");
-              setFirstAccessOtp("");
-              setFirstAccessVerificationToken("");
-              setFirstAccessPassword("");
-              setFirstAccessPasswordConfirm("");
-              setFirstAccessDestination(null);
-              setFirstAccessInfo(null);
-              setFirstAccessError(null);
+              resetFirstAccessState();
+              clearFirstAccessQueryParams();
             }
           }}
         >
