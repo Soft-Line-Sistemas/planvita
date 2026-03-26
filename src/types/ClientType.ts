@@ -72,6 +72,8 @@ export interface Cliente {
   email: string;
   telefone: string;
   whatsapp?: string;
+  situacaoConjugal?: string;
+  profissao?: string;
   dataNascimento: string;
   idade: number;
   endereco: Endereco;
@@ -82,6 +84,15 @@ export interface Cliente {
   diaVencimento: number;
   plano: Plano;
   consultor: Consultor;
+  responsavelFinanceiro?: {
+    id: string;
+    nome: string;
+    email: string;
+    telefone: string;
+    relacionamento: string;
+    situacaoConjugal?: string;
+    profissao?: string;
+  };
   dependentes: Dependente[];
   pagamentos: Pagamento[];
 }

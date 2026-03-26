@@ -18,6 +18,8 @@ const dadosPessoaisSchema = z.object({
   nomeCompleto: z.string().min(2, "Nome completo é obrigatório"),
   cpf: z.string().min(11, "CPF inválido"),
   dataNascimento: z.string().min(10, "Data de nascimento é obrigatória"),
+  situacaoConjugal: z.string().min(2, "Situação conjugal é obrigatória"),
+  profissao: z.string().min(2, "Profissão é obrigatória"),
   telefone: z.string().min(10, "Telefone inválido"),
   whatsapp: z.string().min(11, "WhatsApp inválido"),
   email: z.string().email("E-mail inválido"),
@@ -44,11 +46,19 @@ const responsavelFinanceiroSchema = z
     email: z.string().optional(),
     telefone: z.string().optional(),
     whatsapp: z.string().optional(),
+    situacaoConjugal: z.string().optional(),
+    profissao: z.string().optional(),
   })
   .refine(
     (data) => {
       if (data.usarMesmosDados) return true;
-      return !!data.nomeCompleto && !!data.cpf && !!data.parentesco;
+      return (
+        !!data.nomeCompleto &&
+        !!data.cpf &&
+        !!data.parentesco &&
+        !!data.situacaoConjugal &&
+        !!data.profissao
+      );
     },
     {
       message: "Preencha os campos obrigatórios ou marque 'Usar mesmos dados'",

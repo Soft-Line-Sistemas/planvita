@@ -50,6 +50,8 @@ type TitularApi = {
   telefone?: string | null;
   cpf?: string | null;
   dataNascimento?: string | null;
+  situacaoConjugal?: string | null;
+  profissao?: string | null;
   statusPlano?: string | null;
   dataContratacao?: string | null;
   cep?: string | null;
@@ -60,6 +62,15 @@ type TitularApi = {
   numero?: string | null;
   complemento?: string | null;
   dependentes?: DependenteApi[];
+  corresponsaveis?: Array<{
+    id: number;
+    nome: string;
+    email: string;
+    telefone?: string | null;
+    relacionamento: string;
+    situacaoConjugal?: string | null;
+    profissao?: string | null;
+  }> | null;
   plano?: PlanoApi | null;
   pagamentos?: PagamentoApi[];
   vendedor?: {
@@ -186,6 +197,8 @@ export const mapClienteFromApi = (payload: TitularApi): Cliente => {
     email: payload.email ?? "",
     telefone: payload.telefone ?? "",
     whatsapp: payload.telefone ?? "",
+    situacaoConjugal: payload.situacaoConjugal ?? "",
+    profissao: payload.profissao ?? "",
     dataNascimento: toISODate(payload.dataNascimento),
     idade: calcularIdade(payload.dataNascimento),
     endereco: {
@@ -215,6 +228,19 @@ export const mapClienteFromApi = (payload: TitularApi): Cliente => {
       email: payload.vendedor?.email ?? "",
       telefone: payload.vendedor?.telefone ?? "",
     },
+    responsavelFinanceiro:
+      Array.isArray(payload.corresponsaveis) &&
+      payload.corresponsaveis.length > 0
+        ? {
+            id: String(payload.corresponsaveis[0].id),
+            nome: payload.corresponsaveis[0].nome ?? "",
+            email: payload.corresponsaveis[0].email ?? "",
+            telefone: payload.corresponsaveis[0].telefone ?? "",
+            relacionamento: payload.corresponsaveis[0].relacionamento ?? "",
+            situacaoConjugal: payload.corresponsaveis[0].situacaoConjugal ?? "",
+            profissao: payload.corresponsaveis[0].profissao ?? "",
+          }
+        : undefined,
     dependentes: (payload.dependentes ?? []).map((dep) => ({
       id: String(dep.id),
       nome: dep.nome,
@@ -257,6 +283,8 @@ export type UpdateClientePayload = {
   telefone?: string;
   cpf?: string;
   dataNascimento?: string;
+  situacaoConjugal?: string;
+  profissao?: string;
   cep?: string;
   uf?: string;
   cidade?: string;
@@ -282,5 +310,30 @@ export const atualizarPlanoDoCliente = async (
   const { data } = await api.patch(`/plano/titulares/${titularId}/plano`, {
     planoId,
   });
+  return data;
+};
+
+export type UpdateCorresponsavelPayload = {
+  titularId?: string | number;
+  nome?: string;
+  email?: string;
+  telefone?: string;
+  relacionamento?: string;
+  situacaoConjugal?: string;
+  profissao?: string;
+};
+
+export const atualizarCorresponsavel = async (
+  id: string | number,
+  payload: UpdateCorresponsavelPayload,
+) => {
+  const { data } = await api.put(`/corresponsavel/${id}`, payload);
+  return data;
+};
+
+export const criarCorresponsavel = async (
+  payload: UpdateCorresponsavelPayload,
+) => {
+  const { data } = await api.post(`/corresponsavel`, payload);
   return data;
 };

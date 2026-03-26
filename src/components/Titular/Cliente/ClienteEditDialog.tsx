@@ -7,6 +7,8 @@ import { toast } from "sonner";
 
 import {
   atualizarCliente,
+  atualizarCorresponsavel,
+  criarCorresponsavel,
   atualizarPlanoDoCliente,
   type UpdateClientePayload,
 } from "@/services/cliente.service";
@@ -38,6 +40,8 @@ type EditClienteFormValues = {
   telefone: string;
   cpf: string;
   dataNascimento: string;
+  situacaoConjugal: string;
+  profissao: string;
   statusPlano: string;
   cep: string;
   uf: string;
@@ -47,6 +51,13 @@ type EditClienteFormValues = {
   numero: string;
   complemento: string;
   planoId: string;
+  responsavelId: string;
+  responsavelNome: string;
+  responsavelEmail: string;
+  responsavelTelefone: string;
+  responsavelRelacionamento: string;
+  responsavelSituacaoConjugal: string;
+  responsavelProfissao: string;
 };
 
 type ClienteEditDialogProps = {
@@ -78,6 +89,8 @@ export function ClienteEditDialog({
       telefone: cliente.telefone ?? "",
       cpf: cliente.cpf ?? "",
       dataNascimento: cliente.dataNascimento ?? "",
+      situacaoConjugal: cliente.situacaoConjugal ?? "",
+      profissao: cliente.profissao ?? "",
       statusPlano: (cliente.statusPlano ?? "ATIVO").toUpperCase(),
       cep: cliente.endereco?.cep ?? "",
       uf: cliente.endereco?.uf ?? "",
@@ -87,6 +100,15 @@ export function ClienteEditDialog({
       numero: cliente.endereco?.numero ?? "",
       complemento: cliente.endereco?.complemento ?? "",
       planoId: cliente.plano?.id ? String(cliente.plano.id) : "none",
+      responsavelId: cliente.responsavelFinanceiro?.id ?? "",
+      responsavelNome: cliente.responsavelFinanceiro?.nome ?? "",
+      responsavelEmail: cliente.responsavelFinanceiro?.email ?? "",
+      responsavelTelefone: cliente.responsavelFinanceiro?.telefone ?? "",
+      responsavelRelacionamento:
+        cliente.responsavelFinanceiro?.relacionamento ?? "",
+      responsavelSituacaoConjugal:
+        cliente.responsavelFinanceiro?.situacaoConjugal ?? "",
+      responsavelProfissao: cliente.responsavelFinanceiro?.profissao ?? "",
     },
   });
 
@@ -103,6 +125,8 @@ export function ClienteEditDialog({
       telefone: cliente.telefone ?? "",
       cpf: cliente.cpf ?? "",
       dataNascimento: cliente.dataNascimento ?? "",
+      situacaoConjugal: cliente.situacaoConjugal ?? "",
+      profissao: cliente.profissao ?? "",
       statusPlano: (cliente.statusPlano ?? "ATIVO").toUpperCase(),
       cep: cliente.endereco?.cep ?? "",
       uf: cliente.endereco?.uf ?? "",
@@ -112,6 +136,15 @@ export function ClienteEditDialog({
       numero: cliente.endereco?.numero ?? "",
       complemento: cliente.endereco?.complemento ?? "",
       planoId: cliente.plano?.id ? String(cliente.plano.id) : "none",
+      responsavelId: cliente.responsavelFinanceiro?.id ?? "",
+      responsavelNome: cliente.responsavelFinanceiro?.nome ?? "",
+      responsavelEmail: cliente.responsavelFinanceiro?.email ?? "",
+      responsavelTelefone: cliente.responsavelFinanceiro?.telefone ?? "",
+      responsavelRelacionamento:
+        cliente.responsavelFinanceiro?.relacionamento ?? "",
+      responsavelSituacaoConjugal:
+        cliente.responsavelFinanceiro?.situacaoConjugal ?? "",
+      responsavelProfissao: cliente.responsavelFinanceiro?.profissao ?? "",
     });
   }, [cliente, form]);
 
@@ -145,12 +178,28 @@ export function ClienteEditDialog({
   );
 
   const onSubmit = form.handleSubmit(async (values) => {
+    if (!values.situacaoConjugal?.trim() || !values.profissao?.trim()) {
+      toast.error("Preencha situação conjugal e profissão do titular.");
+      return;
+    }
+    if (
+      !values.responsavelSituacaoConjugal?.trim() ||
+      !values.responsavelProfissao?.trim()
+    ) {
+      toast.error(
+        "Preencha situação conjugal e profissão do responsável financeiro.",
+      );
+      return;
+    }
+
     const payload: UpdateClientePayload = {
       nome: values.nome.trim(),
       email: values.email.trim(),
       telefone: values.telefone.trim(),
       cpf: values.cpf.trim(),
       dataNascimento: values.dataNascimento,
+      situacaoConjugal: values.situacaoConjugal.trim(),
+      profissao: values.profissao.trim(),
       statusPlano: values.statusPlano.toUpperCase(),
       cep: values.cep.trim(),
       uf: values.uf.trim(),
@@ -167,6 +216,28 @@ export function ClienteEditDialog({
 
     try {
       await atualizarDados.mutateAsync(payload);
+
+      const responsavelPayload = {
+        nome: values.responsavelNome.trim(),
+        email: values.responsavelEmail.trim(),
+        telefone: values.responsavelTelefone.trim(),
+        relacionamento: values.responsavelRelacionamento.trim(),
+        situacaoConjugal: values.responsavelSituacaoConjugal.trim(),
+        profissao: values.responsavelProfissao.trim(),
+      };
+
+      const responsavelId = values.responsavelId.trim();
+      if (responsavelId) {
+        await atualizarCorresponsavel(responsavelId, responsavelPayload);
+      } else {
+        const created = await criarCorresponsavel({
+          titularId: cliente.id,
+          ...responsavelPayload,
+        });
+        if (created?.id != null) {
+          form.setValue("responsavelId", String(created.id));
+        }
+      }
 
       if (values.planoId !== planoAtualId) {
         await atualizarPlano.mutateAsync(planoIdNumber);
@@ -238,6 +309,31 @@ export function ClienteEditDialog({
               />
             </div>
             <div className="space-y-2">
+              <Label>Situação conjugal</Label>
+              <Select
+                value={form.watch("situacaoConjugal")}
+                onValueChange={(value) =>
+                  form.setValue("situacaoConjugal", value)
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem>
+                  <SelectItem value="Casado(a)">Casado(a)</SelectItem>
+                  <SelectItem value="União estável">União estável</SelectItem>
+                  <SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem>
+                  <SelectItem value="Separado(a)">Separado(a)</SelectItem>
+                  <SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="profissao">Profissão</Label>
+              <Input id="profissao" {...form.register("profissao")} required />
+            </div>
+            <div className="space-y-2">
               <Label>Status do plano</Label>
               <Select
                 value={form.watch("statusPlano")}
@@ -254,6 +350,77 @@ export function ClienteEditDialog({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="space-y-4 rounded-lg border border-gray-200 p-4">
+            <h3 className="text-sm font-semibold text-gray-900">
+              Responsável financeiro
+            </h3>
+            <Input type="hidden" {...form.register("responsavelId")} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="responsavelNome">Nome completo</Label>
+                <Input
+                  id="responsavelNome"
+                  {...form.register("responsavelNome")}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="responsavelEmail">E-mail</Label>
+                <Input
+                  id="responsavelEmail"
+                  type="email"
+                  {...form.register("responsavelEmail")}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="responsavelTelefone">Telefone</Label>
+                <Input
+                  id="responsavelTelefone"
+                  {...form.register("responsavelTelefone")}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="responsavelRelacionamento">Parentesco</Label>
+                <Input
+                  id="responsavelRelacionamento"
+                  {...form.register("responsavelRelacionamento")}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Situação conjugal</Label>
+                <Select
+                  value={form.watch("responsavelSituacaoConjugal")}
+                  onValueChange={(value) =>
+                    form.setValue("responsavelSituacaoConjugal", value)
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem>
+                    <SelectItem value="Casado(a)">Casado(a)</SelectItem>
+                    <SelectItem value="União estável">União estável</SelectItem>
+                    <SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem>
+                    <SelectItem value="Separado(a)">Separado(a)</SelectItem>
+                    <SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="responsavelProfissao">Profissão</Label>
+                <Input
+                  id="responsavelProfissao"
+                  {...form.register("responsavelProfissao")}
+                  required
+                />
+              </div>
             </div>
           </div>
 
