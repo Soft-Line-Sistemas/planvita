@@ -7,6 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Plus, Trash2, Users } from "lucide-react";
 import { formatCPF, formatPhone } from "@/helpers/formHelpers";
 import { calcularIdade } from "@/utils/planos";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export interface DependenteFieldErrors {
   nome?: string;
@@ -15,6 +22,22 @@ export interface DependenteFieldErrors {
   telefone?: string;
   cpf?: string;
 }
+
+export const DEPENDENTE_PARENTESCO_OPTIONS = [
+  "Cônjuge",
+  "Filho(a)",
+  "Pai",
+  "Mãe",
+  "Irmão(ã)",
+  "Avô/Avó",
+  "Neto(a)",
+  "Tio(a)",
+  "Sobrinho(a)",
+  "Primo(a)",
+  "Genro/Nora",
+  "Cunhado(a)",
+  "Outro",
+] as const;
 
 interface Props {
   dependentes: Dependente[];
@@ -140,16 +163,23 @@ export const DependentesForm = ({
                   <Label className="inline-flex items-center gap-1">
                     Parentesco <span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    value={dep.parentesco}
-                    onChange={(e) =>
-                      handleDependenteChange(
-                        index,
-                        "parentesco",
-                        e.target.value,
-                      )
+                  <Select
+                    value={dep.parentesco || ""}
+                    onValueChange={(value) =>
+                      handleDependenteChange(index, "parentesco", value)
                     }
-                  />
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DEPENDENTE_PARENTESCO_OPTIONS.map((item) => (
+                        <SelectItem key={item} value={item}>
+                          {item}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {errors.parentesco && (
                     <p className="text-sm text-red-500 mt-1">
                       {errors.parentesco}

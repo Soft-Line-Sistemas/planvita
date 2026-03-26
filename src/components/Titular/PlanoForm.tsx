@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
+import { AxiosError } from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Shield } from "lucide-react";
@@ -172,20 +173,32 @@ export function PlanoForm({
   } = useQuery({
     queryKey: ["planos", "sugerir", participantesPayload, "todos"],
     queryFn: async () => {
-      const resp = await api.post("/plano/sugerir", {
-        participantes: participantesPayload,
-        retornarTodos: true,
-      });
+      try {
+        const resp = await api.post("/plano/sugerir", {
+          participantes: participantesPayload,
+          retornarTodos: true,
+        });
 
-      const sanitized = sanitizePlanoArray(resp.data);
+        const sanitized = sanitizePlanoArray(resp.data);
 
-      sanitized.sort((a, b) => {
-        if (a.valorMensal !== b.valorMensal)
-          return a.valorMensal - b.valorMensal;
-        return a.nome.localeCompare(b.nome);
-      });
+        sanitized.sort((a, b) => {
+          if (a.valorMensal !== b.valorMensal)
+            return a.valorMensal - b.valorMensal;
+          return a.nome.localeCompare(b.nome);
+        });
 
-      return sanitized;
+        return sanitized;
+      } catch (err) {
+        const axiosError = err as AxiosError<{ message?: string }>;
+        if (
+          axiosError.response?.status === 404 &&
+          axiosError.response?.data?.message ===
+            "Nenhum plano elegível encontrado."
+        ) {
+          return [];
+        }
+        throw err;
+      }
     },
     enabled,
     staleTime: 60_000,
