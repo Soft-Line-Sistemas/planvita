@@ -1190,7 +1190,9 @@ export default function ConsultaClientePage() {
                     </Alert>
                   )}
                   <Button
-                    onClick={startFirstAccess}
+                    onClick={() => {
+                      void startFirstAccess();
+                    }}
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
                     disabled={firstAccessLoading}
                   >
@@ -1225,7 +1227,9 @@ export default function ConsultaClientePage() {
                       type="button"
                       variant="outline"
                       className="w-full"
-                      onClick={() => startFirstAccess("whatsapp")}
+                      onClick={() => {
+                        void startFirstAccess("whatsapp");
+                      }}
                       disabled={firstAccessLoading}
                     >
                       Enviar código por WhatsApp
