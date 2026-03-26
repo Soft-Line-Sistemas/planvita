@@ -13,6 +13,7 @@ interface EnderecoFormValues {
   logradouro: string;
   complemento?: string;
   numero: string;
+  pontoReferencia: string;
 }
 
 interface Props {
@@ -108,6 +109,19 @@ export const EnderecoForm = ({ form }: Props) => {
             Complemento
           </Label>
           <Input id="complemento" {...form.register("complemento")} />
+        </div>
+      </div>
+
+      {/* Linha 4 */}
+      <div className="grid grid-cols-1 gap-4">
+        <div>
+          <Label
+            htmlFor="pontoReferencia"
+            className="inline-flex items-center gap-1"
+          >
+            Ponto de referência <span className="text-red-500">*</span>
+          </Label>
+          <Input id="pontoReferencia" {...form.register("pontoReferencia")} />
         </div>
       </div>
     </div>

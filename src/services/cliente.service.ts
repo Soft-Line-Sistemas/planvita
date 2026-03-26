@@ -52,6 +52,9 @@ type TitularApi = {
   dataNascimento?: string | null;
   situacaoConjugal?: string | null;
   profissao?: string | null;
+  sexo?: string | null;
+  rg?: string | null;
+  naturalidade?: string | null;
   statusPlano?: string | null;
   dataContratacao?: string | null;
   cep?: string | null;
@@ -61,6 +64,7 @@ type TitularApi = {
   logradouro?: string | null;
   numero?: string | null;
   complemento?: string | null;
+  pontoReferencia?: string | null;
   dependentes?: DependenteApi[];
   corresponsaveis?: Array<{
     id: number;
@@ -70,6 +74,16 @@ type TitularApi = {
     relacionamento: string;
     situacaoConjugal?: string | null;
     profissao?: string | null;
+    sexo?: string | null;
+    naturalidade?: string | null;
+    cep?: string | null;
+    uf?: string | null;
+    cidade?: string | null;
+    bairro?: string | null;
+    logradouro?: string | null;
+    numero?: string | null;
+    complemento?: string | null;
+    pontoReferencia?: string | null;
   }> | null;
   plano?: PlanoApi | null;
   pagamentos?: PagamentoApi[];
@@ -199,6 +213,9 @@ export const mapClienteFromApi = (payload: TitularApi): Cliente => {
     whatsapp: payload.telefone ?? "",
     situacaoConjugal: payload.situacaoConjugal ?? "",
     profissao: payload.profissao ?? "",
+    sexo: payload.sexo ?? "",
+    rg: payload.rg ?? "",
+    naturalidade: payload.naturalidade ?? "",
     dataNascimento: toISODate(payload.dataNascimento),
     idade: calcularIdade(payload.dataNascimento),
     endereco: {
@@ -209,6 +226,7 @@ export const mapClienteFromApi = (payload: TitularApi): Cliente => {
       logradouro: payload.logradouro ?? "",
       numero: payload.numero ?? "",
       complemento: payload.complemento ?? "",
+      pontoReferencia: payload.pontoReferencia ?? "",
     },
     statusPlano: payload.statusPlano ?? "ATIVO",
     dataContratacao,
@@ -239,6 +257,16 @@ export const mapClienteFromApi = (payload: TitularApi): Cliente => {
             relacionamento: payload.corresponsaveis[0].relacionamento ?? "",
             situacaoConjugal: payload.corresponsaveis[0].situacaoConjugal ?? "",
             profissao: payload.corresponsaveis[0].profissao ?? "",
+            sexo: payload.corresponsaveis[0].sexo ?? "",
+            naturalidade: payload.corresponsaveis[0].naturalidade ?? "",
+            cep: payload.corresponsaveis[0].cep ?? "",
+            uf: payload.corresponsaveis[0].uf ?? "",
+            cidade: payload.corresponsaveis[0].cidade ?? "",
+            bairro: payload.corresponsaveis[0].bairro ?? "",
+            logradouro: payload.corresponsaveis[0].logradouro ?? "",
+            numero: payload.corresponsaveis[0].numero ?? "",
+            complemento: payload.corresponsaveis[0].complemento ?? "",
+            pontoReferencia: payload.corresponsaveis[0].pontoReferencia ?? "",
           }
         : undefined,
     dependentes: (payload.dependentes ?? []).map((dep) => ({
@@ -285,6 +313,9 @@ export type UpdateClientePayload = {
   dataNascimento?: string;
   situacaoConjugal?: string;
   profissao?: string;
+  sexo?: string;
+  rg?: string;
+  naturalidade?: string;
   cep?: string;
   uf?: string;
   cidade?: string;
@@ -292,6 +323,7 @@ export type UpdateClientePayload = {
   logradouro?: string;
   numero?: string;
   complemento?: string;
+  pontoReferencia?: string;
   statusPlano?: string;
 };
 
@@ -321,6 +353,16 @@ export type UpdateCorresponsavelPayload = {
   relacionamento?: string;
   situacaoConjugal?: string;
   profissao?: string;
+  sexo?: string;
+  naturalidade?: string;
+  cep?: string;
+  uf?: string;
+  cidade?: string;
+  bairro?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  pontoReferencia?: string;
 };
 
 export const atualizarCorresponsavel = async (

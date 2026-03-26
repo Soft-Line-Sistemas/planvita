@@ -74,6 +74,9 @@ export interface Cliente {
   whatsapp?: string;
   situacaoConjugal?: string;
   profissao?: string;
+  sexo?: string;
+  rg?: string;
+  naturalidade?: string;
   dataNascimento: string;
   idade: number;
   endereco: Endereco;
@@ -92,6 +95,16 @@ export interface Cliente {
     relacionamento: string;
     situacaoConjugal?: string;
     profissao?: string;
+    sexo?: string;
+    naturalidade?: string;
+    cep?: string;
+    uf?: string;
+    cidade?: string;
+    bairro?: string;
+    logradouro?: string;
+    numero?: string;
+    complemento?: string;
+    pontoReferencia?: string;
   };
   dependentes: Dependente[];
   pagamentos: Pagamento[];
