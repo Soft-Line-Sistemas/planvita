@@ -56,27 +56,34 @@ export const ResponsavelFinanceiroForm = ({
   // setUsarMesmosDados,
 }: Props) => {
   useEffect(() => {
+    form.register("cep");
+    form.register("uf");
+    form.register("cidade");
+    form.register("bairro");
+    form.register("logradouro");
+  }, [form]);
+
+  useEffect(() => {
     form.setValue("usarMesmosDados", usarMesmosDados);
   }, [usarMesmosDados, form]);
 
   const cepValue = form.watch("cep");
   useEffect(() => {
-    const cep = cepValue?.replace(/\D/g, "");
-    if (cep && cep.length === 8) {
-      fetch(`https://viacep.com.br/ws/${cep}/json/`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (!data?.erro) {
-            form.setValue("logradouro", data.logradouro || "");
-            form.setValue("bairro", data.bairro || "");
-            form.setValue("cidade", data.localidade || "");
-            form.setValue("uf", data.uf || "");
-          }
-        })
-        .catch(() => {
-          // silencioso para não interromper o fluxo
-        });
-    }
+    const cep = (cepValue ?? "").replace(/\D/g, "");
+    if (cep.length !== 8) return;
+
+    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.erro) return;
+        form.setValue("logradouro", data.logradouro || "");
+        form.setValue("bairro", data.bairro || "");
+        form.setValue("cidade", data.localidade || "");
+        form.setValue("uf", data.uf || "");
+      })
+      .catch(() => {
+        // silencioso para não interromper o fluxo
+      });
   }, [cepValue, form]);
 
   return (
