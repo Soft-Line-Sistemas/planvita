@@ -1,8 +1,10 @@
 export const RELATIONSHIP_OPTIONS = [
   "Cônjuge",
   "Filho(a)",
+  "Enteado(a)",
   "Pai",
   "Mãe",
+  "Sogro(a)",
   "Irmão(ã)",
   "Avô/Avó",
   "Neto(a)",
