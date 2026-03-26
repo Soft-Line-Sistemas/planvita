@@ -1840,14 +1840,14 @@ export default function ConsultaClientePage() {
                       <h4 className="font-medium mb-3 text-emerald-800">
                         Coberturas e Benefícios
                       </h4>
-                      <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
+                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[13px] text-gray-600">
                         {cliente.plano.cobertura.map((item, index) => (
                           <li
                             key={`${item}-${index}`}
-                            className="flex items-start gap-2"
+                            className="flex items-start gap-1.5 leading-tight"
                           >
-                            <CheckCircle className="h-4 w-4 text-emerald-500 mt-0.5" />
-                            <span>{item}</span>
+                            <CheckCircle className="h-3.5 w-3.5 text-emerald-500 mt-0.5 shrink-0" />
+                            <span className="break-words">{item}</span>
                           </li>
                         ))}
                       </ul>
