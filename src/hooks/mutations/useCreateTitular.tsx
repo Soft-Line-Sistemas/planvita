@@ -100,7 +100,7 @@ export function useCreateTitular(options?: {
       toast.success("Titular criado com sucesso!", {
         description: "Cadastro concluído e vinculado ao plano.",
       });
-      router.push("/cliente");
+      router.push("/painel/cliente");
     },
   });
 }

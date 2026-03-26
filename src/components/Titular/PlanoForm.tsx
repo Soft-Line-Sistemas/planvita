@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
+import { AxiosError } from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Shield } from "lucide-react";
@@ -169,24 +170,35 @@ export function PlanoForm({
     data: elegiveis,
     isLoading,
     isError,
-    error,
   } = useQuery({
     queryKey: ["planos", "sugerir", participantesPayload, "todos"],
     queryFn: async () => {
-      const resp = await api.post("/plano/sugerir", {
-        participantes: participantesPayload,
-        retornarTodos: true,
-      });
+      try {
+        const resp = await api.post("/plano/sugerir", {
+          participantes: participantesPayload,
+          retornarTodos: true,
+        });
 
-      const sanitized = sanitizePlanoArray(resp.data);
+        const sanitized = sanitizePlanoArray(resp.data);
 
-      sanitized.sort((a, b) => {
-        if (a.valorMensal !== b.valorMensal)
-          return a.valorMensal - b.valorMensal;
-        return a.nome.localeCompare(b.nome);
-      });
+        sanitized.sort((a, b) => {
+          if (a.valorMensal !== b.valorMensal)
+            return a.valorMensal - b.valorMensal;
+          return a.nome.localeCompare(b.nome);
+        });
 
-      return sanitized;
+        return sanitized;
+      } catch (err) {
+        const axiosError = err as AxiosError<{ message?: string }>;
+        if (
+          axiosError.response?.status === 404 &&
+          axiosError.response?.data?.message ===
+            "Nenhum plano elegível encontrado."
+        ) {
+          return [];
+        }
+        throw err;
+      }
     },
     enabled,
     staleTime: 60_000,
@@ -353,8 +365,8 @@ export function PlanoForm({
         )}
         {enabled && isError && (
           <p className="text-red-600">
-            Falha ao obter planos:{" "}
-            {error instanceof Error ? error.message : "erro inesperado"}
+            Não foi possível carregar os planos agora. Revise os dados dos
+            participantes e tente novamente.
           </p>
         )}
 
@@ -370,7 +382,7 @@ export function PlanoForm({
         ) : (
           !isLoading && (
             <p className="text-red-600">
-              Nenhum plano disponível para essa faixa etária.
+              Nenhum plano disponível para os dados informados.
             </p>
           )
         )}

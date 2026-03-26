@@ -6,11 +6,21 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Phone, Mail } from "lucide-react";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   formatCPF,
   formatPhone,
   formatWhatsApp,
   formatRG,
+  formatCEP,
 } from "@/helpers/formHelpers";
+import { RELATIONSHIP_OPTIONS } from "@/constants/relationshipOptions";
+import { BRAZIL_STATES, normalizeUfCode } from "@/constants/brazilStates";
 
 interface ResponsavelFormValues {
   usarMesmosDados: boolean;
@@ -18,10 +28,22 @@ interface ResponsavelFormValues {
   cpf?: string;
   rg?: string;
   dataNascimento?: string;
+  sexo?: string;
+  naturalidade?: string;
   parentesco?: string;
   email?: string;
   telefone?: string;
   whatsapp?: string;
+  situacaoConjugal?: string;
+  profissao?: string;
+  cep?: string;
+  uf?: string;
+  cidade?: string;
+  bairro?: string;
+  logradouro?: string;
+  complemento?: string;
+  numero?: string;
+  pontoReferencia?: string;
 }
 
 interface Props {
@@ -35,9 +57,47 @@ export const ResponsavelFinanceiroForm = ({
   usarMesmosDados,
   // setUsarMesmosDados,
 }: Props) => {
+  const errors = form.formState.errors;
+
+  useEffect(() => {
+    form.register("cep");
+    form.register("uf");
+    form.register("cidade");
+    form.register("bairro");
+    form.register("logradouro");
+  }, [form]);
+
   useEffect(() => {
     form.setValue("usarMesmosDados", usarMesmosDados);
   }, [usarMesmosDados, form]);
+
+  const cepValue = form.watch("cep");
+  const ufRawValue = form.watch("uf");
+  const ufValue = normalizeUfCode(ufRawValue);
+
+  useEffect(() => {
+    if ((ufRawValue ?? "") !== ufValue) {
+      form.setValue("uf", ufValue);
+    }
+  }, [form, ufRawValue, ufValue]);
+
+  useEffect(() => {
+    const cep = (cepValue ?? "").replace(/\D/g, "");
+    if (cep.length !== 8) return;
+
+    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.erro) return;
+        form.setValue("logradouro", data.logradouro || "");
+        form.setValue("bairro", data.bairro || "");
+        form.setValue("cidade", data.localidade || "");
+        form.setValue("uf", normalizeUfCode(data.uf));
+      })
+      .catch(() => {
+        // silencioso para não interromper o fluxo
+      });
+  }, [cepValue, form]);
 
   return (
     <div className="space-y-6">
@@ -62,7 +122,16 @@ export const ResponsavelFinanceiroForm = ({
               Nome completo
               <span className="text-red-500">*</span>
             </Label>
-            <Input id="nomeCompletoResp" {...form.register("nomeCompleto")} />
+            <Input
+              id="nomeCompletoResp"
+              maxLength={1000}
+              {...form.register("nomeCompleto")}
+            />
+            {errors.nomeCompleto && (
+              <p className="text-sm text-red-500 mt-1">
+                {String(errors.nomeCompleto.message)}
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -73,19 +142,31 @@ export const ResponsavelFinanceiroForm = ({
               </Label>
               <Input
                 id="cpfResp"
+                maxLength={14}
                 {...form.register("cpf")}
                 onChange={(e) =>
                   form.setValue("cpf", formatCPF(e.target.value))
                 }
               />
+              {errors.cpf && (
+                <p className="text-sm text-red-500 mt-1">
+                  {String(errors.cpf.message)}
+                </p>
+              )}
             </div>
             <div className="space-y-1">
               <Label htmlFor="rgResp">RG</Label>
               <Input
                 id="rgResp"
+                maxLength={12}
                 {...form.register("rg")}
                 onChange={(e) => form.setValue("rg", formatRG(e.target.value))}
               />
+              {errors.rg && (
+                <p className="text-sm text-red-500 mt-1">
+                  {String(errors.rg.message)}
+                </p>
+              )}
             </div>
           </div>
 
@@ -103,9 +184,9 @@ export const ResponsavelFinanceiroForm = ({
                 id="dataNascimentoResp"
                 {...form.register("dataNascimento")}
               />
-              {form.formState.errors.dataNascimento && (
+              {errors.dataNascimento && (
                 <p className="text-sm text-red-500 mt-1">
-                  {form.formState.errors.dataNascimento.message}
+                  {String(errors.dataNascimento.message)}
                 </p>
               )}
             </div>
@@ -114,7 +195,294 @@ export const ResponsavelFinanceiroForm = ({
                 Parentesco
                 <span className="text-red-500">*</span>
               </Label>
-              <Input id="parentesco" {...form.register("parentesco")} />
+              <Select
+                value={form.watch("parentesco") || ""}
+                onValueChange={(value) => form.setValue("parentesco", value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {RELATIONSHIP_OPTIONS.map((item) => (
+                    <SelectItem key={item} value={item}>
+                      {item}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.parentesco && (
+                <p className="text-sm text-red-500 mt-1">
+                  {String(errors.parentesco.message)}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="sexoResp" className="flex items-center gap-1">
+                Sexo <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={form.watch("sexo") || ""}
+                onValueChange={(value) => form.setValue("sexo", value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Masculino">Masculino</SelectItem>
+                  <SelectItem value="Feminino">Feminino</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.sexo && (
+                <p className="text-sm text-red-500 mt-1">
+                  {String(errors.sexo.message)}
+                </p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <Label
+                htmlFor="naturalidadeResp"
+                className="flex items-center gap-1"
+              >
+                Naturalidade <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="naturalidadeResp"
+                maxLength={191}
+                {...form.register("naturalidade")}
+              />
+              {errors.naturalidade && (
+                <p className="text-sm text-red-500 mt-1">
+                  {String(errors.naturalidade.message)}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label
+                htmlFor="situacaoConjugalResp"
+                className="flex items-center gap-1"
+              >
+                Situação conjugal
+                <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={form.watch("situacaoConjugal") || ""}
+                onValueChange={(value) =>
+                  form.setValue("situacaoConjugal", value)
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem>
+                  <SelectItem value="Casado(a)">Casado(a)</SelectItem>
+                  <SelectItem value="União estável">União estável</SelectItem>
+                  <SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem>
+                  <SelectItem value="Separado(a)">Separado(a)</SelectItem>
+                  <SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.situacaoConjugal && (
+                <p className="text-sm text-red-500 mt-1">
+                  {String(errors.situacaoConjugal.message)}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <Label
+                htmlFor="profissaoResp"
+                className="flex items-center gap-1"
+              >
+                Profissão
+                <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="profissaoResp"
+                maxLength={191}
+                {...form.register("profissao")}
+              />
+              {errors.profissao && (
+                <p className="text-sm text-red-500 mt-1">
+                  {String(errors.profissao.message)}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-4 rounded-lg border border-gray-200 p-4">
+            <h4 className="text-sm font-semibold text-gray-900">
+              Endereço do responsável
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label
+                  htmlFor="cepResp"
+                  className="inline-flex items-center gap-1"
+                >
+                  CEP <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="cepResp"
+                  maxLength={9}
+                  value={form.watch("cep") || ""}
+                  onChange={(e) =>
+                    form.setValue("cep", formatCEP(e.target.value))
+                  }
+                  placeholder="00000-000"
+                />
+                {errors.cep && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {String(errors.cep.message)}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label
+                  htmlFor="ufResp"
+                  className="inline-flex items-center gap-1"
+                >
+                  UF <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={ufValue}
+                  onValueChange={(value) => form.setValue("uf", value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BRAZIL_STATES.map((state) => (
+                      <SelectItem key={state.code} value={state.code}>
+                        {state.code} - {state.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.uf && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {String(errors.uf.message)}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label
+                  htmlFor="cidadeResp"
+                  className="inline-flex items-center gap-1"
+                >
+                  Cidade <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="cidadeResp"
+                  maxLength={191}
+                  {...form.register("cidade")}
+                />
+                {errors.cidade && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {String(errors.cidade.message)}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label
+                  htmlFor="bairroResp"
+                  className="inline-flex items-center gap-1"
+                >
+                  Bairro <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="bairroResp"
+                  maxLength={191}
+                  {...form.register("bairro")}
+                />
+                {errors.bairro && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {String(errors.bairro.message)}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label
+                  htmlFor="logradouroResp"
+                  className="inline-flex items-center gap-1"
+                >
+                  Rua <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="logradouroResp"
+                  maxLength={191}
+                  {...form.register("logradouro")}
+                />
+                {errors.logradouro && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {String(errors.logradouro.message)}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label
+                  htmlFor="numeroResp"
+                  className="inline-flex items-center gap-1"
+                >
+                  Número <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="numeroResp"
+                  maxLength={50}
+                  {...form.register("numero")}
+                />
+                {errors.numero && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {String(errors.numero.message)}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label
+                  htmlFor="complementoResp"
+                  className="inline-flex items-center gap-1"
+                >
+                  Complemento
+                </Label>
+                <Input
+                  id="complementoResp"
+                  maxLength={191}
+                  {...form.register("complemento")}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <Label
+                  htmlFor="pontoReferenciaResp"
+                  className="inline-flex items-center gap-1"
+                >
+                  Ponto de referência <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="pontoReferenciaResp"
+                  maxLength={255}
+                  {...form.register("pontoReferencia")}
+                />
+                {errors.pontoReferencia && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {String(errors.pontoReferencia.message)}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -127,6 +495,7 @@ export const ResponsavelFinanceiroForm = ({
             <Input
               id="emailResp"
               type="email"
+              maxLength={1000}
               {...form.register("email", {
                 pattern: {
                   value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
@@ -134,9 +503,9 @@ export const ResponsavelFinanceiroForm = ({
                 },
               })}
             />
-            {form.formState.errors.email && (
+            {errors.email && (
               <p className="text-sm text-red-500 mt-1">
-                {form.formState.errors.email.message}
+                {String(errors.email.message)}
               </p>
             )}
           </div>
@@ -150,6 +519,7 @@ export const ResponsavelFinanceiroForm = ({
               </Label>
               <Input
                 id="telefoneResp"
+                maxLength={15}
                 {...form.register("telefone")}
                 onChange={(e) =>
                   form.setValue("telefone", formatPhone(e.target.value))
@@ -165,6 +535,11 @@ export const ResponsavelFinanceiroForm = ({
                   }
                 }}
               />
+              {errors.telefone && (
+                <p className="text-sm text-red-500 mt-1">
+                  {String(errors.telefone.message)}
+                </p>
+              )}
             </div>
             <div className="space-y-1">
               <Label htmlFor="whatsappResp" className="flex items-center gap-1">
@@ -173,11 +548,17 @@ export const ResponsavelFinanceiroForm = ({
               </Label>
               <Input
                 id="whatsappResp"
+                maxLength={14}
                 {...form.register("whatsapp")}
                 onChange={(e) =>
                   form.setValue("whatsapp", formatWhatsApp(e.target.value))
                 }
               />
+              {errors.whatsapp && (
+                <p className="text-sm text-red-500 mt-1">
+                  {String(errors.whatsapp.message)}
+                </p>
+              )}
             </div>
           </div>
         </div>

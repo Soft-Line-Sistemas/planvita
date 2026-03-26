@@ -4,6 +4,14 @@ import { UseFormReturn } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCEP } from "@/helpers/formHelpers";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { BRAZIL_STATES, normalizeUfCode } from "@/constants/brazilStates";
 
 interface EnderecoFormValues {
   cep: string;
@@ -13,6 +21,7 @@ interface EnderecoFormValues {
   logradouro: string;
   complemento?: string;
   numero: string;
+  pontoReferencia: string;
 }
 
 interface Props {
@@ -21,6 +30,15 @@ interface Props {
 
 export const EnderecoForm = ({ form }: Props) => {
   const cepValue = form.watch("cep");
+  const ufRawValue = form.watch("uf");
+  const ufValue = normalizeUfCode(ufRawValue);
+  const errors = form.formState.errors;
+
+  useEffect(() => {
+    if ((ufRawValue ?? "") !== ufValue) {
+      form.setValue("uf", ufValue);
+    }
+  }, [form, ufRawValue, ufValue]);
 
   useEffect(() => {
     const cep = cepValue?.replace(/\D/g, "");
@@ -33,7 +51,7 @@ export const EnderecoForm = ({ form }: Props) => {
             form.setValue("logradouro", data.logradouro || "");
             form.setValue("bairro", data.bairro || "");
             form.setValue("cidade", data.localidade || "");
-            form.setValue("uf", data.uf || "");
+            form.setValue("uf", normalizeUfCode(data.uf));
           }
         })
         .catch(() => {
@@ -52,24 +70,54 @@ export const EnderecoForm = ({ form }: Props) => {
           </Label>
           <Input
             id="cep"
+            maxLength={9}
             value={form.watch("cep") || ""}
             onChange={(e) => form.setValue("cep", formatCEP(e.target.value))}
             placeholder="00000-000"
           />
+          {errors.cep && (
+            <p className="text-sm text-red-500 mt-1">
+              {String(errors.cep.message)}
+            </p>
+          )}
         </div>
 
         <div>
           <Label htmlFor="uf" className="inline-flex items-center gap-1">
             UF <span className="text-red-500">*</span>
           </Label>
-          <Input id="uf" {...form.register("uf")} />
+          <Select
+            value={ufValue}
+            onValueChange={(value) => form.setValue("uf", value)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              {BRAZIL_STATES.map((state) => (
+                <SelectItem key={state.code} value={state.code}>
+                  {state.code} - {state.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.uf && (
+            <p className="text-sm text-red-500 mt-1">
+              {String(errors.uf.message)}
+            </p>
+          )}
         </div>
 
         <div>
           <Label htmlFor="cidade" className="inline-flex items-center gap-1">
             Cidade <span className="text-red-500">*</span>
           </Label>
-          <Input id="cidade" {...form.register("cidade")} />
+          <Input id="cidade" maxLength={1000} {...form.register("cidade")} />
+          {errors.cidade && (
+            <p className="text-sm text-red-500 mt-1">
+              {String(errors.cidade.message)}
+            </p>
+          )}
         </div>
       </div>
 
@@ -79,7 +127,12 @@ export const EnderecoForm = ({ form }: Props) => {
           <Label htmlFor="bairro" className="inline-flex items-center gap-1">
             Bairro <span className="text-red-500">*</span>
           </Label>
-          <Input id="bairro" {...form.register("bairro")} />
+          <Input id="bairro" maxLength={1000} {...form.register("bairro")} />
+          {errors.bairro && (
+            <p className="text-sm text-red-500 mt-1">
+              {String(errors.bairro.message)}
+            </p>
+          )}
         </div>
         <div>
           <Label
@@ -88,7 +141,16 @@ export const EnderecoForm = ({ form }: Props) => {
           >
             Rua <span className="text-red-500">*</span>
           </Label>
-          <Input id="logradouro" {...form.register("logradouro")} />
+          <Input
+            id="logradouro"
+            maxLength={1000}
+            {...form.register("logradouro")}
+          />
+          {errors.logradouro && (
+            <p className="text-sm text-red-500 mt-1">
+              {String(errors.logradouro.message)}
+            </p>
+          )}
         </div>
       </div>
 
@@ -98,7 +160,12 @@ export const EnderecoForm = ({ form }: Props) => {
           <Label htmlFor="numero" className="inline-flex items-center gap-1">
             Número <span className="text-red-500">*</span>
           </Label>
-          <Input id="numero" {...form.register("numero")} />
+          <Input id="numero" maxLength={1000} {...form.register("numero")} />
+          {errors.numero && (
+            <p className="text-sm text-red-500 mt-1">
+              {String(errors.numero.message)}
+            </p>
+          )}
         </div>
         <div>
           <Label
@@ -107,7 +174,33 @@ export const EnderecoForm = ({ form }: Props) => {
           >
             Complemento
           </Label>
-          <Input id="complemento" {...form.register("complemento")} />
+          <Input
+            id="complemento"
+            maxLength={1000}
+            {...form.register("complemento")}
+          />
+        </div>
+      </div>
+
+      {/* Linha 4 */}
+      <div className="grid grid-cols-1 gap-4">
+        <div>
+          <Label
+            htmlFor="pontoReferencia"
+            className="inline-flex items-center gap-1"
+          >
+            Ponto de referência <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="pontoReferencia"
+            maxLength={255}
+            {...form.register("pontoReferencia")}
+          />
+          {errors.pontoReferencia && (
+            <p className="text-sm text-red-500 mt-1">
+              {String(errors.pontoReferencia.message)}
+            </p>
+          )}
         </div>
       </div>
     </div>

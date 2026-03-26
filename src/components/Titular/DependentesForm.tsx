@@ -7,9 +7,26 @@ import { Input } from "@/components/ui/input";
 import { Plus, Trash2, Users } from "lucide-react";
 import { formatCPF, formatPhone } from "@/helpers/formHelpers";
 import { calcularIdade } from "@/utils/planos";
+import { RELATIONSHIP_OPTIONS } from "@/constants/relationshipOptions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+export interface DependenteFieldErrors {
+  nome?: string;
+  dataNascimento?: string;
+  parentesco?: string;
+  telefone?: string;
+  cpf?: string;
+}
 
 interface Props {
   dependentes: Dependente[];
+  dependentesErrors?: DependenteFieldErrors[];
   handleAddDependente: () => void;
   handleRemoveDependente: (index: number) => void;
   handleDependenteChange: <K extends keyof Dependente>(
@@ -23,6 +40,7 @@ interface Props {
 
 export const DependentesForm = ({
   dependentes,
+  dependentesErrors = [],
   handleAddDependente,
   handleRemoveDependente,
   handleDependenteChange,
@@ -64,6 +82,8 @@ export const DependentesForm = ({
     ) : (
       <div className="space-y-4">
         {dependentes.map((dep, index) => {
+          const errors = dependentesErrors[index] ?? {};
+
           const handleDataNascimentoChange = (value: string) => {
             const normalized = value || null;
             const idadeCalculada = normalized
@@ -96,11 +116,15 @@ export const DependentesForm = ({
                     Nome <span className="text-red-500">*</span>
                   </Label>
                   <Input
+                    maxLength={1000}
                     value={dep.nome}
                     onChange={(e) =>
                       handleDependenteChange(index, "nome", e.target.value)
                     }
                   />
+                  {errors.nome && (
+                    <p className="text-sm text-red-500 mt-1">{errors.nome}</p>
+                  )}
                 </div>
 
                 {/* Data de Nascimento */}
@@ -113,6 +137,11 @@ export const DependentesForm = ({
                     value={dep.dataNascimento ?? ""}
                     onChange={(e) => handleDataNascimentoChange(e.target.value)}
                   />
+                  {errors.dataNascimento && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {errors.dataNascimento}
+                    </p>
+                  )}
                 </div>
 
                 {/* Parentesco */}
@@ -120,16 +149,28 @@ export const DependentesForm = ({
                   <Label className="inline-flex items-center gap-1">
                     Parentesco <span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    value={dep.parentesco}
-                    onChange={(e) =>
-                      handleDependenteChange(
-                        index,
-                        "parentesco",
-                        e.target.value,
-                      )
+                  <Select
+                    value={dep.parentesco || ""}
+                    onValueChange={(value) =>
+                      handleDependenteChange(index, "parentesco", value)
                     }
-                  />
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RELATIONSHIP_OPTIONS.map((item) => (
+                        <SelectItem key={item} value={item}>
+                          {item}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.parentesco && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {errors.parentesco}
+                    </p>
+                  )}
                 </div>
 
                 {/* Telefone */}
@@ -147,6 +188,11 @@ export const DependentesForm = ({
                       )
                     }
                   />
+                  {errors.telefone && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {errors.telefone}
+                    </p>
+                  )}
                 </div>
 
                 {/* CPF */}
@@ -164,6 +210,9 @@ export const DependentesForm = ({
                       )
                     }
                   />
+                  {errors.cpf && (
+                    <p className="text-sm text-red-500 mt-1">{errors.cpf}</p>
+                  )}
                 </div>
               </div>
             </Card>
