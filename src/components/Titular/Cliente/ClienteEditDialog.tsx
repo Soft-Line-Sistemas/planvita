@@ -319,295 +319,324 @@ export function ClienteEditDialog({
         if (!nextOpen) onClose();
       }}
     >
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-none overflow-hidden p-0 sm:w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-2rem)] lg:max-w-6xl">
+        <DialogHeader className="border-b px-4 py-4 sm:px-6">
           <DialogTitle>Editar dados do cliente</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={onSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="nome">Nome completo</Label>
-              <Input
-                id="nome"
-                maxLength={1000}
-                {...form.register("nome")}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                maxLength={1000}
-                {...form.register("email")}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="telefone">Telefone</Label>
-              <Input
-                id="telefone"
-                maxLength={15}
-                {...form.register("telefone")}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="cpf">CPF</Label>
-              <Input
-                id="cpf"
-                maxLength={14}
-                {...form.register("cpf")}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="dataNascimento">Data de nascimento</Label>
-              <Input
-                id="dataNascimento"
-                type="date"
-                {...form.register("dataNascimento")}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Situação conjugal</Label>
-              <Select
-                value={form.watch("situacaoConjugal")}
-                onValueChange={(value) =>
-                  form.setValue("situacaoConjugal", value)
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem>
-                  <SelectItem value="Casado(a)">Casado(a)</SelectItem>
-                  <SelectItem value="União estável">União estável</SelectItem>
-                  <SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem>
-                  <SelectItem value="Separado(a)">Separado(a)</SelectItem>
-                  <SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="profissao">Profissão</Label>
-              <Input
-                id="profissao"
-                maxLength={191}
-                {...form.register("profissao")}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Status do plano</Label>
-              <Select
-                value={form.watch("statusPlano")}
-                onValueChange={(value) => form.setValue("statusPlano", value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPCOES.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+        <form onSubmit={onSubmit} className="flex max-h-[90dvh] flex-col">
+          <div className="overflow-y-auto px-4 py-4 sm:px-6">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <section className="space-y-4 rounded-lg border border-gray-200 p-4">
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Dados do titular
+                </h3>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="nome">Nome completo</Label>
+                    <Input
+                      id="nome"
+                      maxLength={1000}
+                      {...form.register("nome")}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">E-mail</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      maxLength={1000}
+                      {...form.register("email")}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="telefone">Telefone</Label>
+                    <Input
+                      id="telefone"
+                      maxLength={15}
+                      {...form.register("telefone")}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cpf">CPF</Label>
+                    <Input
+                      id="cpf"
+                      maxLength={14}
+                      {...form.register("cpf")}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dataNascimento">Data de nascimento</Label>
+                    <Input
+                      id="dataNascimento"
+                      type="date"
+                      {...form.register("dataNascimento")}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Situação conjugal</Label>
+                    <Select
+                      value={form.watch("situacaoConjugal")}
+                      onValueChange={(value) =>
+                        form.setValue("situacaoConjugal", value)
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem>
+                        <SelectItem value="Casado(a)">Casado(a)</SelectItem>
+                        <SelectItem value="União estável">
+                          União estável
+                        </SelectItem>
+                        <SelectItem value="Divorciado(a)">
+                          Divorciado(a)
+                        </SelectItem>
+                        <SelectItem value="Separado(a)">Separado(a)</SelectItem>
+                        <SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="profissao">Profissão</Label>
+                    <Input
+                      id="profissao"
+                      maxLength={191}
+                      {...form.register("profissao")}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Status do plano</Label>
+                    <Select
+                      value={form.watch("statusPlano")}
+                      onValueChange={(value) =>
+                        form.setValue("statusPlano", value)
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUS_OPCOES.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </section>
 
-          <div className="space-y-4 rounded-lg border border-gray-200 p-4">
-            <h3 className="text-sm font-semibold text-gray-900">
-              Responsável financeiro
-            </h3>
-            <Input type="hidden" {...form.register("responsavelId")} />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="responsavelNome">Nome completo</Label>
-                <Input
-                  id="responsavelNome"
-                  maxLength={1000}
-                  {...form.register("responsavelNome")}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="responsavelEmail">E-mail</Label>
-                <Input
-                  id="responsavelEmail"
-                  type="email"
-                  maxLength={1000}
-                  {...form.register("responsavelEmail")}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="responsavelTelefone">Telefone</Label>
-                <Input
-                  id="responsavelTelefone"
-                  maxLength={15}
-                  {...form.register("responsavelTelefone")}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="responsavelRelacionamento">Parentesco</Label>
+              <section className="space-y-4 rounded-lg border border-gray-200 p-4">
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Responsável financeiro
+                </h3>
+                <Input type="hidden" {...form.register("responsavelId")} />
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="responsavelNome">Nome completo</Label>
+                    <Input
+                      id="responsavelNome"
+                      maxLength={1000}
+                      {...form.register("responsavelNome")}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="responsavelEmail">E-mail</Label>
+                    <Input
+                      id="responsavelEmail"
+                      type="email"
+                      maxLength={1000}
+                      {...form.register("responsavelEmail")}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="responsavelTelefone">Telefone</Label>
+                    <Input
+                      id="responsavelTelefone"
+                      maxLength={15}
+                      {...form.register("responsavelTelefone")}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="responsavelRelacionamento">
+                      Parentesco
+                    </Label>
+                    <Select
+                      value={form.watch("responsavelRelacionamento")}
+                      onValueChange={(value) =>
+                        form.setValue("responsavelRelacionamento", value)
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {RELATIONSHIP_OPTIONS.map((item) => (
+                          <SelectItem key={item} value={item}>
+                            {item}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Situação conjugal</Label>
+                    <Select
+                      value={form.watch("responsavelSituacaoConjugal")}
+                      onValueChange={(value) =>
+                        form.setValue("responsavelSituacaoConjugal", value)
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem>
+                        <SelectItem value="Casado(a)">Casado(a)</SelectItem>
+                        <SelectItem value="União estável">
+                          União estável
+                        </SelectItem>
+                        <SelectItem value="Divorciado(a)">
+                          Divorciado(a)
+                        </SelectItem>
+                        <SelectItem value="Separado(a)">Separado(a)</SelectItem>
+                        <SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="responsavelProfissao">Profissão</Label>
+                    <Input
+                      id="responsavelProfissao"
+                      maxLength={191}
+                      {...form.register("responsavelProfissao")}
+                      required
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-4 rounded-lg border border-gray-200 p-4">
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Endereço
+                </h3>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="cep">CEP</Label>
+                    <Input id="cep" maxLength={9} {...form.register("cep")} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="uf">UF</Label>
+                    <Select
+                      value={normalizeUfCode(form.watch("uf"))}
+                      onValueChange={(value) => form.setValue("uf", value)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BRAZIL_STATES.map((state) => (
+                          <SelectItem key={state.code} value={state.code}>
+                            {state.code} - {state.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cidade">Cidade</Label>
+                    <Input
+                      id="cidade"
+                      maxLength={1000}
+                      {...form.register("cidade")}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bairro">Bairro</Label>
+                    <Input
+                      id="bairro"
+                      maxLength={1000}
+                      {...form.register("bairro")}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="logradouro">Logradouro</Label>
+                    <Input
+                      id="logradouro"
+                      maxLength={1000}
+                      {...form.register("logradouro")}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="numero">Número</Label>
+                    <Input
+                      id="numero"
+                      maxLength={1000}
+                      {...form.register("numero")}
+                    />
+                  </div>
+                  <div className="space-y-2 xl:col-span-3">
+                    <Label htmlFor="complemento">Complemento</Label>
+                    <Input
+                      id="complemento"
+                      maxLength={1000}
+                      {...form.register("complemento")}
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-2 rounded-lg border border-gray-200 p-4">
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Plano vinculado
+                </h3>
                 <Select
-                  value={form.watch("responsavelRelacionamento")}
-                  onValueChange={(value) =>
-                    form.setValue("responsavelRelacionamento", value)
-                  }
+                  value={form.watch("planoId")}
+                  onValueChange={(value) => form.setValue("planoId", value)}
+                  disabled={isLoadingPlanos || isErrorPlanos}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione" />
+                    <SelectValue
+                      placeholder={
+                        isLoadingPlanos
+                          ? "Carregando planos..."
+                          : "Selecione o plano"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    {RELATIONSHIP_OPTIONS.map((item) => (
-                      <SelectItem key={item} value={item}>
-                        {item}
+                    <SelectItem value="none">Sem plano vinculado</SelectItem>
+                    {(planos ?? []).map((plano) => (
+                      <SelectItem key={plano.id} value={String(plano.id)}>
+                        {plano.nome} — R${" "}
+                        {Number(plano.valorMensal ?? 0).toFixed(2)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Situação conjugal</Label>
-                <Select
-                  value={form.watch("responsavelSituacaoConjugal")}
-                  onValueChange={(value) =>
-                    form.setValue("responsavelSituacaoConjugal", value)
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Solteiro(a)">Solteiro(a)</SelectItem>
-                    <SelectItem value="Casado(a)">Casado(a)</SelectItem>
-                    <SelectItem value="União estável">União estável</SelectItem>
-                    <SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem>
-                    <SelectItem value="Separado(a)">Separado(a)</SelectItem>
-                    <SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="responsavelProfissao">Profissão</Label>
-                <Input
-                  id="responsavelProfissao"
-                  maxLength={191}
-                  {...form.register("responsavelProfissao")}
-                  required
-                />
-              </div>
+                {isErrorPlanos && (
+                  <p className="text-sm text-red-600">
+                    Não foi possível carregar os planos. Tente novamente mais
+                    tarde.
+                  </p>
+                )}
+              </section>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="cep">CEP</Label>
-              <Input id="cep" maxLength={9} {...form.register("cep")} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="uf">UF</Label>
-              <Select
-                value={normalizeUfCode(form.watch("uf"))}
-                onValueChange={(value) => form.setValue("uf", value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {BRAZIL_STATES.map((state) => (
-                    <SelectItem key={state.code} value={state.code}>
-                      {state.code} - {state.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="cidade">Cidade</Label>
-              <Input
-                id="cidade"
-                maxLength={1000}
-                {...form.register("cidade")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="bairro">Bairro</Label>
-              <Input
-                id="bairro"
-                maxLength={1000}
-                {...form.register("bairro")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="logradouro">Logradouro</Label>
-              <Input
-                id="logradouro"
-                maxLength={1000}
-                {...form.register("logradouro")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="numero">Número</Label>
-              <Input
-                id="numero"
-                maxLength={1000}
-                {...form.register("numero")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="complemento">Complemento</Label>
-              <Input
-                id="complemento"
-                maxLength={1000}
-                {...form.register("complemento")}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Plano vinculado</Label>
-            <Select
-              value={form.watch("planoId")}
-              onValueChange={(value) => form.setValue("planoId", value)}
-              disabled={isLoadingPlanos || isErrorPlanos}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue
-                  placeholder={
-                    isLoadingPlanos
-                      ? "Carregando planos..."
-                      : "Selecione o plano"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sem plano vinculado</SelectItem>
-                {(planos ?? []).map((plano) => (
-                  <SelectItem key={plano.id} value={String(plano.id)}>
-                    {plano.nome} — R${" "}
-                    {Number(plano.valorMensal ?? 0).toFixed(2)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {isErrorPlanos && (
-              <p className="text-sm text-red-600">
-                Não foi possível carregar os planos. Tente novamente mais tarde.
-              </p>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-3 border-t px-4 py-4 sm:px-6">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>

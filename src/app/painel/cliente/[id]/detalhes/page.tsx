@@ -25,10 +25,12 @@ import { toast } from "sonner";
 import { StatusPagamento } from "@/types/PaymentType";
 import { useClienteDetalhes } from "@/hooks/queries/useClienteDetalhes";
 import { ClienteEditDialog } from "@/components/Titular/Cliente/ClienteEditDialog";
+import CarteirinhaAsImage from "@/components/CarteirinhaAsImage";
 import {
   atualizarDependente,
   criarDependente,
 } from "@/services/dependente.service";
+import { mapTitularToCarteirinha } from "@/services/clienteCarteirinha.service";
 import api from "@/utils/api";
 import { extractApiError } from "@/utils/httpError";
 import { Input } from "@/components/ui/input";
@@ -40,6 +42,7 @@ const DetalhesCliente = () => {
   const params = useParams();
   const clienteId = params?.id as string | undefined;
   const [abaAtiva, setAbaAtiva] = useState("geral");
+  const [isFlippedCarteirinha, setIsFlippedCarteirinha] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [limiteBeneficiarios, setLimiteBeneficiarios] = useState<number | null>(
     null,
@@ -261,6 +264,7 @@ const DetalhesCliente = () => {
 
   const abas = [
     { id: "geral", nome: "Visão Geral", icon: User },
+    { id: "carteirinha", nome: "Carteirinha", icon: CreditCard },
     { id: "coberturas", nome: "Coberturas", icon: Shield },
     { id: "dependentes", nome: "Dependentes", icon: Users },
     { id: "financeiro", nome: "Financeiro", icon: CreditCard },
@@ -275,6 +279,39 @@ const DetalhesCliente = () => {
   );
   const valorMensalComAdicionais =
     Number(cliente.plano.valorMensal ?? 0) + totalAdicionaisDependentes;
+  const titularIdNumber = Number(cliente.id);
+  const clienteCarteirinha = mapTitularToCarteirinha({
+    id: Number.isFinite(titularIdNumber) ? titularIdNumber : null,
+    nome: cliente.nome,
+    cpf: cliente.cpf,
+    email: cliente.email,
+    telefone: cliente.telefone,
+    statusPlano: cliente.statusPlano,
+    dataContratacao: cliente.dataContratacao,
+    plano: {
+      id: cliente.plano.id,
+      nome: cliente.plano.nome,
+      valorMensal: Number(cliente.plano.valorMensal ?? 0),
+      vigenciaMeses: Number(cliente.plano.vigenciaMeses ?? 12),
+      coberturas: [
+        ...(cliente.plano.coberturas.servicosPadrao ?? []),
+        ...(cliente.plano.coberturas.coberturaTranslado ?? []),
+        ...(cliente.plano.coberturas.servicosEspecificos ?? []),
+      ].map((item) => ({
+        descricao: item.descricao,
+        tipo: item.nome,
+      })),
+    },
+    dependentes: (cliente.dependentes ?? []).map((dep) => {
+      const depIdNumber = Number(dep.id);
+      return {
+        id: Number.isFinite(depIdNumber) ? depIdNumber : null,
+        nome: dep.nome,
+        dataNascimento: dep.dataNascimento,
+        tipoDependente: dep.parentesco,
+      };
+    }),
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -471,6 +508,34 @@ const DetalhesCliente = () => {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {abaAtiva === "carteirinha" && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Carteirinha do Cliente
+              </h3>
+              <p className="text-sm text-gray-600">
+                Visualize a carteirinha e faça download em PDF.
+              </p>
+            </div>
+
+            <CarteirinhaAsImage
+              cliente={clienteCarteirinha}
+              isFlipped={isFlippedCarteirinha}
+              setIsFlipped={setIsFlippedCarteirinha}
+              formatDate={(value: string) =>
+                new Date(value).toLocaleDateString("pt-BR")
+              }
+              formatCurrency={(value: number) =>
+                value.toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                })
+              }
+            />
           </div>
         )}
 

@@ -160,9 +160,9 @@ export default function CarteirinhaAsImage({
           <li style="display:flex;gap:8px;align-items:flex-start;min-width:0;
               border:1px solid ${COLORS.emeraldBorder70};
               background:${COLORS.emerald50_60};
-              border-radius:12px;padding:8px 12px;">
+              border-radius:12px;padding:6px 10px;">
             <span style="width:6px;height:6px;border-radius:9999px;background:${COLORS.emerald500};margin-top:4px;flex-shrink:0;"></span>
-            <span style="line-height:1.2;word-break:break-word;color:${COLORS.slate700}">${t}</span>
+            <span style="font-size:12px;line-height:1.15;word-break:break-word;overflow-wrap:anywhere;color:${COLORS.slate700}">${t}</span>
           </li>
         `;
       })
@@ -184,16 +184,16 @@ export default function CarteirinhaAsImage({
           display:flex;flex-direction:column;gap:0;
         ">
           <div style="display:flex;justify-content:space-between;align-items:center">
-            <h2 style="margin:0;font-size:18px;font-weight:700;color:${COLORS.slate900}">Benefícios do plano</h2>
+            <h2 style="margin:0;font-size:17px;font-weight:700;color:${COLORS.slate900}">Benefícios do plano</h2>
             <span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.3em;color:${COLORS.slate400}">${tenantLabel}</span>
           </div>
 
-          <ul style="margin:24px 0 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px;">
+          <ul style="margin:18px 0 0 0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             ${coberturaLis}
           </ul>
 
           <div style="
-            margin-top:24px;display:flex;flex-direction:column;gap:12px;border-radius:12px;padding:16px;
+            margin-top:18px;display:flex;flex-direction:column;gap:10px;border-radius:12px;padding:12px;
             border:1px solid ${COLORS.emeraldBorder70};
             background:${COLORS.emerald50_80};color:${COLORS.slate700};
           ">

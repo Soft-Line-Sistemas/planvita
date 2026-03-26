@@ -73,6 +73,12 @@ export default function AcessoPage() {
   const [emailModalUser, setEmailModalUser] = useState<User | null>(null);
   const [newEmail, setNewEmail] = useState("");
   const [updatingEmail, setUpdatingEmail] = useState(false);
+  const [commissionDrafts, setCommissionDrafts] = useState<
+    Record<number, string>
+  >({});
+  const [savingCommissionId, setSavingCommissionId] = useState<number | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!hasPermission("user.view")) {
@@ -85,7 +91,16 @@ export default function AcessoPage() {
           api.get("/users"),
           api.get("/roles"),
         ]);
-        setUsers(usersRes.data);
+        const loadedUsers = usersRes.data as User[];
+        setUsers(loadedUsers);
+        setCommissionDrafts(
+          Object.fromEntries(
+            loadedUsers.map((loadedUser) => [
+              loadedUser.id,
+              String(Number(loadedUser.valorComissaoIndicacao ?? 0)),
+            ]),
+          ),
+        );
         setRoles(rolesRes.data);
       } catch (err) {
         console.error(err);
@@ -98,14 +113,87 @@ export default function AcessoPage() {
   }, [hasPermission]);
 
   const handleChangeRole = async (userId: number, newRoleId: number) => {
+    const roleSelecionada = roles.find((role) => role.id === newRoleId);
+    const isConsultorRole =
+      roleSelecionada?.name?.toLowerCase().trim() === "consultor";
+    const valorComissaoIndicacao = isConsultorRole
+      ? Number(commissionDrafts[userId] ?? 0)
+      : undefined;
+
     try {
-      await api.put(`/users/${userId}/role`, { roleId: newRoleId });
+      await api.put(`/users/${userId}/role`, {
+        roleId: newRoleId,
+        valorComissaoIndicacao,
+      });
       setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, roleId: newRoleId } : u)),
+        prev.map((u) =>
+          u.id === userId
+            ? {
+                ...u,
+                roleId: newRoleId,
+                valorComissaoIndicacao: isConsultorRole
+                  ? Number(commissionDrafts[userId] ?? 0)
+                  : u.valorComissaoIndicacao,
+              }
+            : u,
+        ),
       );
     } catch (err) {
       console.error(err);
       alert("Erro ao atribuir cargo ao usuário");
+    }
+  };
+
+  const handleSaveCommission = async (targetUser: User) => {
+    if (!targetUser.roleId) {
+      toast.error("Defina um cargo antes de salvar a comissão");
+      return;
+    }
+
+    const roleAtual = roles.find((role) => role.id === targetUser.roleId);
+    const isConsultorRole =
+      roleAtual?.name?.toLowerCase().trim() === "consultor" ||
+      !!targetUser.consultorId;
+
+    if (!isConsultorRole) {
+      toast.error("Comissão só pode ser configurada para consultor");
+      return;
+    }
+
+    const rawValue =
+      commissionDrafts[targetUser.id] ??
+      String(Number(targetUser.valorComissaoIndicacao ?? 0));
+    const parsedValue = Number(rawValue);
+
+    if (Number.isNaN(parsedValue) || parsedValue < 0) {
+      toast.error("Informe um valor de comissão válido");
+      return;
+    }
+
+    setSavingCommissionId(targetUser.id);
+    try {
+      await api.put(`/users/${targetUser.id}/role`, {
+        roleId: targetUser.roleId,
+        valorComissaoIndicacao: parsedValue,
+      });
+
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === targetUser.id
+            ? { ...u, valorComissaoIndicacao: parsedValue }
+            : u,
+        ),
+      );
+      setCommissionDrafts((prev) => ({
+        ...prev,
+        [targetUser.id]: String(parsedValue),
+      }));
+      toast.success("Comissão atualizada com sucesso");
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao atualizar comissão");
+    } finally {
+      setSavingCommissionId(null);
     }
   };
 
@@ -373,107 +461,156 @@ export default function AcessoPage() {
               </TableHeader>
 
               <TableBody>
-                {filteredUsers.map((user) => (
-                  <motion.tr
-                    key={user.id}
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.15 }}
-                    className="hover:bg-muted/40"
-                  >
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell className="text-gray-500">
-                      {user.email}
-                      {canUpdateUser && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleOpenEmailModal(user)}
-                        >
-                          Editar
-                        </Button>
+                {filteredUsers.map((user) => {
+                  const roleAtual = roles.find((r) => r.id === user.roleId);
+                  const isConsultorRow =
+                    roleAtual?.name?.toLowerCase().trim() === "consultor" ||
+                    !!user.consultorId;
+
+                  return (
+                    <motion.tr
+                      key={user.id}
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="hover:bg-muted/40"
+                    >
+                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell className="text-gray-500">
+                        {user.email}
+                        {canUpdateUser && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenEmailModal(user)}
+                          >
+                            Editar
+                          </Button>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {user.roleId ? (
+                          <Badge variant="secondary">
+                            {roles.find((r) => r.id === user.roleId)?.name ||
+                              "—"}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-gray-500">
+                            Sem cargo
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isConsultorRow
+                          ? `R$ ${Number(user.valorComissaoIndicacao ?? 0).toFixed(2)}`
+                          : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {isConsultorRow
+                          ? `R$ ${Number(user.comissaoPendente ?? 0).toFixed(2)}`
+                          : "—"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={user.roleId?.toString() || ""}
+                            onValueChange={(val) =>
+                              handleChangeRole(user.id, Number(val))
+                            }
+                            disabled={!canAssignRole}
+                          >
+                            <SelectTrigger className="w-44">
+                              <SelectValue placeholder="Selecionar" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {roles.map((role) => (
+                                <SelectItem
+                                  key={role.id}
+                                  value={role.id.toString()}
+                                >
+                                  {role.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {isConsultorRow && (
+                            <>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                className="w-36"
+                                value={
+                                  commissionDrafts[user.id] ??
+                                  String(
+                                    Number(user.valorComissaoIndicacao ?? 0),
+                                  )
+                                }
+                                onChange={(e) =>
+                                  setCommissionDrafts((prev) => ({
+                                    ...prev,
+                                    [user.id]: e.target.value,
+                                  }))
+                                }
+                                disabled={
+                                  !canAssignRole ||
+                                  savingCommissionId === user.id
+                                }
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSaveCommission(user)}
+                                disabled={
+                                  !canAssignRole ||
+                                  savingCommissionId === user.id
+                                }
+                              >
+                                {savingCommissionId === user.id
+                                  ? "Salvando..."
+                                  : "Salvar"}
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                      {isAdmin && canUpdateUser && (
+                        <TableCell className="text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenPasswordModal(user)}
+                          >
+                            Alterar
+                          </Button>
+                        </TableCell>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      {user.roleId ? (
-                        <Badge variant="secondary">
-                          {roles.find((r) => r.id === user.roleId)?.name || "—"}
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-gray-500">
-                          Sem cargo
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {user.consultorId
-                        ? `R$ ${Number(user.valorComissaoIndicacao ?? 0).toFixed(2)}`
-                        : "—"}
-                    </TableCell>
-                    <TableCell>
-                      {user.consultorId
-                        ? `R$ ${Number(user.comissaoPendente ?? 0).toFixed(2)}`
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="flex w-full justify-end">
-                      <Select
-                        value={user.roleId?.toString() || ""}
-                        onValueChange={(val) =>
-                          handleChangeRole(user.id, Number(val))
-                        }
-                        disabled={!canAssignRole}
-                      >
-                        <SelectTrigger className="w-44">
-                          <SelectValue placeholder="Selecionar" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {roles.map((role) => (
-                            <SelectItem
-                              key={role.id}
-                              value={role.id.toString()}
-                            >
-                              {role.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    {isAdmin && canUpdateUser && (
                       <TableCell className="text-right">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleOpenPasswordModal(user)}
+                          onClick={() => {
+                            const link =
+                              user.linkCadastro ||
+                              (user.consultorId
+                                ? `${window.location.origin}/cliente/cadastro?consultorId=${user.consultorId}`
+                                : "");
+                            if (!link) {
+                              toast.error(
+                                "Este colaborador não possui vínculo de consultor",
+                              );
+                              return;
+                            }
+                            setSelectedLink(link);
+                            setShareModalOpen(true);
+                          }}
                         >
-                          Alterar
+                          Enviar
                         </Button>
                       </TableCell>
-                    )}
-                    <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const link =
-                            user.linkCadastro ||
-                            (user.consultorId
-                              ? `${window.location.origin}/cliente/cadastro?consultorId=${user.consultorId}`
-                              : "");
-                          if (!link) {
-                            toast.error(
-                              "Este colaborador não possui vínculo de consultor",
-                            );
-                            return;
-                          }
-                          setSelectedLink(link);
-                          setShareModalOpen(true);
-                        }}
-                      >
-                        Enviar
-                      </Button>
-                    </TableCell>
-                  </motion.tr>
-                ))}
+                    </motion.tr>
+                  );
+                })}
               </TableBody>
             </Table>
           </ScrollArea>
