@@ -327,7 +327,12 @@ export function ClienteEditDialog({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="nome">Nome completo</Label>
-              <Input id="nome" {...form.register("nome")} required />
+              <Input
+                id="nome"
+                maxLength={1000}
+                {...form.register("nome")}
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
@@ -378,7 +383,12 @@ export function ClienteEditDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="profissao">Profissão</Label>
-              <Input id="profissao" {...form.register("profissao")} required />
+              <Input
+                id="profissao"
+                maxLength={191}
+                {...form.register("profissao")}
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label>Status do plano</Label>
@@ -410,6 +420,7 @@ export function ClienteEditDialog({
                 <Label htmlFor="responsavelNome">Nome completo</Label>
                 <Input
                   id="responsavelNome"
+                  maxLength={1000}
                   {...form.register("responsavelNome")}
                   required
                 />
@@ -476,6 +487,7 @@ export function ClienteEditDialog({
                 <Label htmlFor="responsavelProfissao">Profissão</Label>
                 <Input
                   id="responsavelProfissao"
+                  maxLength={191}
                   {...form.register("responsavelProfissao")}
                   required
                 />

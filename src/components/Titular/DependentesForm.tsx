@@ -116,6 +116,7 @@ export const DependentesForm = ({
                     Nome <span className="text-red-500">*</span>
                   </Label>
                   <Input
+                    maxLength={1000}
                     value={dep.nome}
                     onChange={(e) =>
                       handleDependenteChange(index, "nome", e.target.value)

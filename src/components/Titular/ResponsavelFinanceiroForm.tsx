@@ -112,7 +112,11 @@ export const ResponsavelFinanceiroForm = ({
               Nome completo
               <span className="text-red-500">*</span>
             </Label>
-            <Input id="nomeCompletoResp" {...form.register("nomeCompleto")} />
+            <Input
+              id="nomeCompletoResp"
+              maxLength={1000}
+              {...form.register("nomeCompleto")}
+            />
             {errors.nomeCompleto && (
               <p className="text-sm text-red-500 mt-1">
                 {String(errors.nomeCompleto.message)}
@@ -232,7 +236,11 @@ export const ResponsavelFinanceiroForm = ({
               >
                 Naturalidade <span className="text-red-500">*</span>
               </Label>
-              <Input id="naturalidadeResp" {...form.register("naturalidade")} />
+              <Input
+                id="naturalidadeResp"
+                maxLength={191}
+                {...form.register("naturalidade")}
+              />
               {errors.naturalidade && (
                 <p className="text-sm text-red-500 mt-1">
                   {String(errors.naturalidade.message)}
@@ -283,7 +291,11 @@ export const ResponsavelFinanceiroForm = ({
                 Profissão
                 <span className="text-red-500">*</span>
               </Label>
-              <Input id="profissaoResp" {...form.register("profissao")} />
+              <Input
+                id="profissaoResp"
+                maxLength={191}
+                {...form.register("profissao")}
+              />
               {errors.profissao && (
                 <p className="text-sm text-red-500 mt-1">
                   {String(errors.profissao.message)}

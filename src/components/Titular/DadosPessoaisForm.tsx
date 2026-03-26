@@ -31,7 +31,11 @@ export const DadosPessoaisForm = ({ form }: Props) => (
         Nome completo
         <span className="text-red-500">*</span>
       </Label>
-      <Input id="nomeCompleto" {...form.register("nomeCompleto")} />
+      <Input
+        id="nomeCompleto"
+        maxLength={1000}
+        {...form.register("nomeCompleto")}
+      />
       {form.formState.errors.nomeCompleto && (
         <p className="text-red-600 text-sm">
           {form.formState.errors.nomeCompleto.message}
@@ -122,7 +126,11 @@ export const DadosPessoaisForm = ({ form }: Props) => (
       <Label htmlFor="naturalidade" className="flex items-center gap-1">
         Naturalidade <span className="text-red-500">*</span>
       </Label>
-      <Input id="naturalidade" {...form.register("naturalidade")} />
+      <Input
+        id="naturalidade"
+        maxLength={191}
+        {...form.register("naturalidade")}
+      />
       {form.formState.errors.naturalidade && (
         <p className="text-red-600 text-sm">
           {String(form.formState.errors.naturalidade.message)}
@@ -164,7 +172,7 @@ export const DadosPessoaisForm = ({ form }: Props) => (
           Profissão
           <span className="text-red-500">*</span>
         </Label>
-        <Input id="profissao" {...form.register("profissao")} />
+        <Input id="profissao" maxLength={191} {...form.register("profissao")} />
         {form.formState.errors.profissao && (
           <p className="text-red-600 text-sm">
             {form.formState.errors.profissao.message}
