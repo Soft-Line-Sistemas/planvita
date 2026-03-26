@@ -8,8 +8,17 @@ import { Plus, Trash2, Users } from "lucide-react";
 import { formatCPF, formatPhone } from "@/helpers/formHelpers";
 import { calcularIdade } from "@/utils/planos";
 
+export interface DependenteFieldErrors {
+  nome?: string;
+  dataNascimento?: string;
+  parentesco?: string;
+  telefone?: string;
+  cpf?: string;
+}
+
 interface Props {
   dependentes: Dependente[];
+  dependentesErrors?: DependenteFieldErrors[];
   handleAddDependente: () => void;
   handleRemoveDependente: (index: number) => void;
   handleDependenteChange: <K extends keyof Dependente>(
@@ -23,6 +32,7 @@ interface Props {
 
 export const DependentesForm = ({
   dependentes,
+  dependentesErrors = [],
   handleAddDependente,
   handleRemoveDependente,
   handleDependenteChange,
@@ -64,6 +74,8 @@ export const DependentesForm = ({
     ) : (
       <div className="space-y-4">
         {dependentes.map((dep, index) => {
+          const errors = dependentesErrors[index] ?? {};
+
           const handleDataNascimentoChange = (value: string) => {
             const normalized = value || null;
             const idadeCalculada = normalized
@@ -101,6 +113,9 @@ export const DependentesForm = ({
                       handleDependenteChange(index, "nome", e.target.value)
                     }
                   />
+                  {errors.nome && (
+                    <p className="text-sm text-red-500 mt-1">{errors.nome}</p>
+                  )}
                 </div>
 
                 {/* Data de Nascimento */}
@@ -113,6 +128,11 @@ export const DependentesForm = ({
                     value={dep.dataNascimento ?? ""}
                     onChange={(e) => handleDataNascimentoChange(e.target.value)}
                   />
+                  {errors.dataNascimento && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {errors.dataNascimento}
+                    </p>
+                  )}
                 </div>
 
                 {/* Parentesco */}
@@ -130,6 +150,11 @@ export const DependentesForm = ({
                       )
                     }
                   />
+                  {errors.parentesco && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {errors.parentesco}
+                    </p>
+                  )}
                 </div>
 
                 {/* Telefone */}
@@ -147,6 +172,11 @@ export const DependentesForm = ({
                       )
                     }
                   />
+                  {errors.telefone && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {errors.telefone}
+                    </p>
+                  )}
                 </div>
 
                 {/* CPF */}
@@ -164,6 +194,9 @@ export const DependentesForm = ({
                       )
                     }
                   />
+                  {errors.cpf && (
+                    <p className="text-sm text-red-500 mt-1">{errors.cpf}</p>
+                  )}
                 </div>
               </div>
             </Card>

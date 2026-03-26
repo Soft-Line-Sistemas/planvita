@@ -28,7 +28,10 @@ import {
 import { DadosPessoaisForm } from "@/components/Titular/DadosPessoaisForm";
 import { EnderecoForm } from "@/components/Titular/EnderecoForm";
 import { ResponsavelFinanceiroForm } from "@/components/Titular/ResponsavelFinanceiroForm";
-import { DependentesForm } from "@/components/Titular/DependentesForm";
+import {
+  DependentesForm,
+  type DependenteFieldErrors,
+} from "@/components/Titular/DependentesForm";
 import { Dependente } from "@/types/DependentesType";
 import { PlanoForm } from "@/components/Titular/PlanoForm";
 import { Confirmacao } from "@/components/Titular/Confirmacao";
@@ -76,6 +79,9 @@ export function CadastroClienteWizard({
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<WizardStepsData>({});
   const [dependentes, setDependentes] = useState<Dependente[]>([]);
+  const [dependentesErrors, setDependentesErrors] = useState<
+    DependenteFieldErrors[]
+  >([]);
   const [limiteBeneficiarios, setLimiteBeneficiarios] = useState<number | null>(
     null,
   );
@@ -119,6 +125,38 @@ export function CadastroClienteWizard({
         : undefined,
     );
   }, []);
+
+  const buildDependenteErrors = (dep: Dependente): DependenteFieldErrors => {
+    const errors: DependenteFieldErrors = {};
+    const nome = String(dep.nome ?? "").trim();
+    const dataNascimento = String(dep.dataNascimento ?? "").trim();
+    const parentesco = String(dep.parentesco ?? "").trim();
+    const telefoneDigits = String(dep.telefone ?? "").replace(/\D/g, "");
+    const cpfDigits = String(dep.cpf ?? "").replace(/\D/g, "");
+
+    if (!nome) errors.nome = "Nome do dependente é obrigatório";
+    if (!dataNascimento)
+      errors.dataNascimento = "Data de nascimento é obrigatória";
+    if (!parentesco) errors.parentesco = "Parentesco é obrigatório";
+    if (!telefoneDigits) {
+      errors.telefone = "Telefone é obrigatório";
+    } else if (telefoneDigits.length < 10) {
+      errors.telefone = "Telefone inválido";
+    }
+    if (!cpfDigits) {
+      errors.cpf = "CPF é obrigatório";
+    } else if (cpfDigits.length < 11) {
+      errors.cpf = "CPF inválido";
+    }
+
+    return errors;
+  };
+
+  const validateDependentes = (items: Dependente[]) => {
+    const errors = items.map(buildDependenteErrors);
+    const isValid = errors.every((err) => Object.keys(err).length === 0);
+    return { isValid, errors };
+  };
 
   useEffect(() => {
     let ativo = true;
@@ -218,6 +256,16 @@ export function CadastroClienteWizard({
         }));
         return true;
       }
+      case 4: {
+        const { isValid, errors } = validateDependentes(dependentes);
+        setDependentesErrors(errors);
+        if (!isValid) return false;
+        setFormData((prev) => ({
+          ...prev,
+          dependentes,
+        }));
+        return true;
+      }
       case 5: {
         const isValid = await planoForm.trigger(undefined, {
           shouldFocus: true,
@@ -262,10 +310,13 @@ export function CadastroClienteWizard({
         cpf: "",
       },
     ]);
+    setDependentesErrors((prev) => [...prev, {}]);
   };
 
-  const handleRemoveDependente = (index: number) =>
+  const handleRemoveDependente = (index: number) => {
     setDependentes((prev) => prev.filter((_, i) => i !== index));
+    setDependentesErrors((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleDependenteChange = <K extends keyof Dependente>(
     index: number,
@@ -275,6 +326,8 @@ export function CadastroClienteWizard({
     setDependentes((prev) => {
       const updated = [...prev];
       updated[index][field] = value;
+      const { errors } = validateDependentes(updated);
+      setDependentesErrors(errors);
       return updated;
     });
   };
@@ -283,6 +336,8 @@ export function CadastroClienteWizard({
     !limiteBeneficiarios ||
     limiteBeneficiarios <= 0 ||
     dependentes.length < limiteBeneficiarios;
+  const canContinueStep4 =
+    currentStep !== 4 || validateDependentes(dependentes).isValid;
 
   const handleFinish = async () => {
     if (!selectedConsultorId) {
@@ -372,6 +427,7 @@ export function CadastroClienteWizard({
         return (
           <DependentesForm
             dependentes={dependentes}
+            dependentesErrors={dependentesErrors}
             handleAddDependente={handleAddDependente}
             handleRemoveDependente={handleRemoveDependente}
             handleDependenteChange={handleDependenteChange}
@@ -512,6 +568,7 @@ export function CadastroClienteWizard({
                 <Button
                   type="button"
                   onClick={handleNext}
+                  disabled={!canContinueStep4}
                   className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
                 >
                   Continuar <ChevronRight className="h-4 w-4" />

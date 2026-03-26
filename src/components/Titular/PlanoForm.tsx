@@ -169,7 +169,6 @@ export function PlanoForm({
     data: elegiveis,
     isLoading,
     isError,
-    error,
   } = useQuery({
     queryKey: ["planos", "sugerir", participantesPayload, "todos"],
     queryFn: async () => {
@@ -353,8 +352,8 @@ export function PlanoForm({
         )}
         {enabled && isError && (
           <p className="text-red-600">
-            Falha ao obter planos:{" "}
-            {error instanceof Error ? error.message : "erro inesperado"}
+            Não foi possível carregar os planos agora. Revise os dados dos
+            participantes e tente novamente.
           </p>
         )}
 
@@ -370,7 +369,7 @@ export function PlanoForm({
         ) : (
           !isLoading && (
             <p className="text-red-600">
-              Nenhum plano disponível para essa faixa etária.
+              Nenhum plano disponível para os dados informados.
             </p>
           )
         )}
