@@ -55,6 +55,8 @@ export const ResponsavelFinanceiroForm = ({
   usarMesmosDados,
   // setUsarMesmosDados,
 }: Props) => {
+  const errors = form.formState.errors;
+
   useEffect(() => {
     form.register("cep");
     form.register("uf");
@@ -110,6 +112,11 @@ export const ResponsavelFinanceiroForm = ({
               <span className="text-red-500">*</span>
             </Label>
             <Input id="nomeCompletoResp" {...form.register("nomeCompleto")} />
+            {errors.nomeCompleto && (
+              <p className="text-sm text-red-500 mt-1">
+                {String(errors.nomeCompleto.message)}
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -125,6 +132,11 @@ export const ResponsavelFinanceiroForm = ({
                   form.setValue("cpf", formatCPF(e.target.value))
                 }
               />
+              {errors.cpf && (
+                <p className="text-sm text-red-500 mt-1">
+                  {String(errors.cpf.message)}
+                </p>
+              )}
             </div>
             <div className="space-y-1">
               <Label htmlFor="rgResp">RG</Label>
@@ -133,6 +145,11 @@ export const ResponsavelFinanceiroForm = ({
                 {...form.register("rg")}
                 onChange={(e) => form.setValue("rg", formatRG(e.target.value))}
               />
+              {errors.rg && (
+                <p className="text-sm text-red-500 mt-1">
+                  {String(errors.rg.message)}
+                </p>
+              )}
             </div>
           </div>
 
@@ -150,9 +167,9 @@ export const ResponsavelFinanceiroForm = ({
                 id="dataNascimentoResp"
                 {...form.register("dataNascimento")}
               />
-              {form.formState.errors.dataNascimento && (
+              {errors.dataNascimento && (
                 <p className="text-sm text-red-500 mt-1">
-                  {form.formState.errors.dataNascimento.message}
+                  {String(errors.dataNascimento.message)}
                 </p>
               )}
             </div>
@@ -162,6 +179,11 @@ export const ResponsavelFinanceiroForm = ({
                 <span className="text-red-500">*</span>
               </Label>
               <Input id="parentesco" {...form.register("parentesco")} />
+              {errors.parentesco && (
+                <p className="text-sm text-red-500 mt-1">
+                  {String(errors.parentesco.message)}
+                </p>
+              )}
             </div>
           </div>
 
@@ -182,6 +204,11 @@ export const ResponsavelFinanceiroForm = ({
                   <SelectItem value="Feminino">Feminino</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.sexo && (
+                <p className="text-sm text-red-500 mt-1">
+                  {String(errors.sexo.message)}
+                </p>
+              )}
             </div>
             <div className="space-y-1">
               <Label
@@ -191,6 +218,11 @@ export const ResponsavelFinanceiroForm = ({
                 Naturalidade <span className="text-red-500">*</span>
               </Label>
               <Input id="naturalidadeResp" {...form.register("naturalidade")} />
+              {errors.naturalidade && (
+                <p className="text-sm text-red-500 mt-1">
+                  {String(errors.naturalidade.message)}
+                </p>
+              )}
             </div>
           </div>
 
@@ -221,9 +253,9 @@ export const ResponsavelFinanceiroForm = ({
                   <SelectItem value="Viúvo(a)">Viúvo(a)</SelectItem>
                 </SelectContent>
               </Select>
-              {form.formState.errors.situacaoConjugal && (
+              {errors.situacaoConjugal && (
                 <p className="text-sm text-red-500 mt-1">
-                  {String(form.formState.errors.situacaoConjugal.message)}
+                  {String(errors.situacaoConjugal.message)}
                 </p>
               )}
             </div>
@@ -237,9 +269,9 @@ export const ResponsavelFinanceiroForm = ({
                 <span className="text-red-500">*</span>
               </Label>
               <Input id="profissaoResp" {...form.register("profissao")} />
-              {form.formState.errors.profissao && (
+              {errors.profissao && (
                 <p className="text-sm text-red-500 mt-1">
-                  {String(form.formState.errors.profissao.message)}
+                  {String(errors.profissao.message)}
                 </p>
               )}
             </div>
@@ -265,6 +297,11 @@ export const ResponsavelFinanceiroForm = ({
                   }
                   placeholder="00000-000"
                 />
+                {errors.cep && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {String(errors.cep.message)}
+                  </p>
+                )}
               </div>
               <div>
                 <Label
@@ -274,6 +311,11 @@ export const ResponsavelFinanceiroForm = ({
                   UF <span className="text-red-500">*</span>
                 </Label>
                 <Input id="ufResp" {...form.register("uf")} />
+                {errors.uf && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {String(errors.uf.message)}
+                  </p>
+                )}
               </div>
               <div>
                 <Label
@@ -283,6 +325,11 @@ export const ResponsavelFinanceiroForm = ({
                   Cidade <span className="text-red-500">*</span>
                 </Label>
                 <Input id="cidadeResp" {...form.register("cidade")} />
+                {errors.cidade && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {String(errors.cidade.message)}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -295,6 +342,11 @@ export const ResponsavelFinanceiroForm = ({
                   Bairro <span className="text-red-500">*</span>
                 </Label>
                 <Input id="bairroResp" {...form.register("bairro")} />
+                {errors.bairro && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {String(errors.bairro.message)}
+                  </p>
+                )}
               </div>
               <div>
                 <Label
@@ -304,6 +356,11 @@ export const ResponsavelFinanceiroForm = ({
                   Rua <span className="text-red-500">*</span>
                 </Label>
                 <Input id="logradouroResp" {...form.register("logradouro")} />
+                {errors.logradouro && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {String(errors.logradouro.message)}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -316,6 +373,11 @@ export const ResponsavelFinanceiroForm = ({
                   Número <span className="text-red-500">*</span>
                 </Label>
                 <Input id="numeroResp" {...form.register("numero")} />
+                {errors.numero && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {String(errors.numero.message)}
+                  </p>
+                )}
               </div>
               <div>
                 <Label
@@ -340,6 +402,11 @@ export const ResponsavelFinanceiroForm = ({
                   id="pontoReferenciaResp"
                   {...form.register("pontoReferencia")}
                 />
+                {errors.pontoReferencia && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {String(errors.pontoReferencia.message)}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -360,9 +427,9 @@ export const ResponsavelFinanceiroForm = ({
                 },
               })}
             />
-            {form.formState.errors.email && (
+            {errors.email && (
               <p className="text-sm text-red-500 mt-1">
-                {form.formState.errors.email.message}
+                {String(errors.email.message)}
               </p>
             )}
           </div>
@@ -391,6 +458,11 @@ export const ResponsavelFinanceiroForm = ({
                   }
                 }}
               />
+              {errors.telefone && (
+                <p className="text-sm text-red-500 mt-1">
+                  {String(errors.telefone.message)}
+                </p>
+              )}
             </div>
             <div className="space-y-1">
               <Label htmlFor="whatsappResp" className="flex items-center gap-1">
@@ -404,6 +476,11 @@ export const ResponsavelFinanceiroForm = ({
                   form.setValue("whatsapp", formatWhatsApp(e.target.value))
                 }
               />
+              {errors.whatsapp && (
+                <p className="text-sm text-red-500 mt-1">
+                  {String(errors.whatsapp.message)}
+                </p>
+              )}
             </div>
           </div>
         </div>
