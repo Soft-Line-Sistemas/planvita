@@ -256,6 +256,9 @@ export default function ConsultaClientePage() {
   const [firstAccessDestination, setFirstAccessDestination] = useState<
     string | null
   >(null);
+  const [firstAccessChannel, setFirstAccessChannel] = useState<
+    "email" | "whatsapp" | null
+  >(null);
   const [firstAccessError, setFirstAccessError] = useState<string | null>(null);
   const [firstAccessLoading, setFirstAccessLoading] = useState(false);
 
@@ -296,6 +299,7 @@ export default function ConsultaClientePage() {
     setFirstAccessPassword("");
     setFirstAccessPasswordConfirm("");
     setFirstAccessDestination(null);
+    setFirstAccessChannel(null);
     setFirstAccessInfo(null);
     setFirstAccessError(null);
   }, []);
@@ -586,6 +590,7 @@ export default function ConsultaClientePage() {
         setFirstAccessStep("request");
         setFirstAccessLogin(loginValue.trim());
         setFirstAccessDestination(null);
+        setFirstAccessChannel(null);
         setFirstAccessInfo(
           "Seu cadastro ainda não possui senha. Vamos validar seu acesso e criar sua senha.",
         );
@@ -601,9 +606,11 @@ export default function ConsultaClientePage() {
     }
   };
 
-  const startFirstAccess = async () => {
+  const startFirstAccess = async (channel?: "email" | "whatsapp") => {
     setFirstAccessError(null);
-    setFirstAccessInfo(null);
+    if (firstAccessStep === "verify") {
+      setFirstAccessInfo(null);
+    }
     setFirstAccessDestination(null);
     const loginError = validarLoginCliente(firstAccessLogin);
     if (loginError) {
@@ -615,14 +622,16 @@ export default function ConsultaClientePage() {
     try {
       const { data } = await api.post("/auth/first-access", {
         login: firstAccessLogin.trim(),
+        ...(channel ? { channel } : {}),
       });
       const destination =
         data?.start?.destinationMasked || data?.start?.channel || "seu contato";
       setFirstAccessDestination(destination);
-      const devOtp = data?.start?.dev?.otp;
-      setFirstAccessInfo(
-        `Enviamos um código para ${destination}.${devOtp ? ` Código (dev): ${devOtp}` : ""}`,
+      setFirstAccessChannel(
+        data?.start?.channel === "whatsapp" ? "whatsapp" : "email",
       );
+      const devOtp = data?.start?.dev?.otp;
+      setFirstAccessInfo(devOtp ? `Código (dev): ${devOtp}` : null);
       setFirstAccessStep("verify");
     } catch (err: unknown) {
       const errorObject = err as {
@@ -1211,11 +1220,19 @@ export default function ConsultaClientePage() {
                       maxLength={6}
                     />
                   </div>
+                  {firstAccessChannel !== "whatsapp" && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => startFirstAccess("whatsapp")}
+                      disabled={firstAccessLoading}
+                    >
+                      Enviar código por WhatsApp
+                    </Button>
+                  )}
                   {firstAccessInfo && (
-                    <Alert>
-                      <AlertTitle>Info</AlertTitle>
-                      <AlertDescription>{firstAccessInfo}</AlertDescription>
-                    </Alert>
+                    <p className="text-xs text-slate-500">{firstAccessInfo}</p>
                   )}
                   {firstAccessError && (
                     <Alert variant="destructive">
