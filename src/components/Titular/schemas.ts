@@ -18,6 +18,12 @@ const dadosPessoaisSchema = z.object({
   nomeCompleto: z.string().min(2, "Nome completo é obrigatório"),
   cpf: z.string().min(11, "CPF inválido"),
   dataNascimento: z.string().min(10, "Data de nascimento é obrigatória"),
+  sexo: z.enum(["Masculino", "Feminino"], {
+    required_error: "Sexo é obrigatório",
+    invalid_type_error: "Sexo inválido",
+  }),
+  rg: z.string().min(5, "RG é obrigatório"),
+  naturalidade: z.string().min(2, "Naturalidade é obrigatória"),
   situacaoConjugal: z.string().min(2, "Situação conjugal é obrigatória"),
   profissao: z.string().min(2, "Profissão é obrigatória"),
   telefone: z.string().min(10, "Telefone inválido"),
@@ -33,6 +39,7 @@ const enderecoSchema = z.object({
   logradouro: z.string().min(2, "Logradouro é obrigatório"),
   complemento: z.string().optional(),
   numero: z.string().min(1, "Número é obrigatório"),
+  pontoReferencia: z.string().min(2, "Ponto de referência é obrigatório"),
 });
 
 const responsavelFinanceiroSchema = z
@@ -42,12 +49,22 @@ const responsavelFinanceiroSchema = z
     cpf: z.string().optional(),
     rg: z.string().optional(),
     dataNascimento: z.string().optional(),
+    sexo: z.enum(["Masculino", "Feminino"]).optional(),
+    naturalidade: z.string().optional(),
     parentesco: z.string().optional(),
     email: z.string().optional(),
     telefone: z.string().optional(),
     whatsapp: z.string().optional(),
     situacaoConjugal: z.string().optional(),
     profissao: z.string().optional(),
+    cep: z.string().optional(),
+    uf: z.string().optional(),
+    cidade: z.string().optional(),
+    bairro: z.string().optional(),
+    logradouro: z.string().optional(),
+    complemento: z.string().optional(),
+    numero: z.string().optional(),
+    pontoReferencia: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -56,8 +73,17 @@ const responsavelFinanceiroSchema = z
         !!data.nomeCompleto &&
         !!data.cpf &&
         !!data.parentesco &&
+        !!data.sexo &&
+        !!data.naturalidade &&
         !!data.situacaoConjugal &&
-        !!data.profissao
+        !!data.profissao &&
+        !!data.cep &&
+        !!data.uf &&
+        !!data.cidade &&
+        !!data.bairro &&
+        !!data.logradouro &&
+        !!data.numero &&
+        !!data.pontoReferencia
       );
     },
     {

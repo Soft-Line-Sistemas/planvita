@@ -58,6 +58,14 @@ type EditClienteFormValues = {
   responsavelRelacionamento: string;
   responsavelSituacaoConjugal: string;
   responsavelProfissao: string;
+  responsavelCep: string;
+  responsavelUf: string;
+  responsavelCidade: string;
+  responsavelBairro: string;
+  responsavelLogradouro: string;
+  responsavelNumero: string;
+  responsavelComplemento: string;
+  responsavelPontoReferencia: string;
 };
 
 type ClienteEditDialogProps = {
@@ -109,6 +117,15 @@ export function ClienteEditDialog({
       responsavelSituacaoConjugal:
         cliente.responsavelFinanceiro?.situacaoConjugal ?? "",
       responsavelProfissao: cliente.responsavelFinanceiro?.profissao ?? "",
+      responsavelCep: cliente.responsavelFinanceiro?.cep ?? "",
+      responsavelUf: cliente.responsavelFinanceiro?.uf ?? "",
+      responsavelCidade: cliente.responsavelFinanceiro?.cidade ?? "",
+      responsavelBairro: cliente.responsavelFinanceiro?.bairro ?? "",
+      responsavelLogradouro: cliente.responsavelFinanceiro?.logradouro ?? "",
+      responsavelNumero: cliente.responsavelFinanceiro?.numero ?? "",
+      responsavelComplemento: cliente.responsavelFinanceiro?.complemento ?? "",
+      responsavelPontoReferencia:
+        cliente.responsavelFinanceiro?.pontoReferencia ?? "",
     },
   });
 
@@ -145,6 +162,15 @@ export function ClienteEditDialog({
       responsavelSituacaoConjugal:
         cliente.responsavelFinanceiro?.situacaoConjugal ?? "",
       responsavelProfissao: cliente.responsavelFinanceiro?.profissao ?? "",
+      responsavelCep: cliente.responsavelFinanceiro?.cep ?? "",
+      responsavelUf: cliente.responsavelFinanceiro?.uf ?? "",
+      responsavelCidade: cliente.responsavelFinanceiro?.cidade ?? "",
+      responsavelBairro: cliente.responsavelFinanceiro?.bairro ?? "",
+      responsavelLogradouro: cliente.responsavelFinanceiro?.logradouro ?? "",
+      responsavelNumero: cliente.responsavelFinanceiro?.numero ?? "",
+      responsavelComplemento: cliente.responsavelFinanceiro?.complemento ?? "",
+      responsavelPontoReferencia:
+        cliente.responsavelFinanceiro?.pontoReferencia ?? "",
     });
   }, [cliente, form]);
 
@@ -176,6 +202,26 @@ export function ClienteEditDialog({
     () => (cliente.plano?.id ? String(cliente.plano.id) : "none"),
     [cliente.plano?.id],
   );
+
+  const responsavelCepValue = form.watch("responsavelCep");
+  useEffect(() => {
+    const cep = responsavelCepValue?.replace(/\D/g, "");
+    if (cep && cep.length === 8) {
+      fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data?.erro) {
+            form.setValue("responsavelLogradouro", data.logradouro || "");
+            form.setValue("responsavelBairro", data.bairro || "");
+            form.setValue("responsavelCidade", data.localidade || "");
+            form.setValue("responsavelUf", data.uf || "");
+          }
+        })
+        .catch(() => {
+          // silencioso
+        });
+    }
+  }, [responsavelCepValue, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     if (!values.situacaoConjugal?.trim() || !values.profissao?.trim()) {

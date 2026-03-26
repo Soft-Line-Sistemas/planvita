@@ -17,6 +17,7 @@ import {
   formatPhone,
   formatWhatsApp,
   formatRG,
+  formatCEP,
 } from "@/helpers/formHelpers";
 
 interface ResponsavelFormValues {
@@ -25,12 +26,22 @@ interface ResponsavelFormValues {
   cpf?: string;
   rg?: string;
   dataNascimento?: string;
+  sexo?: string;
+  naturalidade?: string;
   parentesco?: string;
   email?: string;
   telefone?: string;
   whatsapp?: string;
   situacaoConjugal?: string;
   profissao?: string;
+  cep?: string;
+  uf?: string;
+  cidade?: string;
+  bairro?: string;
+  logradouro?: string;
+  complemento?: string;
+  numero?: string;
+  pontoReferencia?: string;
 }
 
 interface Props {
@@ -47,6 +58,26 @@ export const ResponsavelFinanceiroForm = ({
   useEffect(() => {
     form.setValue("usarMesmosDados", usarMesmosDados);
   }, [usarMesmosDados, form]);
+
+  const cepValue = form.watch("cep");
+  useEffect(() => {
+    const cep = cepValue?.replace(/\D/g, "");
+    if (cep && cep.length === 8) {
+      fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data?.erro) {
+            form.setValue("logradouro", data.logradouro || "");
+            form.setValue("bairro", data.bairro || "");
+            form.setValue("cidade", data.localidade || "");
+            form.setValue("uf", data.uf || "");
+          }
+        })
+        .catch(() => {
+          // silencioso para não interromper o fluxo
+        });
+    }
+  }, [cepValue, form]);
 
   return (
     <div className="space-y-6">
@@ -129,6 +160,35 @@ export const ResponsavelFinanceiroForm = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
+              <Label htmlFor="sexoResp" className="flex items-center gap-1">
+                Sexo <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={form.watch("sexo") || ""}
+                onValueChange={(value) => form.setValue("sexo", value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Masculino">Masculino</SelectItem>
+                  <SelectItem value="Feminino">Feminino</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label
+                htmlFor="naturalidadeResp"
+                className="flex items-center gap-1"
+              >
+                Naturalidade <span className="text-red-500">*</span>
+              </Label>
+              <Input id="naturalidadeResp" {...form.register("naturalidade")} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
               <Label
                 htmlFor="situacaoConjugalResp"
                 className="flex items-center gap-1"
@@ -175,6 +235,105 @@ export const ResponsavelFinanceiroForm = ({
                   {String(form.formState.errors.profissao.message)}
                 </p>
               )}
+            </div>
+          </div>
+
+          <div className="space-y-4 rounded-lg border border-gray-200 p-4">
+            <h4 className="text-sm font-semibold text-gray-900">
+              Endereço do responsável
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label
+                  htmlFor="cepResp"
+                  className="inline-flex items-center gap-1"
+                >
+                  CEP <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="cepResp"
+                  value={form.watch("cep") || ""}
+                  onChange={(e) =>
+                    form.setValue("cep", formatCEP(e.target.value))
+                  }
+                  placeholder="00000-000"
+                />
+              </div>
+              <div>
+                <Label
+                  htmlFor="ufResp"
+                  className="inline-flex items-center gap-1"
+                >
+                  UF <span className="text-red-500">*</span>
+                </Label>
+                <Input id="ufResp" {...form.register("uf")} />
+              </div>
+              <div>
+                <Label
+                  htmlFor="cidadeResp"
+                  className="inline-flex items-center gap-1"
+                >
+                  Cidade <span className="text-red-500">*</span>
+                </Label>
+                <Input id="cidadeResp" {...form.register("cidade")} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label
+                  htmlFor="bairroResp"
+                  className="inline-flex items-center gap-1"
+                >
+                  Bairro <span className="text-red-500">*</span>
+                </Label>
+                <Input id="bairroResp" {...form.register("bairro")} />
+              </div>
+              <div>
+                <Label
+                  htmlFor="logradouroResp"
+                  className="inline-flex items-center gap-1"
+                >
+                  Rua <span className="text-red-500">*</span>
+                </Label>
+                <Input id="logradouroResp" {...form.register("logradouro")} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label
+                  htmlFor="numeroResp"
+                  className="inline-flex items-center gap-1"
+                >
+                  Número <span className="text-red-500">*</span>
+                </Label>
+                <Input id="numeroResp" {...form.register("numero")} />
+              </div>
+              <div>
+                <Label
+                  htmlFor="complementoResp"
+                  className="inline-flex items-center gap-1"
+                >
+                  Complemento
+                </Label>
+                <Input id="complementoResp" {...form.register("complemento")} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <Label
+                  htmlFor="pontoReferenciaResp"
+                  className="inline-flex items-center gap-1"
+                >
+                  Ponto de referência <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="pontoReferenciaResp"
+                  {...form.register("pontoReferencia")}
+                />
+              </div>
             </div>
           </div>
 

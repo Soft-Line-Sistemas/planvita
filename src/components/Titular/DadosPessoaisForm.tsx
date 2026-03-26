@@ -4,7 +4,12 @@ import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Phone, Mail } from "lucide-react";
-import { formatCPF, formatPhone, formatWhatsApp } from "@/helpers/formHelpers";
+import {
+  formatCPF,
+  formatPhone,
+  formatWhatsApp,
+  formatRG,
+} from "@/helpers/formHelpers";
 import { dadosPessoaisSchema } from "./schemas";
 import {
   Select,
@@ -69,6 +74,60 @@ export const DadosPessoaisForm = ({ form }: Props) => (
           </p>
         )}
       </div>
+    </div>
+
+    {/* Sexo e RG */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-1">
+        <Label htmlFor="sexo" className="flex items-center gap-1">
+          Sexo <span className="text-red-500">*</span>
+        </Label>
+        <Select
+          value={form.watch("sexo") || ""}
+          onValueChange={(value) => form.setValue("sexo", value)}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Selecione" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Masculino">Masculino</SelectItem>
+            <SelectItem value="Feminino">Feminino</SelectItem>
+          </SelectContent>
+        </Select>
+        {form.formState.errors.sexo && (
+          <p className="text-red-600 text-sm">
+            {String(form.formState.errors.sexo.message)}
+          </p>
+        )}
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="rg" className="flex items-center gap-1">
+          RG <span className="text-red-500">*</span>
+        </Label>
+        <Input
+          id="rg"
+          value={form.watch("rg") || ""}
+          onChange={(e) => form.setValue("rg", formatRG(e.target.value))}
+        />
+        {form.formState.errors.rg && (
+          <p className="text-red-600 text-sm">
+            {String(form.formState.errors.rg.message)}
+          </p>
+        )}
+      </div>
+    </div>
+
+    {/* Naturalidade */}
+    <div className="space-y-1">
+      <Label htmlFor="naturalidade" className="flex items-center gap-1">
+        Naturalidade <span className="text-red-500">*</span>
+      </Label>
+      <Input id="naturalidade" {...form.register("naturalidade")} />
+      {form.formState.errors.naturalidade && (
+        <p className="text-red-600 text-sm">
+          {String(form.formState.errors.naturalidade.message)}
+        </p>
+      )}
     </div>
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
