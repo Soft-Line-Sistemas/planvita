@@ -22,6 +22,7 @@ interface Props {
 
 export const EnderecoForm = ({ form }: Props) => {
   const cepValue = form.watch("cep");
+  const errors = form.formState.errors;
 
   useEffect(() => {
     const cep = cepValue?.replace(/\D/g, "");
@@ -57,6 +58,11 @@ export const EnderecoForm = ({ form }: Props) => {
             onChange={(e) => form.setValue("cep", formatCEP(e.target.value))}
             placeholder="00000-000"
           />
+          {errors.cep && (
+            <p className="text-sm text-red-500 mt-1">
+              {String(errors.cep.message)}
+            </p>
+          )}
         </div>
 
         <div>
@@ -64,6 +70,11 @@ export const EnderecoForm = ({ form }: Props) => {
             UF <span className="text-red-500">*</span>
           </Label>
           <Input id="uf" {...form.register("uf")} />
+          {errors.uf && (
+            <p className="text-sm text-red-500 mt-1">
+              {String(errors.uf.message)}
+            </p>
+          )}
         </div>
 
         <div>
@@ -71,6 +82,11 @@ export const EnderecoForm = ({ form }: Props) => {
             Cidade <span className="text-red-500">*</span>
           </Label>
           <Input id="cidade" {...form.register("cidade")} />
+          {errors.cidade && (
+            <p className="text-sm text-red-500 mt-1">
+              {String(errors.cidade.message)}
+            </p>
+          )}
         </div>
       </div>
 
@@ -81,6 +97,11 @@ export const EnderecoForm = ({ form }: Props) => {
             Bairro <span className="text-red-500">*</span>
           </Label>
           <Input id="bairro" {...form.register("bairro")} />
+          {errors.bairro && (
+            <p className="text-sm text-red-500 mt-1">
+              {String(errors.bairro.message)}
+            </p>
+          )}
         </div>
         <div>
           <Label
@@ -90,6 +111,11 @@ export const EnderecoForm = ({ form }: Props) => {
             Rua <span className="text-red-500">*</span>
           </Label>
           <Input id="logradouro" {...form.register("logradouro")} />
+          {errors.logradouro && (
+            <p className="text-sm text-red-500 mt-1">
+              {String(errors.logradouro.message)}
+            </p>
+          )}
         </div>
       </div>
 
@@ -100,6 +126,11 @@ export const EnderecoForm = ({ form }: Props) => {
             Número <span className="text-red-500">*</span>
           </Label>
           <Input id="numero" {...form.register("numero")} />
+          {errors.numero && (
+            <p className="text-sm text-red-500 mt-1">
+              {String(errors.numero.message)}
+            </p>
+          )}
         </div>
         <div>
           <Label
@@ -122,6 +153,11 @@ export const EnderecoForm = ({ form }: Props) => {
             Ponto de referência <span className="text-red-500">*</span>
           </Label>
           <Input id="pontoReferencia" {...form.register("pontoReferencia")} />
+          {errors.pontoReferencia && (
+            <p className="text-sm text-red-500 mt-1">
+              {String(errors.pontoReferencia.message)}
+            </p>
+          )}
         </div>
       </div>
     </div>
