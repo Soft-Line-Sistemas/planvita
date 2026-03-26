@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Image from "next/image";
@@ -104,13 +104,13 @@ export function CadastroClienteWizard({
   ];
 
   const dadosPessoaisForm = useForm<Step1Values>({
-    resolver: zodResolver(dadosPessoaisSchema),
+    resolver: zodResolver(dadosPessoaisSchema) as Resolver<Step1Values>,
   });
   const enderecoForm = useForm<Step2Values>({
-    resolver: zodResolver(enderecoSchema),
+    resolver: zodResolver(enderecoSchema) as Resolver<Step2Values>,
   });
   const responsavelForm = useForm<Step3Values>({
-    resolver: zodResolver(responsavelFinanceiroSchema),
+    resolver: zodResolver(responsavelFinanceiroSchema) as Resolver<Step3Values>,
   });
   const planoForm = useForm<PlanoFormValues>();
 
