@@ -8,6 +8,7 @@ interface Endereco {
   logradouro: string;
   numero: string;
   complemento?: string;
+  pontoReferencia?: string;
 }
 
 interface Cobertura {
