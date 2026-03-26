@@ -20,6 +20,7 @@ import {
   formatCEP,
 } from "@/helpers/formHelpers";
 import { RELATIONSHIP_OPTIONS } from "@/constants/relationshipOptions";
+import { BRAZIL_STATES, normalizeUfCode } from "@/constants/brazilStates";
 
 interface ResponsavelFormValues {
   usarMesmosDados: boolean;
@@ -71,6 +72,15 @@ export const ResponsavelFinanceiroForm = ({
   }, [usarMesmosDados, form]);
 
   const cepValue = form.watch("cep");
+  const ufRawValue = form.watch("uf");
+  const ufValue = normalizeUfCode(ufRawValue);
+
+  useEffect(() => {
+    if ((ufRawValue ?? "") !== ufValue) {
+      form.setValue("uf", ufValue);
+    }
+  }, [form, ufRawValue, ufValue]);
+
   useEffect(() => {
     const cep = (cepValue ?? "").replace(/\D/g, "");
     if (cep.length !== 8) return;
@@ -82,7 +92,7 @@ export const ResponsavelFinanceiroForm = ({
         form.setValue("logradouro", data.logradouro || "");
         form.setValue("bairro", data.bairro || "");
         form.setValue("cidade", data.localidade || "");
-        form.setValue("uf", data.uf || "");
+        form.setValue("uf", normalizeUfCode(data.uf));
       })
       .catch(() => {
         // silencioso para não interromper o fluxo
@@ -340,7 +350,21 @@ export const ResponsavelFinanceiroForm = ({
                 >
                   UF <span className="text-red-500">*</span>
                 </Label>
-                <Input id="ufResp" maxLength={5} {...form.register("uf")} />
+                <Select
+                  value={ufValue}
+                  onValueChange={(value) => form.setValue("uf", value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BRAZIL_STATES.map((state) => (
+                      <SelectItem key={state.code} value={state.code}>
+                        {state.code} - {state.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {errors.uf && (
                   <p className="text-sm text-red-500 mt-1">
                     {String(errors.uf.message)}

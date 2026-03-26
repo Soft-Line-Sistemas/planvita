@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RELATIONSHIP_OPTIONS } from "@/constants/relationshipOptions";
+import { BRAZIL_STATES, normalizeUfCode } from "@/constants/brazilStates";
 
 type EditClienteFormValues = {
   nome: string;
@@ -102,7 +103,7 @@ export function ClienteEditDialog({
       profissao: cliente.profissao ?? "",
       statusPlano: (cliente.statusPlano ?? "ATIVO").toUpperCase(),
       cep: cliente.endereco?.cep ?? "",
-      uf: cliente.endereco?.uf ?? "",
+      uf: normalizeUfCode(cliente.endereco?.uf ?? ""),
       cidade: cliente.endereco?.cidade ?? "",
       bairro: cliente.endereco?.bairro ?? "",
       logradouro: cliente.endereco?.logradouro ?? "",
@@ -147,7 +148,7 @@ export function ClienteEditDialog({
       profissao: cliente.profissao ?? "",
       statusPlano: (cliente.statusPlano ?? "ATIVO").toUpperCase(),
       cep: cliente.endereco?.cep ?? "",
-      uf: cliente.endereco?.uf ?? "",
+      uf: normalizeUfCode(cliente.endereco?.uf ?? ""),
       cidade: cliente.endereco?.cidade ?? "",
       bairro: cliente.endereco?.bairro ?? "",
       logradouro: cliente.endereco?.logradouro ?? "",
@@ -515,7 +516,21 @@ export function ClienteEditDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="uf">UF</Label>
-              <Input id="uf" maxLength={5} {...form.register("uf")} />
+              <Select
+                value={normalizeUfCode(form.watch("uf"))}
+                onValueChange={(value) => form.setValue("uf", value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {BRAZIL_STATES.map((state) => (
+                    <SelectItem key={state.code} value={state.code}>
+                      {state.code} - {state.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="cidade">Cidade</Label>
