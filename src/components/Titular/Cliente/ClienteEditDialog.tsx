@@ -339,17 +339,28 @@ export function ClienteEditDialog({
               <Input
                 id="email"
                 type="email"
+                maxLength={1000}
                 {...form.register("email")}
                 required
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="telefone">Telefone</Label>
-              <Input id="telefone" {...form.register("telefone")} required />
+              <Input
+                id="telefone"
+                maxLength={15}
+                {...form.register("telefone")}
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="cpf">CPF</Label>
-              <Input id="cpf" {...form.register("cpf")} required />
+              <Input
+                id="cpf"
+                maxLength={14}
+                {...form.register("cpf")}
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="dataNascimento">Data de nascimento</Label>
@@ -430,6 +441,7 @@ export function ClienteEditDialog({
                 <Input
                   id="responsavelEmail"
                   type="email"
+                  maxLength={1000}
                   {...form.register("responsavelEmail")}
                   required
                 />
@@ -438,6 +450,7 @@ export function ClienteEditDialog({
                 <Label htmlFor="responsavelTelefone">Telefone</Label>
                 <Input
                   id="responsavelTelefone"
+                  maxLength={15}
                   {...form.register("responsavelTelefone")}
                   required
                 />
@@ -498,31 +511,51 @@ export function ClienteEditDialog({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="cep">CEP</Label>
-              <Input id="cep" {...form.register("cep")} />
+              <Input id="cep" maxLength={9} {...form.register("cep")} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="uf">UF</Label>
-              <Input id="uf" {...form.register("uf")} />
+              <Input id="uf" maxLength={5} {...form.register("uf")} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="cidade">Cidade</Label>
-              <Input id="cidade" {...form.register("cidade")} />
+              <Input
+                id="cidade"
+                maxLength={1000}
+                {...form.register("cidade")}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="bairro">Bairro</Label>
-              <Input id="bairro" {...form.register("bairro")} />
+              <Input
+                id="bairro"
+                maxLength={1000}
+                {...form.register("bairro")}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="logradouro">Logradouro</Label>
-              <Input id="logradouro" {...form.register("logradouro")} />
+              <Input
+                id="logradouro"
+                maxLength={1000}
+                {...form.register("logradouro")}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="numero">Número</Label>
-              <Input id="numero" {...form.register("numero")} />
+              <Input
+                id="numero"
+                maxLength={1000}
+                {...form.register("numero")}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="complemento">Complemento</Label>
-              <Input id="complemento" {...form.register("complemento")} />
+              <Input
+                id="complemento"
+                maxLength={1000}
+                {...form.register("complemento")}
+              />
             </div>
           </div>
 

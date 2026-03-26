@@ -52,6 +52,7 @@ export const DadosPessoaisForm = ({ form }: Props) => (
         </Label>
         <Input
           id="cpf"
+          maxLength={14}
           value={form.watch("cpf") || ""}
           onChange={(e) => form.setValue("cpf", formatCPF(e.target.value))}
         />
@@ -110,6 +111,7 @@ export const DadosPessoaisForm = ({ form }: Props) => (
         </Label>
         <Input
           id="rg"
+          maxLength={12}
           value={form.watch("rg") || ""}
           onChange={(e) => form.setValue("rg", formatRG(e.target.value))}
         />
@@ -191,6 +193,7 @@ export const DadosPessoaisForm = ({ form }: Props) => (
         </Label>
         <Input
           id="telefone"
+          maxLength={15}
           value={form.watch("telefone") || ""}
           onChange={(e) =>
             form.setValue("telefone", formatPhone(e.target.value))
@@ -221,6 +224,7 @@ export const DadosPessoaisForm = ({ form }: Props) => (
         </Label>
         <Input
           id="whatsapp"
+          maxLength={14}
           value={form.watch("whatsapp") || ""}
           onChange={(e) =>
             form.setValue("whatsapp", formatWhatsApp(e.target.value))
@@ -241,7 +245,12 @@ export const DadosPessoaisForm = ({ form }: Props) => (
         <span>E-mail</span>
         <span className="text-red-500">*</span>
       </Label>
-      <Input id="email" type="email" {...form.register("email")} />
+      <Input
+        id="email"
+        type="email"
+        maxLength={1000}
+        {...form.register("email")}
+      />
       {form.formState.errors.email && (
         <p className="text-red-600 text-sm">
           {form.formState.errors.email.message}

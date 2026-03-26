@@ -132,6 +132,7 @@ export const ResponsavelFinanceiroForm = ({
               </Label>
               <Input
                 id="cpfResp"
+                maxLength={14}
                 {...form.register("cpf")}
                 onChange={(e) =>
                   form.setValue("cpf", formatCPF(e.target.value))
@@ -147,6 +148,7 @@ export const ResponsavelFinanceiroForm = ({
               <Label htmlFor="rgResp">RG</Label>
               <Input
                 id="rgResp"
+                maxLength={12}
                 {...form.register("rg")}
                 onChange={(e) => form.setValue("rg", formatRG(e.target.value))}
               />
@@ -318,6 +320,7 @@ export const ResponsavelFinanceiroForm = ({
                 </Label>
                 <Input
                   id="cepResp"
+                  maxLength={9}
                   value={form.watch("cep") || ""}
                   onChange={(e) =>
                     form.setValue("cep", formatCEP(e.target.value))
@@ -337,7 +340,7 @@ export const ResponsavelFinanceiroForm = ({
                 >
                   UF <span className="text-red-500">*</span>
                 </Label>
-                <Input id="ufResp" {...form.register("uf")} />
+                <Input id="ufResp" maxLength={5} {...form.register("uf")} />
                 {errors.uf && (
                   <p className="text-sm text-red-500 mt-1">
                     {String(errors.uf.message)}
@@ -351,7 +354,11 @@ export const ResponsavelFinanceiroForm = ({
                 >
                   Cidade <span className="text-red-500">*</span>
                 </Label>
-                <Input id="cidadeResp" {...form.register("cidade")} />
+                <Input
+                  id="cidadeResp"
+                  maxLength={191}
+                  {...form.register("cidade")}
+                />
                 {errors.cidade && (
                   <p className="text-sm text-red-500 mt-1">
                     {String(errors.cidade.message)}
@@ -368,7 +375,11 @@ export const ResponsavelFinanceiroForm = ({
                 >
                   Bairro <span className="text-red-500">*</span>
                 </Label>
-                <Input id="bairroResp" {...form.register("bairro")} />
+                <Input
+                  id="bairroResp"
+                  maxLength={191}
+                  {...form.register("bairro")}
+                />
                 {errors.bairro && (
                   <p className="text-sm text-red-500 mt-1">
                     {String(errors.bairro.message)}
@@ -382,7 +393,11 @@ export const ResponsavelFinanceiroForm = ({
                 >
                   Rua <span className="text-red-500">*</span>
                 </Label>
-                <Input id="logradouroResp" {...form.register("logradouro")} />
+                <Input
+                  id="logradouroResp"
+                  maxLength={191}
+                  {...form.register("logradouro")}
+                />
                 {errors.logradouro && (
                   <p className="text-sm text-red-500 mt-1">
                     {String(errors.logradouro.message)}
@@ -399,7 +414,11 @@ export const ResponsavelFinanceiroForm = ({
                 >
                   Número <span className="text-red-500">*</span>
                 </Label>
-                <Input id="numeroResp" {...form.register("numero")} />
+                <Input
+                  id="numeroResp"
+                  maxLength={50}
+                  {...form.register("numero")}
+                />
                 {errors.numero && (
                   <p className="text-sm text-red-500 mt-1">
                     {String(errors.numero.message)}
@@ -413,7 +432,11 @@ export const ResponsavelFinanceiroForm = ({
                 >
                   Complemento
                 </Label>
-                <Input id="complementoResp" {...form.register("complemento")} />
+                <Input
+                  id="complementoResp"
+                  maxLength={191}
+                  {...form.register("complemento")}
+                />
               </div>
             </div>
 
@@ -427,6 +450,7 @@ export const ResponsavelFinanceiroForm = ({
                 </Label>
                 <Input
                   id="pontoReferenciaResp"
+                  maxLength={255}
                   {...form.register("pontoReferencia")}
                 />
                 {errors.pontoReferencia && (
@@ -447,6 +471,7 @@ export const ResponsavelFinanceiroForm = ({
             <Input
               id="emailResp"
               type="email"
+              maxLength={1000}
               {...form.register("email", {
                 pattern: {
                   value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
@@ -470,6 +495,7 @@ export const ResponsavelFinanceiroForm = ({
               </Label>
               <Input
                 id="telefoneResp"
+                maxLength={15}
                 {...form.register("telefone")}
                 onChange={(e) =>
                   form.setValue("telefone", formatPhone(e.target.value))
@@ -498,6 +524,7 @@ export const ResponsavelFinanceiroForm = ({
               </Label>
               <Input
                 id="whatsappResp"
+                maxLength={14}
                 {...form.register("whatsapp")}
                 onChange={(e) =>
                   form.setValue("whatsapp", formatWhatsApp(e.target.value))
