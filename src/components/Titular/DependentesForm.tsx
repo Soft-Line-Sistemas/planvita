@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Trash2, Users } from "lucide-react";
 import { formatCPF, formatPhone } from "@/helpers/formHelpers";
 import { calcularIdade } from "@/utils/planos";
+import { RELATIONSHIP_OPTIONS } from "@/constants/relationshipOptions";
 import {
   Select,
   SelectContent,
@@ -22,22 +23,6 @@ export interface DependenteFieldErrors {
   telefone?: string;
   cpf?: string;
 }
-
-export const DEPENDENTE_PARENTESCO_OPTIONS = [
-  "Cônjuge",
-  "Filho(a)",
-  "Pai",
-  "Mãe",
-  "Irmão(ã)",
-  "Avô/Avó",
-  "Neto(a)",
-  "Tio(a)",
-  "Sobrinho(a)",
-  "Primo(a)",
-  "Genro/Nora",
-  "Cunhado(a)",
-  "Outro",
-] as const;
 
 interface Props {
   dependentes: Dependente[];
@@ -173,7 +158,7 @@ export const DependentesForm = ({
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      {DEPENDENTE_PARENTESCO_OPTIONS.map((item) => (
+                      {RELATIONSHIP_OPTIONS.map((item) => (
                         <SelectItem key={item} value={item}>
                           {item}
                         </SelectItem>

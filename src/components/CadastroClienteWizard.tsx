@@ -30,9 +30,9 @@ import { EnderecoForm } from "@/components/Titular/EnderecoForm";
 import { ResponsavelFinanceiroForm } from "@/components/Titular/ResponsavelFinanceiroForm";
 import {
   DependentesForm,
-  DEPENDENTE_PARENTESCO_OPTIONS,
   type DependenteFieldErrors,
 } from "@/components/Titular/DependentesForm";
+import { RELATIONSHIP_OPTIONS } from "@/constants/relationshipOptions";
 import { Dependente } from "@/types/DependentesType";
 import { PlanoForm } from "@/components/Titular/PlanoForm";
 import { Confirmacao } from "@/components/Titular/Confirmacao";
@@ -139,7 +139,7 @@ export function CadastroClienteWizard({
     if (!dataNascimento)
       errors.dataNascimento = "Data de nascimento é obrigatória";
     if (!parentesco) errors.parentesco = "Parentesco é obrigatório";
-    else if (!DEPENDENTE_PARENTESCO_OPTIONS.includes(parentesco as never)) {
+    else if (!RELATIONSHIP_OPTIONS.includes(parentesco as never)) {
       errors.parentesco = "Selecione um parentesco válido";
     }
     if (!telefoneDigits) {

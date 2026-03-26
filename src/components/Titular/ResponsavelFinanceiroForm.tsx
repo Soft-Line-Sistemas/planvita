@@ -19,6 +19,7 @@ import {
   formatRG,
   formatCEP,
 } from "@/helpers/formHelpers";
+import { RELATIONSHIP_OPTIONS } from "@/constants/relationshipOptions";
 
 interface ResponsavelFormValues {
   usarMesmosDados: boolean;
@@ -178,7 +179,21 @@ export const ResponsavelFinanceiroForm = ({
                 Parentesco
                 <span className="text-red-500">*</span>
               </Label>
-              <Input id="parentesco" {...form.register("parentesco")} />
+              <Select
+                value={form.watch("parentesco") || ""}
+                onValueChange={(value) => form.setValue("parentesco", value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {RELATIONSHIP_OPTIONS.map((item) => (
+                    <SelectItem key={item} value={item}>
+                      {item}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {errors.parentesco && (
                 <p className="text-sm text-red-500 mt-1">
                   {String(errors.parentesco.message)}

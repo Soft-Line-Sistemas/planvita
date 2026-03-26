@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RELATIONSHIP_OPTIONS } from "@/constants/relationshipOptions";
 
 type EditClienteFormValues = {
   nome: string;
@@ -432,11 +433,23 @@ export function ClienteEditDialog({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="responsavelRelacionamento">Parentesco</Label>
-                <Input
-                  id="responsavelRelacionamento"
-                  {...form.register("responsavelRelacionamento")}
-                  required
-                />
+                <Select
+                  value={form.watch("responsavelRelacionamento")}
+                  onValueChange={(value) =>
+                    form.setValue("responsavelRelacionamento", value)
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RELATIONSHIP_OPTIONS.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {item}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>Situação conjugal</Label>

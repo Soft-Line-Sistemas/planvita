@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { RELATIONSHIP_OPTIONS } from "@/constants/relationshipOptions";
 
 const calcularIdade = (dataNascimento?: string): number | null => {
   if (!dataNascimento) return null;
@@ -226,6 +227,17 @@ const responsavelFinanceiroSchema = z
         code: z.ZodIssueCode.custom,
         message: "CPF do corresponsável inválido",
         path: ["cpf"],
+      });
+    }
+
+    if (
+      data.parentesco &&
+      !RELATIONSHIP_OPTIONS.includes(data.parentesco as never)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Selecione um parentesco válido",
+        path: ["parentesco"],
       });
     }
 
