@@ -89,7 +89,11 @@ export const DadosPessoaisForm = ({ form }: Props) => (
         </Label>
         <Select
           value={form.watch("sexo") || ""}
-          onValueChange={(value) => form.setValue("sexo", value)}
+          onValueChange={(value) => {
+            if (value === "Masculino" || value === "Feminino") {
+              form.setValue("sexo", value);
+            }
+          }}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Selecione" />
