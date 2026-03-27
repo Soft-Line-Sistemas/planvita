@@ -1,5 +1,6 @@
 // utils/planos.ts
 import { Plano } from "@/types/PlanType";
+import { calculateAgeFromBirthDate } from "@/utils/date";
 
 type PlanoBeneficio = NonNullable<Plano["beneficios"]>[number];
 type PlanoCobertura = NonNullable<Plano["coberturas"]>[number];
@@ -169,13 +170,7 @@ export type ParticipanteMin = {
 /** Retorna idade (anos inteiros) a partir de YYYY-MM-DD */
 export function calcularIdade(dataNascimento?: string | null): number | null {
   if (!dataNascimento) return null;
-  const nasc = new Date(dataNascimento);
-  if (isNaN(nasc.getTime())) return null;
-  const hoje = new Date();
-  let idade = hoje.getFullYear() - nasc.getFullYear();
-  const m = hoje.getMonth() - nasc.getMonth();
-  if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) idade--;
-  return idade;
+  return calculateAgeFromBirthDate(dataNascimento);
 }
 
 /** Recebe array de participantes e retorna a maior idade encontrada */

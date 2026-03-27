@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { formatDatePtBr } from "@/utils/date";
 
 interface ParticipanteMin {
   nome?: string;
@@ -29,8 +30,8 @@ interface ConfirmacaoProps {
     [key: string]: unknown;
   };
   consultores: Array<{ id: number; nome: string }>;
-  selectedConsultorId?: number;
-  onSelectConsultor: (consultorId: number) => void;
+  selectedConsultorId?: number | "campo-do-bosque";
+  onSelectConsultor: (consultorId: number | "campo-do-bosque") => void;
   isConsultorLocked?: boolean;
   isLoadingConsultores?: boolean;
   consultorError?: string | null;
@@ -47,9 +48,11 @@ export function Confirmacao({
 }: ConfirmacaoProps) {
   const { titular, dependentes = [], planoSelecionado, consultor } = dados;
   const selectedValue =
-    typeof selectedConsultorId === "number"
-      ? selectedConsultorId.toString()
-      : undefined;
+    selectedConsultorId === "campo-do-bosque"
+      ? "campo-do-bosque"
+      : typeof selectedConsultorId === "number"
+        ? selectedConsultorId.toString()
+        : undefined;
   const consultorSelecionadoNoLink =
     typeof selectedConsultorId === "number" &&
     !consultores.some((item) => item.id === selectedConsultorId);
@@ -62,9 +65,7 @@ export function Confirmacao({
 
   const formatDateBr = (value?: string | null) => {
     if (!value) return null;
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    return date.toLocaleDateString("pt-BR");
+    return formatDatePtBr(value);
   };
 
   return (
@@ -90,7 +91,11 @@ export function Confirmacao({
           </Label>
           <Select
             value={selectedValue}
-            onValueChange={(value) => onSelectConsultor(Number(value))}
+            onValueChange={(value) =>
+              onSelectConsultor(
+                value === "campo-do-bosque" ? "campo-do-bosque" : Number(value),
+              )
+            }
             disabled={isConsultorLocked || isLoadingConsultores}
           >
             <SelectTrigger id="consultor-select" className="w-full bg-white">
@@ -103,6 +108,7 @@ export function Confirmacao({
               />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="campo-do-bosque">Campo do Bosque</SelectItem>
               {consultoresDisponiveis.map((consultorItem) => (
                 <SelectItem
                   key={consultorItem.id}

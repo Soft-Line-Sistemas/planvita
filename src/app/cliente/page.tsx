@@ -66,6 +66,7 @@ import SignaturePad, {
 import Image from "next/image";
 import { AsaasWingsMark } from "@/components/ui/AsaasWingsMark";
 import api from "@/utils/api";
+import { formatDatePtBr } from "@/utils/date";
 
 const normalizeCpf = (value: string) => value.replace(/\D/g, "");
 
@@ -119,11 +120,7 @@ const formatCurrency = (value: number) =>
   });
 
 const formatDate = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleDateString("pt-BR", {
+  return formatDatePtBr(value, {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -261,6 +258,10 @@ export default function ConsultaClientePage() {
   >(null);
   const [firstAccessError, setFirstAccessError] = useState<string | null>(null);
   const [firstAccessLoading, setFirstAccessLoading] = useState(false);
+  const [cadastroRedirectOpen, setCadastroRedirectOpen] = useState(false);
+  const [cadastroRedirectMessage, setCadastroRedirectMessage] = useState(
+    "Não encontramos CPF ou e-mail cadastrado para concluir o primeiro acesso. Finalize seu cadastro para continuar.",
+  );
 
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotStep, setForgotStep] = useState<
@@ -635,12 +636,36 @@ export default function ConsultaClientePage() {
       setFirstAccessStep("verify");
     } catch (err: unknown) {
       const errorObject = err as {
-        response?: { data?: { message?: unknown } };
+        response?: {
+          status?: number;
+          data?: { message?: unknown; code?: unknown };
+        };
       };
+      const status = errorObject?.response?.status;
       const serverMessage =
         typeof errorObject?.response?.data?.message === "string"
           ? errorObject.response.data.message
           : null;
+      const code =
+        typeof errorObject?.response?.data?.code === "string"
+          ? errorObject.response.data.code
+          : null;
+
+      const precisaRedirecionarParaCadastro =
+        code === "FIRST_ACCESS_CONTACT_REQUIRED" ||
+        status === 404 ||
+        serverMessage === "Cliente não encontrado.";
+
+      if (precisaRedirecionarParaCadastro) {
+        setFirstAccessOpen(false);
+        setCadastroRedirectMessage(
+          serverMessage ||
+            "Não encontramos CPF ou e-mail cadastrado para concluir o primeiro acesso. Finalize seu cadastro para continuar.",
+        );
+        setCadastroRedirectOpen(true);
+        return;
+      }
+
       setFirstAccessError(serverMessage || "Não foi possível enviar o código.");
     } finally {
       setFirstAccessLoading(false);
@@ -1492,6 +1517,36 @@ export default function ConsultaClientePage() {
                   </Button>
                 </>
               )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={cadastroRedirectOpen}
+          onOpenChange={setCadastroRedirectOpen}
+        >
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Cadastro necessário</DialogTitle>
+              <DialogDescription>{cadastroRedirectMessage}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Button
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={() => {
+                  window.location.href = "/cliente/cadastro";
+                }}
+              >
+                Ir para cadastro
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => setCadastroRedirectOpen(false)}
+              >
+                Agora não
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -2408,6 +2463,7 @@ function AssinaturaCard({
               <Image
                 src={previewUrl}
                 alt="Assinatura"
+                unoptimized
                 className="max-h-full max-w-full object-contain"
               />
             ) : (

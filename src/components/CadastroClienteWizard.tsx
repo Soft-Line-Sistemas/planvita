@@ -48,6 +48,7 @@ type CadastroClienteWizardVariant = "dashboard" | "public";
 interface CadastroClienteWizardProps {
   variant?: CadastroClienteWizardVariant;
 }
+const MAX_DEPENDENTES_POR_TITULAR = 8;
 
 type Step1Values = z.infer<typeof dadosPessoaisSchema>;
 type Step2Values = z.infer<typeof enderecoSchema>;
@@ -68,6 +69,8 @@ interface ConsultorOption {
   id: number;
   nome: string;
 }
+
+const BOSQUE_DEFAULT_CONSULTOR = "campo-do-bosque" as const;
 
 export function CadastroClienteWizard({
   variant = "dashboard",
@@ -91,7 +94,7 @@ export function CadastroClienteWizard({
   const [isLoadingConsultores, setIsLoadingConsultores] = useState(true);
   const [consultorError, setConsultorError] = useState<string | null>(null);
   const [selectedConsultorId, setSelectedConsultorId] = useState<
-    number | undefined
+    number | typeof BOSQUE_DEFAULT_CONSULTOR | undefined
   >();
   const { mutateAsync, isPending } = useCreateTitular({ variant });
   const steps = [
@@ -207,6 +210,13 @@ export function CadastroClienteWizard({
   }, [consultorIdFromQuery]);
 
   useEffect(() => {
+    if (consultorIdFromQuery) return;
+    if (selectedConsultorId) return;
+    if (isLoadingConsultores) return;
+    setSelectedConsultorId(BOSQUE_DEFAULT_CONSULTOR);
+  }, [consultorIdFromQuery, isLoadingConsultores, selectedConsultorId]);
+
+  useEffect(() => {
     let ativo = true;
     api
       .get("/regras")
@@ -215,13 +225,13 @@ export function CadastroClienteWizard({
         const regra = Array.isArray(res.data) ? res.data[0] : null;
         const limite = Number(regra?.limiteBeneficiarios);
         if (Number.isFinite(limite) && limite > 0) {
-          setLimiteBeneficiarios(limite);
+          setLimiteBeneficiarios(Math.min(limite, MAX_DEPENDENTES_POR_TITULAR));
         } else {
-          setLimiteBeneficiarios(null);
+          setLimiteBeneficiarios(MAX_DEPENDENTES_POR_TITULAR);
         }
       })
       .catch(() => {
-        if (ativo) setLimiteBeneficiarios(null);
+        if (ativo) setLimiteBeneficiarios(MAX_DEPENDENTES_POR_TITULAR);
       });
 
     return () => {
@@ -300,11 +310,8 @@ export function CadastroClienteWizard({
     setCurrentStep((prev) => (prev > 1 ? prev - 1 : prev));
 
   const handleAddDependente = () => {
-    if (
-      limiteBeneficiarios &&
-      limiteBeneficiarios > 0 &&
-      dependentes.length >= limiteBeneficiarios
-    ) {
+    const limiteAtual = limiteBeneficiarios ?? MAX_DEPENDENTES_POR_TITULAR;
+    if (limiteAtual > 0 && dependentes.length >= limiteAtual) {
       return;
     }
     setDependentes((prev) => [
@@ -341,9 +348,7 @@ export function CadastroClienteWizard({
   };
 
   const podeAdicionarDependente =
-    !limiteBeneficiarios ||
-    limiteBeneficiarios <= 0 ||
-    dependentes.length < limiteBeneficiarios;
+    dependentes.length < (limiteBeneficiarios ?? MAX_DEPENDENTES_POR_TITULAR);
   const canContinueStep4 =
     currentStep !== 4 || validateDependentes(dependentes).isValid;
 
@@ -352,6 +357,9 @@ export function CadastroClienteWizard({
       setConsultorError("Selecione o consultor para vincular este cliente.");
       return;
     }
+
+    const shouldForceBosqueTenant =
+      selectedConsultorId === BOSQUE_DEFAULT_CONSULTOR;
 
     const step1Data = formData.step1 ?? dadosPessoaisForm.getValues();
     const step2Data = formData.step2 ?? enderecoForm.getValues();
@@ -365,7 +373,11 @@ export function CadastroClienteWizard({
       step5: step5Data,
       dependentes,
       usarMesmosDados,
-      consultorId: selectedConsultorId,
+      consultorId:
+        typeof selectedConsultorId === "number"
+          ? selectedConsultorId
+          : undefined,
+      forceTenantBosque: shouldForceBosqueTenant,
     };
 
     await mutateAsync(payload);
