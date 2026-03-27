@@ -158,7 +158,7 @@ export const ResponsavelFinanceiroForm = ({
               <Label htmlFor="rgResp">RG</Label>
               <Input
                 id="rgResp"
-                maxLength={12}
+                maxLength={13}
                 {...form.register("rg")}
                 onChange={(e) => form.setValue("rg", formatRG(e.target.value))}
               />

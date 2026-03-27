@@ -115,7 +115,7 @@ export const DadosPessoaisForm = ({ form }: Props) => (
         </Label>
         <Input
           id="rg"
-          maxLength={12}
+          maxLength={13}
           value={form.watch("rg") || ""}
           onChange={(e) => form.setValue("rg", formatRG(e.target.value))}
         />
