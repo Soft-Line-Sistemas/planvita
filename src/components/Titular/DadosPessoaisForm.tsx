@@ -111,7 +111,7 @@ export const DadosPessoaisForm = ({ form }: Props) => (
       </div>
       <div className="space-y-1">
         <Label htmlFor="rg" className="flex items-center gap-1">
-          RG <span className="text-red-500">*</span>
+          RG
         </Label>
         <Input
           id="rg"

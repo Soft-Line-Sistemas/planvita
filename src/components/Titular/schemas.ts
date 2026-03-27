@@ -49,7 +49,7 @@ const dadosPessoaisSchema = z.object({
   cpf: requiredDigits(11, "CPF inválido"),
   dataNascimento: requiredText("Data de nascimento é obrigatória"),
   sexo: sexoField,
-  rg: requiredText("RG é obrigatório", 50),
+  rg: optionalText(50),
   naturalidade: requiredText("Naturalidade é obrigatória", 191),
   situacaoConjugal: requiredText("Situação conjugal é obrigatória", 191),
   profissao: requiredText("Profissão é obrigatória", 191),
