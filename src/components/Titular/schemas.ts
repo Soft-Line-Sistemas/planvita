@@ -1,18 +1,10 @@
 import { z } from "zod";
 import { RELATIONSHIP_OPTIONS } from "@/constants/relationshipOptions";
+import { calculateAgeFromBirthDate } from "@/utils/date";
 
 const calcularIdade = (dataNascimento?: string): number | null => {
   if (!dataNascimento) return null;
-  const data = new Date(dataNascimento);
-  if (Number.isNaN(data.getTime())) return null;
-
-  const hoje = new Date();
-  let idade = hoje.getFullYear() - data.getFullYear();
-  const mes = hoje.getMonth() - data.getMonth();
-  if (mes < 0 || (mes === 0 && hoje.getDate() < data.getDate())) {
-    idade -= 1;
-  }
-  return idade;
+  return calculateAgeFromBirthDate(dataNascimento);
 };
 
 const normalizeString = (value: unknown) =>

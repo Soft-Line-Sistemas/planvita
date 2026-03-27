@@ -43,6 +43,6 @@ export const formatRG = (value: string) =>
     .replace(/\D/g, "")
     .slice(0, 10)
     .replace(
-      /(\d{2})(\d{3})(\d{3})(\d{0,1})/,
+      /(\d{2})(\d{3})(\d{3})(\d{0,2})/,
       (_, a, b, c, d) => `${a}.${b}.${c}${d ? `-${d}` : ""}`,
     );

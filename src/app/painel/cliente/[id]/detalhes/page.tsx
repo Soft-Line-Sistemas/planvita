@@ -37,6 +37,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AsaasWingsMark } from "@/components/ui/AsaasWingsMark";
 import { useAuth } from "@/hooks/useAuth";
+import { formatDatePtBr } from "@/utils/date";
+
+const MAX_DEPENDENTES_POR_TITULAR = 8;
 
 const DetalhesCliente = () => {
   const params = useParams();
@@ -152,7 +155,7 @@ const DetalhesCliente = () => {
     const renovacao = new Date(dataBase);
     renovacao.setMonth(renovacao.getMonth() + vigenciaMeses);
 
-    return renovacao.toLocaleDateString("pt-BR");
+    return formatDatePtBr(renovacao);
   }, [cliente?.dataContratacao, cliente?.plano?.vigenciaMeses]);
 
   useEffect(() => {
@@ -172,13 +175,13 @@ const DetalhesCliente = () => {
         const regra = Array.isArray(res.data) ? res.data[0] : null;
         const limite = Number(regra?.limiteBeneficiarios);
         if (Number.isFinite(limite) && limite > 0) {
-          setLimiteBeneficiarios(limite);
+          setLimiteBeneficiarios(Math.min(limite, MAX_DEPENDENTES_POR_TITULAR));
         } else {
-          setLimiteBeneficiarios(null);
+          setLimiteBeneficiarios(MAX_DEPENDENTES_POR_TITULAR);
         }
       })
       .catch(() => {
-        if (ativo) setLimiteBeneficiarios(null);
+        if (ativo) setLimiteBeneficiarios(MAX_DEPENDENTES_POR_TITULAR);
       });
 
     return () => {
@@ -198,13 +201,10 @@ const DetalhesCliente = () => {
       toast.error("Informe nome e data de nascimento do dependente.");
       return;
     }
-    if (
-      limiteBeneficiarios &&
-      limiteBeneficiarios > 0 &&
-      (cliente?.dependentes?.length ?? 0) >= limiteBeneficiarios
-    ) {
+    const limiteAtual = limiteBeneficiarios ?? MAX_DEPENDENTES_POR_TITULAR;
+    if (limiteAtual > 0 && (cliente?.dependentes?.length ?? 0) >= limiteAtual) {
       toast.error(
-        `Limite de beneficiários (${limiteBeneficiarios}) já atingido para este cliente.`,
+        `Limite de beneficiários (${limiteAtual}) já atingido para este cliente.`,
       );
       return;
     }
@@ -270,9 +270,8 @@ const DetalhesCliente = () => {
     { id: "financeiro", nome: "Financeiro", icon: CreditCard },
   ];
   const limiteAtingido =
-    !!limiteBeneficiarios &&
-    limiteBeneficiarios > 0 &&
-    cliente.dependentes.length >= limiteBeneficiarios;
+    cliente.dependentes.length >=
+    (limiteBeneficiarios ?? MAX_DEPENDENTES_POR_TITULAR);
   const totalAdicionaisDependentes = cliente.dependentes.reduce(
     (acc, dep) => acc + Number(dep.valorAdicionalMensal ?? 0),
     0,
@@ -466,9 +465,7 @@ const DetalhesCliente = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Contratação:</span>
                       <span className="font-medium">
-                        {new Date(cliente.dataContratacao).toLocaleDateString(
-                          "pt-BR",
-                        )}
+                        {formatDatePtBr(cliente.dataContratacao)}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -526,9 +523,7 @@ const DetalhesCliente = () => {
               cliente={clienteCarteirinha}
               isFlipped={isFlippedCarteirinha}
               setIsFlipped={setIsFlippedCarteirinha}
-              formatDate={(value: string) =>
-                new Date(value).toLocaleDateString("pt-BR")
-              }
+              formatDate={(value: string) => formatDatePtBr(value)}
               formatCurrency={(value: number) =>
                 value.toLocaleString("pt-BR", {
                   style: "currency",
@@ -894,9 +889,7 @@ const DetalhesCliente = () => {
                         <tr key={pagamento.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             <div className="flex items-center gap-2">
-                              {new Date(
-                                pagamento.dataVencimento,
-                              ).toLocaleDateString("pt-BR")}
+                              {formatDatePtBr(pagamento.dataVencimento)}
                               {(pagamento.asaasPaymentId ||
                                 pagamento.asaasSubscriptionId) && (
                                 <AsaasWingsMark variant="inline" />

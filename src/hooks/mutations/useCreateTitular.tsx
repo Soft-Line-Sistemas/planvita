@@ -26,6 +26,7 @@ export type CreateTitularInput = {
   step3?: Step3Values;
   step5?: PlanoFormValues;
   consultorId?: number;
+  forceTenantBosque?: boolean;
   dependentes: Dependente[];
   usarMesmosDados: boolean;
 } & Record<string, unknown>;
@@ -40,7 +41,15 @@ export function useCreateTitular(options?: {
     mutationFn: async (payload) => {
       const endpoint =
         options?.variant === "public" ? "/auth/register" : "/titular/full";
-      const { data } = await api.post(endpoint, payload);
+      const { forceTenantBosque, ...requestBody } = payload;
+      const { data } = await api.post(endpoint, requestBody, {
+        ...(forceTenantBosque
+          ? {
+              headers: { "X-Tenant": "bosque" },
+              params: { tenant: "bosque" },
+            }
+          : {}),
+      });
       return data;
     },
     onError: (err) => {

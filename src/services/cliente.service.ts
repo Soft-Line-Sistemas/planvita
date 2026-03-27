@@ -5,6 +5,7 @@ import {
   Pagamento,
   StatusPagamento,
 } from "@/types/PaymentType";
+import { calculateAgeFromBirthDate, toISODateSafe } from "@/utils/date";
 
 type DependenteApi = {
   id: number;
@@ -96,21 +97,13 @@ type TitularApi = {
 };
 
 const toISODate = (value?: string | null): string => {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().split("T")[0];
+  return toISODateSafe(value);
 };
 
 const calcularIdade = (value?: string | null): number => {
   if (!value) return 0;
-  const nascimento = new Date(value);
-  if (Number.isNaN(nascimento.getTime())) return 0;
-  const hoje = new Date();
-  let idade = hoje.getFullYear() - nascimento.getFullYear();
-  const m = hoje.getMonth() - nascimento.getMonth();
-  if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) idade--;
-  return idade;
+  const idade = calculateAgeFromBirthDate(value);
+  return idade ?? 0;
 };
 
 const normalizarStatusPagamento = (value?: string | null): StatusPagamento => {
