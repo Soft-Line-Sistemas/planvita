@@ -134,7 +134,7 @@ export const ResponsavelFinanceiroForm = ({
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-1">
               <Label htmlFor="cpfResp" className="flex items-center gap-1">
                 CPF
@@ -168,9 +168,6 @@ export const ResponsavelFinanceiroForm = ({
                 </p>
               )}
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label
                 htmlFor="dataNascimentoResp"
@@ -190,6 +187,8 @@ export const ResponsavelFinanceiroForm = ({
                 </p>
               )}
             </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-1">
               <Label htmlFor="parentesco" className="flex items-center gap-1">
                 Parentesco
@@ -216,9 +215,6 @@ export const ResponsavelFinanceiroForm = ({
                 </p>
               )}
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label htmlFor="sexoResp" className="flex items-center gap-1">
                 Sexo <span className="text-red-500">*</span>
@@ -391,7 +387,7 @@ export const ResponsavelFinanceiroForm = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <Label
                   htmlFor="bairroResp"
@@ -428,9 +424,6 @@ export const ResponsavelFinanceiroForm = ({
                   </p>
                 )}
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label
                   htmlFor="numeroResp"
@@ -449,7 +442,10 @@ export const ResponsavelFinanceiroForm = ({
                   </p>
                 )}
               </div>
-              <div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="lg:col-span-1">
                 <Label
                   htmlFor="complementoResp"
                   className="inline-flex items-center gap-1"
@@ -462,10 +458,7 @@ export const ResponsavelFinanceiroForm = ({
                   {...form.register("complemento")}
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
-              <div>
+              <div className="lg:col-span-2">
                 <Label
                   htmlFor="pontoReferenciaResp"
                   className="inline-flex items-center gap-1"
@@ -486,31 +479,31 @@ export const ResponsavelFinanceiroForm = ({
             </div>
           </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="emailResp" className="flex items-center gap-1">
-              <Mail className="w-4 h-4 mr-1" />
-              E-mail
-              <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="emailResp"
-              type="email"
-              maxLength={1000}
-              {...form.register("email", {
-                pattern: {
-                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                  message: "E-mail inválido",
-                },
-              })}
-            />
-            {errors.email && (
-              <p className="text-sm text-red-500 mt-1">
-                {String(errors.email.message)}
-              </p>
-            )}
-          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="emailResp" className="flex items-center gap-1">
+                <Mail className="w-4 h-4 mr-1" />
+                E-mail
+                <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="emailResp"
+                type="email"
+                maxLength={1000}
+                {...form.register("email", {
+                  pattern: {
+                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                    message: "E-mail inválido",
+                  },
+                })}
+              />
+              {errors.email && (
+                <p className="text-sm text-red-500 mt-1">
+                  {String(errors.email.message)}
+                </p>
+              )}
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label htmlFor="telefoneResp" className="flex items-center gap-1">
                 <Phone className="w-4 h-4 mr-1" />
@@ -541,6 +534,7 @@ export const ResponsavelFinanceiroForm = ({
                 </p>
               )}
             </div>
+
             <div className="space-y-1">
               <Label htmlFor="whatsappResp" className="flex items-center gap-1">
                 WhatsApp

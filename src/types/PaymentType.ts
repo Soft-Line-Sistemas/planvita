@@ -1,23 +1,11 @@
-interface Cliente {
-  id: string;
-  nome: string;
-  email: string;
-  telefone: string;
-  cpf: string;
-  plano: string;
-}
+import { StatusFinanceiro } from "./Financeiro";
 
-export type StatusPagamento =
-  | "PENDENTE"
-  | "PAGO"
-  | "RECEBIDO"
-  | "VENCIDO"
-  | "CANCELADO";
+export type StatusPagamento = StatusFinanceiro;
+
 export type MetodoPagamento = "Boleto" | "PIX" | "Cartão de Crédito";
 
 export interface Pagamento {
   id: string;
-  cliente: Cliente;
   valor: number;
   dataVencimento: string;
   dataPagamento: string | null;

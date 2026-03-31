@@ -28,6 +28,7 @@ import {
 import { DadosPessoaisForm } from "@/components/Titular/DadosPessoaisForm";
 import { EnderecoForm } from "@/components/Titular/EnderecoForm";
 import { ResponsavelFinanceiroForm } from "@/components/Titular/ResponsavelFinanceiroForm";
+import { Plano } from "@/types/PlanType";
 import {
   DependentesForm,
   type DependenteFieldErrors,
@@ -45,6 +46,7 @@ import api from "@/utils/api";
 
 type CadastroClienteWizardVariant = "dashboard" | "public";
 
+
 interface CadastroClienteWizardProps {
   variant?: CadastroClienteWizardVariant;
 }
@@ -55,14 +57,15 @@ type Step2Values = z.infer<typeof enderecoSchema>;
 type Step3Values = z.infer<typeof responsavelFinanceiroSchema>;
 type PlanoFormValues = {
   planoId?: number;
+  plano?: Plano | null;
 };
 
-interface WizardStepsData {
+export interface TypedWizardStepsData {
   step1?: Step1Values;
   step2?: Step2Values;
-  step3?: Step3Values;
+  step3?: Step3Values & { usarMesmosDados?: boolean };
+  dependentes?: Dependente[];
   step5?: PlanoFormValues;
-  [key: string]: unknown;
 }
 
 interface ConsultorOption {
@@ -81,7 +84,7 @@ export function CadastroClienteWizard({
   >();
 
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<WizardStepsData>({});
+  const [formData, setFormData] = useState<TypedWizardStepsData>({});
   const [dependentes, setDependentes] = useState<Dependente[]>([]);
   const [dependentesErrors, setDependentesErrors] = useState<
     DependenteFieldErrors[]
@@ -430,99 +433,108 @@ export function CadastroClienteWizard({
   );
 
   const renderCurrentStep = () => {
-    switch (currentStep) {
-      case 1:
-        return <DadosPessoaisForm form={dadosPessoaisForm} />;
-      case 2:
-        return <EnderecoForm form={enderecoForm} />;
-      case 3:
-        return (
-          <ResponsavelFinanceiroForm
-            form={responsavelForm}
-            usarMesmosDados={usarMesmosDados}
-            setUsarMesmosDados={setUsarMesmosDados}
-          />
-        );
-      case 4:
-        return (
-          <DependentesForm
-            dependentes={dependentes}
-            dependentesErrors={dependentesErrors}
-            handleAddDependente={handleAddDependente}
-            handleRemoveDependente={handleRemoveDependente}
-            handleDependenteChange={handleDependenteChange}
-            canAddDependente={podeAdicionarDependente}
-            limiteBeneficiarios={limiteBeneficiarios}
-          />
-        );
+    return (
+      <div key={currentStep} className="animate-slide-left">
+        {(() => {
+          switch (currentStep) {
+            case 1:
+              return <DadosPessoaisForm form={dadosPessoaisForm} />;
+            case 2:
+              return <EnderecoForm form={enderecoForm} />;
+            case 3:
+              return (
+                <ResponsavelFinanceiroForm
+                  form={responsavelForm}
+                  usarMesmosDados={usarMesmosDados}
+                  setUsarMesmosDados={setUsarMesmosDados}
+                />
+              );
+            case 4:
+              return (
+                <DependentesForm
+                  dependentes={dependentes}
+                  dependentesErrors={dependentesErrors}
+                  handleAddDependente={handleAddDependente}
+                  handleRemoveDependente={handleRemoveDependente}
+                  handleDependenteChange={handleDependenteChange}
+                  canAddDependente={podeAdicionarDependente}
+                  limiteBeneficiarios={limiteBeneficiarios}
+                />
+              );
 
-      case 5: {
-        const titularData = formData.step1 ?? dadosPessoaisForm.getValues();
+            case 5: {
+              const titularData = formData.step1 ?? dadosPessoaisForm.getValues();
 
-        const participantesList: ParticipanteMin[] = [
-          {
-            nome: titularData?.nomeCompleto ?? "",
-            dataNascimento: titularData?.dataNascimento ?? null,
-            parentesco: "Titular",
-          },
-          ...dependentes.map<ParticipanteMin>((d) => ({
-            nome: d.nome,
-            dataNascimento: d.dataNascimento ?? null,
-            parentesco: d.parentesco ?? "Outro",
-            idade:
-              typeof d.idade === "number" && !Number.isNaN(d.idade)
-                ? d.idade
-                : calcularIdade(d.dataNascimento ?? null),
-          })),
-        ];
+              const participantesList: ParticipanteMin[] = [
+                {
+                  nome: titularData?.nomeCompleto ?? "",
+                  dataNascimento: titularData?.dataNascimento ?? null,
+                  parentesco: "Titular",
+                },
+                ...dependentes.map<ParticipanteMin>((d) => ({
+                  nome: d.nome,
+                  dataNascimento: d.dataNascimento ?? null,
+                  parentesco: d.parentesco ?? "Outro",
+                  idade:
+                    typeof d.idade === "number" && !Number.isNaN(d.idade)
+                      ? d.idade
+                      : calcularIdade(d.dataNascimento ?? null),
+                })),
+              ];
 
-        return (
-          <PlanoForm
-            form={planoForm}
-            planoSelecionado={null}
-            participantes={participantesList}
-            modoCliente={isPublic}
-          />
-        );
-      }
+              return (
+                <PlanoForm
+                  form={planoForm}
+                  planoSelecionado={null}
+                  participantes={participantesList}
+                  modoCliente={isPublic}
+                />
+              );
+            }
 
-      case 6: {
-        const titularData = formData.step1 ?? dadosPessoaisForm.getValues();
-        const titularResumo: ParticipanteMin = {
-          nome: titularData?.nomeCompleto ?? "",
-          dataNascimento: titularData?.dataNascimento ?? null,
-        };
+            case 6: {
+              const titularData = formData.step1 ?? dadosPessoaisForm.getValues();
+              const titularResumo: ParticipanteMin = {
+                nome: titularData?.nomeCompleto ?? "",
+                dataNascimento: titularData?.dataNascimento ?? null,
+              };
 
-        const dependentesResumo: ParticipanteMin[] = dependentes.map((d) => ({
-          nome: d.nome,
-          dataNascimento: d.dataNascimento ?? null,
-          idade:
-            typeof d.idade === "number" && !Number.isNaN(d.idade)
-              ? d.idade
-              : calcularIdade(d.dataNascimento ?? null),
-        }));
+              const dependentesResumo: ParticipanteMin[] = dependentes.map(
+                (d) => ({
+                  nome: d.nome,
+                  dataNascimento: d.dataNascimento ?? null,
+                  idade:
+                    typeof d.idade === "number" && !Number.isNaN(d.idade)
+                      ? d.idade
+                      : calcularIdade(d.dataNascimento ?? null),
+                }),
+              );
 
-        return (
-          <Confirmacao
-            dados={{
-              titular: titularResumo,
-              dependentes: dependentesResumo,
-            }}
-            consultores={consultores}
-            selectedConsultorId={selectedConsultorId}
-            onSelectConsultor={(consultorId) => {
-              setSelectedConsultorId(consultorId);
-              setConsultorError(null);
-            }}
-            isConsultorLocked={Boolean(consultorIdFromQuery)}
-            isLoadingConsultores={isLoadingConsultores}
-            consultorError={consultorError}
-          />
-        );
-      }
-      default:
-        return null;
-    }
+              return (
+                <Confirmacao
+                  dados={{
+                    titular: titularResumo,
+                    dependentes: dependentesResumo,
+                    planoSelecionado: planoForm.getValues().plano,
+                  }}
+                  consultores={consultores}
+                  selectedConsultorId={selectedConsultorId}
+                  onSelectConsultor={(consultorId) => {
+                    setSelectedConsultorId(consultorId);
+                    setConsultorError(null);
+                  }}
+                  isConsultorLocked={Boolean(consultorIdFromQuery)}
+                  isLoadingConsultores={isLoadingConsultores}
+                  consultorError={consultorError}
+                />
+              );
+            }
+            default:
+              return null;
+          }
+        })()}
+      </div>
+    );
   };
 
   const headingTitle = isPublic

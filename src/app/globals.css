@@ -43,13 +43,13 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
+  --background: oklch(0.985 0 0); /* #F8F9FA aproximado */
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --primary: oklch(0.74 0.16 160); /* Verde Figma #2ECC71 aproximado em oklch */
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -68,7 +68,7 @@
   --chart-5: oklch(0.769 0.188 70.08);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary: oklch(0.74 0.16 160);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
@@ -179,11 +179,7 @@
 }
 
 .animate-slide-in-right {
-  animation: slide-in-right 0.5s ease-out;
-}
-
-.animate-pulse-green {
-  animation: pulse-green 2s infinite;
+interface CadastroClienteWizardProps {
 }
 
 /* Transições suaves para todos os elementos interativos */
@@ -202,7 +198,7 @@ textarea {
 
 /* Gradiente personalizado para o background */
 .bg-planvita-gradient {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 50%, #15803d 100%);
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 50%, #1e8449 100%);
 }
 
 /* Estilo para cards com hover */

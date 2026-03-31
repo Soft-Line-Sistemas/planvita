@@ -22,6 +22,7 @@ import { Cliente as ClienteType } from "@/types/ClientType";
 import { Pagamento } from "@/types/PaymentType";
 import { useClientes } from "@/hooks/queries/useClientes";
 import { usePagamentos } from "@/hooks/queries/usePagamentos";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type DashboardCliente = {
   id: string;
@@ -179,6 +180,15 @@ export default function Dashboard({ userEmail = "Operador" }: DashboardProps) {
       : 0;
 
   const isLoadingData = isLoadingClientes || isLoadingPagamentos;
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+  };
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("pt-BR", {
@@ -359,9 +369,12 @@ export default function Dashboard({ userEmail = "Operador" }: DashboardProps) {
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
                   <div className="flex-1 flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                      <Users className="w-6 h-6 text-green-600" />
-                    </div>
+                    <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
+                      <AvatarImage src="" />
+                      <AvatarFallback className="bg-green-100 text-green-700 font-bold">
+                        {getInitials(cliente.nome)}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-900">
                         {cliente.nome}

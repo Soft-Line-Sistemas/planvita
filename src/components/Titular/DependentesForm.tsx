@@ -109,7 +109,7 @@ export const DependentesForm = ({
                 </Button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {/* Nome */}
                 <div>
                   <Label className="inline-flex items-center gap-1">
@@ -196,7 +196,7 @@ export const DependentesForm = ({
                 </div>
 
                 {/* CPF */}
-                <div className="md:col-span-2">
+                <div>
                   <Label className="inline-flex items-center gap-1">
                     CPF <span className="text-red-500">*</span>
                   </Label>

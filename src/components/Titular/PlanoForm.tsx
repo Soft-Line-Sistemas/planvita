@@ -16,8 +16,9 @@ import {
   type ParticipanteMin,
 } from "@/utils/planos";
 
-type PlanoFormFields = {
+export type PlanoFormFields = {
   planoId?: number;
+  plano?: Plano | null;
 };
 
 interface PlanoFormProps {
@@ -292,14 +293,18 @@ export function PlanoForm({
     setSelectedId(idStr);
     if (idStr) {
       form.setValue("planoId", Number(idStr), { shouldDirty: true });
+      form.setValue("plano", planoPadrao, { shouldDirty: true });
     } else {
       form.resetField("planoId");
+      form.resetField("plano");
     }
   }, [planoPadrao, form]);
 
   const onSelectPlano = (idStr: string) => {
     setSelectedId(idStr);
+    const planoEncontrado = elegiveis?.find(p => String(p.id) === idStr) || null;
     form.setValue("planoId", Number(idStr), { shouldDirty: true });
+    form.setValue("plano", planoEncontrado, { shouldDirty: true });
   };
 
   // ----- Card de opção -----
@@ -373,7 +378,7 @@ export function PlanoForm({
         {elegiveis && elegiveis.length > 0 ? (
           <div className="space-y-3">
             <Label>Planos disponíveis</Label>
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {elegiveis.map((pl) => (
                 <PlanoOption key={String(pl.id)} plano={pl} />
               ))}

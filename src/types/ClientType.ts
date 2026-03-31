@@ -1,6 +1,8 @@
-import { StatusPagamento } from "./PaymentType";
+import { StatusPagamento, Pagamento, MetodoPagamento } from "./PaymentType";
+import { Dependente } from "./DependentesType";
+import { Plano as PlanoBase } from "./PlanType";
 
-interface Endereco {
+export interface Endereco {
   cep: string;
   uf: string;
   cidade: string;
@@ -11,59 +13,46 @@ interface Endereco {
   pontoReferencia?: string;
 }
 
-interface Cobertura {
+export interface Cobertura {
   nome: string;
   descricao: string;
   observacoes?: string;
 }
 
-interface Plano {
-  id: string;
-  nome: string;
-  valorMensal: number;
-  vigenciaMeses?: number;
-  coberturas: {
+// Extensão do PlanoBase para casos específicos de ClientType se necessário
+export interface Plano extends PlanoBase {
+  coberturasDetalhadas?: {
     servicosPadrao: Cobertura[];
     coberturaTranslado: Cobertura[];
     servicosEspecificos: Cobertura[];
   };
 }
 
-interface Consultor {
+export interface Consultor {
   nome: string;
   codigo: string;
   email: string;
   telefone: string;
 }
 
-interface Dependente {
+export interface ResponsavelFinanceiro {
   id: string;
   nome: string;
-  cpf: string;
-  dataNascimento: string;
-  idade: number;
-  parentesco: string;
-  parentescoNormalizado?: string;
-  foraGradeFamiliar?: boolean;
-  excluirCobrancaAdicional?: boolean;
-  valorAdicionalMensal?: number;
-  carenciaRestante: number;
-}
-
-type MetodoPagamento = "Boleto" | "PIX" | "Cartão de Crédito";
-
-interface Pagamento {
-  asaasSubscriptionId?: string | null;
-  asaasPaymentId?: string | null;
-  id: string;
-  valor: number;
-  dataVencimento: string;
-  dataPagamento?: string | null;
-  status: StatusPagamento;
-  metodoPagamento: MetodoPagamento;
-  diasAtraso?: number;
-  referencia?: string;
-  observacoes?: string;
+  email: string;
+  telefone: string;
+  relacionamento: string;
+  situacaoConjugal?: string;
+  profissao?: string;
+  sexo?: string;
+  naturalidade?: string;
+  cep?: string;
+  uf?: string;
+  cidade?: string;
+  bairro?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  pontoReferencia?: string;
 }
 
 export interface Cliente {
@@ -88,25 +77,7 @@ export interface Cliente {
   diaVencimento: number;
   plano: Plano;
   consultor: Consultor;
-  responsavelFinanceiro?: {
-    id: string;
-    nome: string;
-    email: string;
-    telefone: string;
-    relacionamento: string;
-    situacaoConjugal?: string;
-    profissao?: string;
-    sexo?: string;
-    naturalidade?: string;
-    cep?: string;
-    uf?: string;
-    cidade?: string;
-    bairro?: string;
-    logradouro?: string;
-    numero?: string;
-    complemento?: string;
-    pontoReferencia?: string;
-  };
+  responsavelFinanceiro?: ResponsavelFinanceiro;
   dependentes: Dependente[];
   pagamentos: Pagamento[];
 }
