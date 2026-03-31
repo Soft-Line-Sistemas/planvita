@@ -46,6 +46,20 @@ export function PlanoForm({
   participantes,
   modoCliente = false,
 }: PlanoFormProps) {
+  const {
+    ref: planoIdRef,
+    name: planoIdName,
+    onBlur: planoIdOnBlur,
+    onChange: planoIdOnChange,
+  } = form.register("planoId", {
+    required: "Selecione um plano para continuar.",
+    valueAsNumber: true,
+    validate: (value) =>
+      typeof value === "number" && Number.isFinite(value) && value > 0
+        ? true
+        : "Selecione um plano para continuar.",
+  });
+
   // ----- Helpers -----
   const formatCurrency = (n: number) =>
     new Intl.NumberFormat("pt-BR", {
@@ -387,6 +401,12 @@ export function PlanoForm({
           )
         )}
 
+        {form.formState.errors.planoId?.message && (
+          <p className="text-sm text-red-600">
+            {String(form.formState.errors.planoId.message)}
+          </p>
+        )}
+
         {/* Participantes */}
         {participantes?.length > 0 && (
           <div>
@@ -401,7 +421,13 @@ export function PlanoForm({
           </div>
         )}
 
-        <input type="hidden" {...form.register("planoId")} />
+        <input
+          type="hidden"
+          name={planoIdName}
+          ref={planoIdRef}
+          onBlur={planoIdOnBlur}
+          onChange={planoIdOnChange}
+        />
       </CardContent>
     </Card>
   );
