@@ -349,8 +349,14 @@ export function CadastroClienteWizard({
 
   const podeAdicionarDependente =
     dependentes.length < (limiteBeneficiarios ?? MAX_DEPENDENTES_POR_TITULAR);
+  const planoSelecionadoId = planoForm.watch("planoId");
   const canContinueStep4 =
     currentStep !== 4 || validateDependentes(dependentes).isValid;
+  const canContinueStep5 =
+    currentStep !== 5 ||
+    (typeof planoSelecionadoId === "number" &&
+      Number.isFinite(planoSelecionadoId) &&
+      planoSelecionadoId > 0);
 
   const handleFinish = async () => {
     if (!selectedConsultorId) {
@@ -588,7 +594,7 @@ export function CadastroClienteWizard({
                 <Button
                   type="button"
                   onClick={handleNext}
-                  disabled={!canContinueStep4}
+                  disabled={!canContinueStep4 || !canContinueStep5}
                   className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
                 >
                   Continuar <ChevronRight className="h-4 w-4" />
