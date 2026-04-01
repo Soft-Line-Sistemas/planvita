@@ -230,6 +230,7 @@ export function CadastroClienteWizard({
 
     return {
       errors: baseDependenteErrors,
+      hasDuplicateCpf: firstStepWithError !== null,
       firstStepWithError,
     };
   };
