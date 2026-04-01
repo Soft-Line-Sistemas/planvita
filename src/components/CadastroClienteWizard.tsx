@@ -163,6 +163,77 @@ export function CadastroClienteWizard({
     return errors;
   };
 
+  const applyDuplicateCpfValidation = (
+    baseDependenteErrors: DependenteFieldErrors[],
+  ) => {
+    const titularCpf = String(
+      (formData.step1 ?? dadosPessoaisForm.getValues()).cpf ?? "",
+    ).replace(/\D/g, "");
+    const responsavelCpf = String(
+      (formData.step3 ?? responsavelForm.getValues()).cpf ?? "",
+    ).replace(/\D/g, "");
+
+    dadosPessoaisForm.clearErrors("cpf");
+    responsavelForm.clearErrors("cpf");
+
+    const byCpf = new Map<
+      string,
+      Array<{ tipo: "titular" | "responsavel" | "dependente"; index?: number }>
+    >();
+    const registrar = (
+      cpfDigits: string,
+      owner: { tipo: "titular" | "responsavel" | "dependente"; index?: number },
+    ) => {
+      if (cpfDigits.length !== 11) return;
+      const lista = byCpf.get(cpfDigits) ?? [];
+      lista.push(owner);
+      byCpf.set(cpfDigits, lista);
+    };
+
+    registrar(titularCpf, { tipo: "titular" });
+    if (!usarMesmosDados) {
+      registrar(responsavelCpf, { tipo: "responsavel" });
+    }
+    dependentes.forEach((dep, index) => {
+      registrar(String(dep.cpf ?? "").replace(/\D/g, ""), {
+        tipo: "dependente",
+        index,
+      });
+    });
+
+    let firstStepWithError: number | null = null;
+    byCpf.forEach((owners) => {
+      if (owners.length <= 1) return;
+      owners.forEach((owner) => {
+        if (owner.tipo === "titular") {
+          dadosPessoaisForm.setError("cpf", {
+            type: "manual",
+            message: "CPF já informado em outro participante do cadastro.",
+          });
+          if (firstStepWithError === null) firstStepWithError = 1;
+        } else if (owner.tipo === "responsavel") {
+          responsavelForm.setError("cpf", {
+            type: "manual",
+            message: "CPF já informado em outro participante do cadastro.",
+          });
+          if (firstStepWithError === null) firstStepWithError = 3;
+        } else if (typeof owner.index === "number") {
+          const idx = owner.index;
+          baseDependenteErrors[idx] = {
+            ...baseDependenteErrors[idx],
+            cpf: "CPF já informado em outro participante do cadastro.",
+          };
+          if (firstStepWithError === null) firstStepWithError = 4;
+        }
+      });
+    });
+
+    return {
+      errors: baseDependenteErrors,
+      firstStepWithError,
+    };
+  };
+
   const validateDependentes = (items: Dependente[]) => {
     const errors = items.map(buildDependenteErrors);
     const isValid = errors.every((err) => Object.keys(err).length === 0);
@@ -275,9 +346,21 @@ export function CadastroClienteWizard({
         return true;
       }
       case 4: {
-        const { isValid, errors } = validateDependentes(dependentes);
-        setDependentesErrors(errors);
-        if (!isValid) return false;
+        const { errors } = validateDependentes(dependentes);
+        const duplicateCheck = applyDuplicateCpfValidation(errors);
+        const isValid = duplicateCheck.errors.every(
+          (err) => Object.keys(err).length === 0,
+        );
+        setDependentesErrors(duplicateCheck.errors);
+        if (!isValid) {
+          if (
+            duplicateCheck.firstStepWithError &&
+            duplicateCheck.firstStepWithError !== 4
+          ) {
+            setCurrentStep(duplicateCheck.firstStepWithError);
+          }
+          return false;
+        }
         setFormData((prev) => ({
           ...prev,
           dependentes,
@@ -385,6 +468,21 @@ export function CadastroClienteWizard({
           : undefined,
       forceTenantBosque: shouldForceBosqueTenant,
     };
+
+    const { errors } = validateDependentes(dependentes);
+    const duplicateCheck = applyDuplicateCpfValidation(errors);
+    const canFinish = duplicateCheck.errors.every(
+      (err) => Object.keys(err).length === 0,
+    );
+    setDependentesErrors(duplicateCheck.errors);
+    if (!canFinish) {
+      if (duplicateCheck.firstStepWithError) {
+        setCurrentStep(duplicateCheck.firstStepWithError);
+      } else {
+        setCurrentStep(4);
+      }
+      return;
+    }
 
     await mutateAsync(payload);
   };
