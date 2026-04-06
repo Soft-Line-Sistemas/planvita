@@ -55,6 +55,7 @@ type Step2Values = z.infer<typeof enderecoSchema>;
 type Step3Values = z.infer<typeof responsavelFinanceiroSchema>;
 type PlanoFormValues = {
   planoId?: number;
+  billingType?: "PIX" | "BOLETO" | "CREDIT_CARD";
 };
 
 interface WizardStepsData {

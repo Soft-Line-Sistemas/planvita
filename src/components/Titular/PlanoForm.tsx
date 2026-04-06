@@ -18,6 +18,7 @@ import {
 
 type PlanoFormFields = {
   planoId?: number;
+  billingType?: "PIX" | "BOLETO" | "CREDIT_CARD";
 };
 
 interface PlanoFormProps {
@@ -59,6 +60,12 @@ export function PlanoForm({
         ? true
         : "Selecione um plano para continuar.",
   });
+  const {
+    ref: billingTypeRef,
+    name: billingTypeName,
+    onBlur: billingTypeOnBlur,
+    onChange: billingTypeOnChange,
+  } = form.register("billingType");
 
   // ----- Helpers -----
   const formatCurrency = (n: number) =>
@@ -311,6 +318,13 @@ export function PlanoForm({
     }
   }, [planoPadrao, form]);
 
+  useEffect(() => {
+    const currentBillingType = form.getValues("billingType");
+    if (!currentBillingType) {
+      form.setValue("billingType", "PIX", { shouldDirty: false });
+    }
+  }, [form]);
+
   const onSelectPlano = (idStr: string) => {
     setSelectedId(idStr);
     form.setValue("planoId", Number(idStr), { shouldDirty: true });
@@ -407,6 +421,28 @@ export function PlanoForm({
           </p>
         )}
 
+        <div className="space-y-2">
+          <Label htmlFor="billingType">Forma de pagamento da recorrência</Label>
+          <select
+            id="billingType"
+            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            value={form.watch("billingType") ?? "PIX"}
+            onChange={(event) =>
+              form.setValue(
+                "billingType",
+                event.target.value as "PIX" | "BOLETO" | "CREDIT_CARD",
+                { shouldDirty: true },
+              )
+            }
+          >
+            <option value="PIX">PIX</option>
+            <option value="BOLETO">Boleto</option>
+          </select>
+          <p className="text-xs text-gray-500">
+            Esse método será usado na criação inicial da recorrência no Asaas.
+          </p>
+        </div>
+
         {/* Participantes */}
         {participantes?.length > 0 && (
           <div>
@@ -427,6 +463,13 @@ export function PlanoForm({
           ref={planoIdRef}
           onBlur={planoIdOnBlur}
           onChange={planoIdOnChange}
+        />
+        <input
+          type="hidden"
+          name={billingTypeName}
+          ref={billingTypeRef}
+          onBlur={billingTypeOnBlur}
+          onChange={billingTypeOnChange}
         />
       </CardContent>
     </Card>
