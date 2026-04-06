@@ -14,7 +14,6 @@ import {
   Calendar,
   TrendingUp,
   FileText,
-  Send,
   MessageCircle,
   Mail,
   User,
@@ -239,6 +238,116 @@ const GestaoFinanceira = () => {
     gerarBoletoPDF(pagamento);
   };
 
+  const getCsvValue = (value: string | number | null | undefined) => {
+    const normalized = String(value ?? "").replace(/"/g, '""');
+    return `"${normalized}"`;
+  };
+
+  const downloadCsv = (
+    filename: string,
+    headers: string[],
+    rows: Array<Array<string | number | null | undefined>>,
+  ) => {
+    const csv = [
+      headers.map((header) => getCsvValue(header)).join(";"),
+      ...rows.map((row) => row.map((value) => getCsvValue(value)).join(";")),
+    ].join("\n");
+    const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleExportarHeader = () => {
+    if (abaAtiva === "inadimplencia") {
+      const rows = inadimplentes.map((conta) => [
+        conta.id,
+        conta.cliente?.nome ?? conta.parceiro ?? "Cliente",
+        conta.cliente?.email ?? conta.contato ?? "",
+        conta.cliente?.telefone ?? "",
+        conta.valor.toFixed(2),
+        conta.status,
+        new Date(conta.dataVencimento).toLocaleDateString("pt-BR"),
+        getDiasAtraso(conta),
+      ]);
+      downloadCsv(
+        "inadimplencia.csv",
+        [
+          "ID",
+          "Cliente",
+          "Email",
+          "Telefone",
+          "Valor",
+          "Status",
+          "Vencimento",
+          "Dias em atraso",
+        ],
+        rows,
+      );
+      return;
+    }
+
+    if ((contasFinanceiras ?? []).length > 0) {
+      const rows = (contasFinanceiras ?? []).map((conta) => [
+        conta.id,
+        conta.tipo,
+        conta.categoria,
+        conta.descricao,
+        conta.parceiro,
+        conta.valor.toFixed(2),
+        conta.status,
+        new Date(conta.dataVencimento).toLocaleDateString("pt-BR"),
+      ]);
+      downloadCsv(
+        "contas-financeiras.csv",
+        [
+          "ID",
+          "Tipo",
+          "Categoria",
+          "Descricao",
+          "Parceiro",
+          "Valor",
+          "Status",
+          "Vencimento",
+        ],
+        rows,
+      );
+      return;
+    }
+
+    const rows = pagamentos.map((pagamento) => [
+      pagamento.id,
+      pagamento.cliente.nome,
+      pagamento.cliente.email,
+      pagamento.referencia,
+      pagamento.valor.toFixed(2),
+      pagamento.status,
+      pagamento.metodoPagamento,
+      new Date(pagamento.dataVencimento).toLocaleDateString("pt-BR"),
+      pagamento.dataPagamento
+        ? new Date(pagamento.dataPagamento).toLocaleDateString("pt-BR")
+        : "",
+    ]);
+    downloadCsv(
+      "pagamentos.csv",
+      [
+        "ID",
+        "Cliente",
+        "Email",
+        "Referencia",
+        "Valor",
+        "Status",
+        "Metodo",
+        "Vencimento",
+        "Data pagamento",
+      ],
+      rows,
+    );
+  };
+
   const abas = useMemo(() => {
     return [
       // { id: "pagamentos", nome: "Pagamentos", icon: CreditCard },
@@ -316,13 +425,12 @@ const GestaoFinanceira = () => {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
+              <button
+                onClick={handleExportarHeader}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+              >
                 <Download className="w-4 h-4" />
                 <span>Exportar</span>
-              </button>
-              <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2">
-                <Send className="w-4 h-4" />
-                <span>Enviar Boletos</span>
               </button>
             </div>
           </div>
