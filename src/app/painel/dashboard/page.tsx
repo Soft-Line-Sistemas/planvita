@@ -398,7 +398,7 @@ export default function Dashboard({ userEmail = "Operador" }: DashboardProps) {
                       </div>
                       <div className="text-sm text-gray-500">
                         {cliente.valorAdicional > 0
-                          ? `${formatCurrency(cliente.valorBase)} + ${formatCurrency(cliente.valorAdicional)}`
+                          ? `${formatCurrency(cliente.valor)} (${formatCurrency(cliente.valorBase)} + ${formatCurrency(cliente.valorAdicional)})`
                           : formatCurrency(cliente.valor)}
                       </div>
                     </div>

@@ -25,6 +25,8 @@ interface Cliente {
   status: "Ativo" | "Pendente" | "Inativo";
   dataContrato: string;
   valor: number;
+  valorBase?: number;
+  valorAdicional?: number;
 }
 
 interface ModalClienteProps {
@@ -106,7 +108,10 @@ export default function ModalCliente({
             </div>
             <div className="flex items-center">
               <DollarSign className="w-4 h-4 mr-2 text-gray-500" />{" "}
-              {formatCurrency(cliente.valor)} ({cliente.plano})
+              {cliente.valorAdicional && cliente.valorAdicional > 0
+                ? `${formatCurrency(cliente.valor)} (${formatCurrency(cliente.valorBase ?? 0)} + ${formatCurrency(cliente.valorAdicional)})`
+                : formatCurrency(cliente.valor)}{" "}
+              ({cliente.plano})
             </div>
           </div>
 
