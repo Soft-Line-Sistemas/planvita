@@ -994,6 +994,26 @@ export default function ConsultaClientePage() {
     };
   }, [cliente, suspensoPorRegra]);
 
+  const resumoMensalidade = useMemo(() => {
+    if (!clienteExibicao) {
+      return { base: 0, adicional: 0, total: 0 };
+    }
+
+    const base = Number(clienteExibicao.plano.valorMensal ?? 0);
+    const adicionalDependentes = (clienteExibicao.dependentes ?? []).reduce(
+      (acc, dep) => acc + Number(dep.valorAdicionalMensal ?? 0),
+      0,
+    );
+    const adicionalPlano = Number(
+      clienteExibicao.plano.valorAdicionalMensal ?? adicionalDependentes,
+    );
+    const total = Number(
+      clienteExibicao.plano.valorTotalMensal ?? base + adicionalPlano,
+    );
+
+    return { base, adicional: adicionalPlano, total };
+  }, [clienteExibicao]);
+
   const contasFiltradas = useMemo(() => {
     let filtradas = [...contasFinanceiras];
 
@@ -1861,8 +1881,13 @@ export default function ConsultaClientePage() {
                           Valor Mensal
                         </span>
                         <p className="font-medium">
-                          {formatCurrency(cliente.plano.valorMensal)}
+                          {formatCurrency(resumoMensalidade.total)}
                         </p>
+                        {resumoMensalidade.adicional > 0 ? (
+                          <p className="text-xs text-gray-500">
+                            {`${formatCurrency(resumoMensalidade.base)} + ${formatCurrency(resumoMensalidade.adicional)} de adicional`}
+                          </p>
+                        ) : null}
                       </div>
                       <div className="space-y-1">
                         <span className="text-sm text-gray-500">Status</span>

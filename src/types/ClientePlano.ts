@@ -8,6 +8,8 @@ export interface PlanoDetalhado {
     fim: string;
   };
   valorMensal: number;
+  valorAdicionalMensal?: number;
+  valorTotalMensal?: number;
   cobertura: string[];
   observacoes?: string;
 }
@@ -17,6 +19,7 @@ export interface DependentePlano {
   nome: string;
   dataNascimento?: string | null;
   tipo?: string | null;
+  valorAdicionalMensal?: number;
 }
 
 export interface ClientePlano {

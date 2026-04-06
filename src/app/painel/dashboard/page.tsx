@@ -32,6 +32,8 @@ type DashboardCliente = {
   status: "Ativo" | "Pendente" | "Inativo";
   dataContrato: string;
   valor: number;
+  valorBase: number;
+  valorAdicional: number;
 };
 
 interface DashboardProps {
@@ -48,16 +50,26 @@ const statusPlanoToDashboard = (
   return "Ativo";
 };
 
-const mapClienteToDashboard = (cliente: ClienteType): DashboardCliente => ({
-  id: String(cliente.id),
-  nome: cliente.nome,
-  email: cliente.email,
-  telefone: cliente.telefone,
-  plano: cliente.plano?.nome ?? "Plano não informado",
-  status: statusPlanoToDashboard(cliente.statusPlano),
-  dataContrato: cliente.dataContratacao ?? "",
-  valor: Number(cliente.plano?.valorMensal ?? 0),
-});
+const mapClienteToDashboard = (cliente: ClienteType): DashboardCliente => {
+  const valorBase = Number(cliente.plano?.valorMensal ?? 0);
+  const valorAdicional = (cliente.dependentes ?? []).reduce(
+    (acc, dependente) => acc + Number(dependente.valorAdicionalMensal ?? 0),
+    0,
+  );
+
+  return {
+    id: String(cliente.id),
+    nome: cliente.nome,
+    email: cliente.email,
+    telefone: cliente.telefone,
+    plano: cliente.plano?.nome ?? "Plano não informado",
+    status: statusPlanoToDashboard(cliente.statusPlano),
+    dataContrato: cliente.dataContratacao ?? "",
+    valor: valorBase + valorAdicional,
+    valorBase,
+    valorAdicional,
+  };
+};
 
 const countClientesByMonth = (
   clientes: ClienteType[],
@@ -385,7 +397,9 @@ export default function Dashboard({ userEmail = "Operador" }: DashboardProps) {
                         {cliente.plano}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {formatCurrency(cliente.valor)}
+                        {cliente.valorAdicional > 0
+                          ? `${formatCurrency(cliente.valorBase)} + ${formatCurrency(cliente.valorAdicional)}`
+                          : formatCurrency(cliente.valor)}
                       </div>
                     </div>
 

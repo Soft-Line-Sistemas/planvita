@@ -308,6 +308,7 @@ const DetalhesCliente = () => {
         nome: dep.nome,
         dataNascimento: dep.dataNascimento,
         tipoDependente: dep.parentesco,
+        valorAdicionalMensal: Number(dep.valorAdicionalMensal ?? 0),
       };
     }),
   });
