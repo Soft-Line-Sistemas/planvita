@@ -255,6 +255,43 @@ const GestaoPlanos = () => {
     router.push("/painel/dashboard");
   };
 
+  const getCsvValue = (value: string | number | null | undefined) => {
+    const normalized = String(value ?? "").replace(/"/g, '""');
+    return `"${normalized}"`;
+  };
+
+  const handleExportarPlanos = () => {
+    const headers = [
+      "ID",
+      "Plano",
+      "Valor Mensal",
+      "Idade Maxima",
+      "Clientes",
+      "Receita Mensal",
+      "Status",
+    ];
+    const rows = planosFiltrados.map((plano) => [
+      plano.id,
+      plano.nome,
+      Number(plano.valorMensal ?? 0).toFixed(2),
+      plano.idadeMaxima ?? "",
+      plano.totalClientes ?? 0,
+      Number(plano.receitaMensal ?? 0).toFixed(2),
+      plano.ativo ? "Ativo" : "Inativo",
+    ]);
+    const csv = [
+      headers.map((header) => getCsvValue(header)).join(";"),
+      ...rows.map((row) => row.map((value) => getCsvValue(value)).join(";")),
+    ].join("\n");
+    const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "planos.csv";
+    link.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   const planosFiltrados = useMemo(() => {
     return planos.filter((plano) => {
       const matchSearch = plano.nome
@@ -540,7 +577,10 @@ const GestaoPlanos = () => {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
+              <button
+                onClick={handleExportarPlanos}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+              >
                 <Download className="w-4 h-4" />
                 <span>Exportar</span>
               </button>

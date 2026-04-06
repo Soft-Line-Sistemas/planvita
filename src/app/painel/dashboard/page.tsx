@@ -17,7 +17,6 @@ import {
   AlertCircle,
   Activity,
 } from "lucide-react";
-import ModalCliente from "@/components/ui/ModalCliente";
 import { Cliente as ClienteType } from "@/types/ClientType";
 import { Pagamento } from "@/types/PaymentType";
 import { useClientes } from "@/hooks/queries/useClientes";
@@ -213,16 +212,8 @@ export default function Dashboard({ userEmail = "Operador" }: DashboardProps) {
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
-  const [selectedCliente, setSelectedCliente] =
-    useState<DashboardCliente | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-
   const handleViewClient = (id: string) => {
-    const cliente = recentClientes.find((item) => item.id === id) ?? null;
-    if (cliente) {
-      setSelectedCliente(cliente);
-      setModalOpen(true);
-    }
+    router.push(`/painel/cliente/${id}/detalhes`);
   };
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
@@ -434,12 +425,6 @@ export default function Dashboard({ userEmail = "Operador" }: DashboardProps) {
           </div>
         </CardContent>
       </Card>
-
-      <ModalCliente
-        cliente={selectedCliente}
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-      />
     </div>
   );
 }
