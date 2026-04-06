@@ -77,7 +77,18 @@ export default function CarteirinhaAsImage({
     const planoNome = esc(cliente.plano.nome);
     const vigIni = esc(formatDate(cliente.plano.vigencia.inicio));
     const vigFim = esc(formatDate(cliente.plano.vigencia.fim));
-    const valor = esc(formatCurrency(cliente.plano.valorMensal));
+    const valorBase = Number(cliente.plano.valorMensal ?? 0);
+    const valorAdicionalDependentes = (cliente.dependentes ?? []).reduce(
+      (acc, dep) => acc + Number(dep.valorAdicionalMensal ?? 0),
+      0,
+    );
+    const valorAdicional = Number(
+      cliente.plano.valorAdicionalMensal ?? valorAdicionalDependentes,
+    );
+    const valorTotal = Number(
+      cliente.plano.valorTotalMensal ?? valorBase + valorAdicional,
+    );
+    const valorTotalFmt = esc(formatCurrency(valorTotal));
     const status = esc(cliente.plano.status);
     const numero = esc(cliente.numeroCarteirinha);
 
@@ -124,7 +135,7 @@ export default function CarteirinhaAsImage({
           <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:center;font-size:14px;">
             <div style="display:flex;flex-direction:column">
               <span style="color:${COLORS.emerald200};text-transform:uppercase;font-size:12px;">Valor mensal</span>
-              <span style="font-weight:700;font-size:18px">${valor}</span>
+              <span style="font-weight:700;font-size:18px">${valorTotalFmt}</span>
             </div>
             <span style="
               border-radius:9999px;padding:6px 12px;font-size:12px;font-weight:700;text-transform:capitalize;

@@ -41,6 +41,7 @@ type TitularResponse = {
     nome?: string | null;
     dataNascimento?: string | null;
     tipoDependente?: string | null;
+    valorAdicionalMensal?: number | null;
   }> | null;
 };
 
@@ -59,7 +60,15 @@ export const mapTitularToCarteirinha = (
       nome: dep?.nome ?? "Dependente",
       dataNascimento: dep?.dataNascimento ?? null,
       tipo: dep?.tipoDependente ?? null,
+      valorAdicionalMensal: Number(dep?.valorAdicionalMensal ?? 0),
     })) ?? [];
+
+  const valorMensalBase = Number(plano?.valorMensal ?? 0);
+  const valorAdicionalMensal = dependentes.reduce(
+    (acc, dep) => acc + Number(dep.valorAdicionalMensal ?? 0),
+    0,
+  );
+  const valorTotalMensal = valorMensalBase + valorAdicionalMensal;
 
   const vigenciaInicio = titular?.dataContratacao ?? new Date().toISOString();
   const vigenciaFim = addMonths(vigenciaInicio, plano?.vigenciaMeses ?? 12);
@@ -93,7 +102,9 @@ export const mapTitularToCarteirinha = (
         inicio: vigenciaInicio,
         fim: vigenciaFim,
       },
-      valorMensal: plano?.valorMensal ?? 0,
+      valorMensal: valorMensalBase,
+      valorAdicionalMensal,
+      valorTotalMensal,
       cobertura: cobertura.length
         ? cobertura
         : ["Cobertura padrão do plano contratado."],

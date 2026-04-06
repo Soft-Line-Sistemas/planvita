@@ -232,7 +232,12 @@ const GestaoPlanos = () => {
     queryFn: async () => {
       const response = await api.get("/plano");
       const sanitized = sanitizePlanoArray(response.data);
-      sanitized.sort((a, b) => a.nome.localeCompare(b.nome));
+      sanitized.sort((a, b) => {
+        if (a.valorMensal !== b.valorMensal) {
+          return a.valorMensal - b.valorMensal;
+        }
+        return a.nome.localeCompare(b.nome);
+      });
       return sanitized;
     },
     staleTime: 60_000,

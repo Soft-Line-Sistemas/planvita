@@ -12,7 +12,7 @@ import {
   atualizarContaFinanceira,
   deleteContaFinanceira,
 } from "@/services/financeiro/contas.service";
-import { TipoConta } from "@/types/Financeiro";
+import { RecorrenciaFinanceira, TipoConta } from "@/types/Financeiro";
 import { toast } from "sonner";
 
 type ContaFinanceiraInput = {
@@ -199,7 +199,60 @@ export const useCancelarRecorrenciaTitular = () => {
   return useMutation({
     mutationFn: (titularId: number) =>
       cancelarRecorrenciaParaTitular(titularId),
-    onSuccess: () => {
+    onMutate: async (titularId: number) => {
+      await queryClient.cancelQueries({
+        queryKey: ["financeiro", "recorrencias"],
+      });
+
+      const previousRecorrencias = queryClient.getQueryData<
+        RecorrenciaFinanceira[]
+      >(["financeiro", "recorrencias"]);
+
+      queryClient.setQueryData<RecorrenciaFinanceira[]>(
+        ["financeiro", "recorrencias"],
+        (current) =>
+          (current ?? []).map((item) =>
+            item.titularId === titularId
+              ? {
+                  ...item,
+                  statusAtual: "CANCELADO",
+                  aberto: false,
+                  asaasSubscriptionId: null,
+                  asaasSubscriptionIdLocal: null,
+                  asaasSubscriptionIdProvider: null,
+                  temReferenciaAsaas: false,
+                  temReferenciaLocal: false,
+                  proximoVencimento: null,
+                }
+              : item,
+          ),
+      );
+
+      return { previousRecorrencias };
+    },
+    onSuccess: (result) => {
+      if (result.cancelled) {
+        queryClient.setQueryData<RecorrenciaFinanceira[]>(
+          ["financeiro", "recorrencias"],
+          (current) =>
+            (current ?? []).map((item) =>
+              item.titularId === result.titularId
+                ? {
+                    ...item,
+                    statusAtual: "CANCELADO",
+                    aberto: false,
+                    asaasSubscriptionId: result.asaasSubscriptionId ?? null,
+                    asaasSubscriptionIdLocal: null,
+                    asaasSubscriptionIdProvider: null,
+                    temReferenciaAsaas: false,
+                    temReferenciaLocal: false,
+                    proximoVencimento: null,
+                  }
+                : item,
+            ),
+        );
+      }
+
       queryClient.invalidateQueries({
         queryKey: ["financeiro", "recorrencias"],
       });
@@ -208,12 +261,24 @@ export const useCancelarRecorrenciaTitular = () => {
       });
       toast.success("Recorrência cancelada com sucesso");
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, _titularId, context) => {
+      if (context?.previousRecorrencias) {
+        queryClient.setQueryData(
+          ["financeiro", "recorrencias"],
+          context.previousRecorrencias,
+        );
+      }
+
       const message =
         error instanceof Error && error.message
           ? error.message
           : "Não foi possível cancelar recorrência";
       toast.error(message);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["financeiro", "recorrencias"],
+      });
     },
   });
 };
