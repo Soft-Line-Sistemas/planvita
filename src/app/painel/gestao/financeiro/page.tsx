@@ -294,9 +294,9 @@ const GestaoFinanceira = () => {
       const rows = (contasFinanceiras ?? []).map((conta) => [
         conta.id,
         conta.tipo,
-        conta.categoria,
         conta.descricao,
         conta.parceiro,
+        conta.metodoPagamento ?? "",
         conta.valor.toFixed(2),
         conta.status,
         new Date(conta.dataVencimento).toLocaleDateString("pt-BR"),
@@ -306,9 +306,9 @@ const GestaoFinanceira = () => {
         [
           "ID",
           "Tipo",
-          "Categoria",
           "Descricao",
           "Parceiro",
+          "Metodo",
           "Valor",
           "Status",
           "Vencimento",
