@@ -159,12 +159,15 @@ export function PlanoForm({
       participantes.map((p) => ({
         dataNascimento: p.dataNascimento ?? null,
         idade: typeof p.idade === "number" ? p.idade : null,
-        nome: p.nome ?? undefined,
         parentesco: typeof p.parentesco === "string" ? p.parentesco : undefined,
       })),
     [participantes],
   );
-  const enabled = participantesPayload.length > 0;
+  const enabled =
+    participantesPayload.length > 0 &&
+    participantesPayload.every((p) =>
+      Boolean(p.dataNascimento || p.idade !== null),
+    );
 
   // ----- Query (e “sanitização” dos planos para garantir arrays) -----
   const {
@@ -302,7 +305,8 @@ export function PlanoForm({
 
   const onSelectPlano = (idStr: string) => {
     setSelectedId(idStr);
-    const planoEncontrado = elegiveis?.find(p => String(p.id) === idStr) || null;
+    const planoEncontrado =
+      elegiveis?.find((p) => String(p.id) === idStr) || null;
     form.setValue("planoId", Number(idStr), { shouldDirty: true });
     form.setValue("plano", planoEncontrado, { shouldDirty: true });
   };

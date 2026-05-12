@@ -14,21 +14,19 @@ export type AssinaturaDigital = {
   updatedAt: string;
 };
 
-export const listarAssinaturas = async (
-  titularId: number | string,
-): Promise<AssinaturaDigital[]> => {
+export const listarAssinaturas = async (): Promise<AssinaturaDigital[]> => {
   const { data } = await api.get<AssinaturaDigital[]>(
-    `/titular/${titularId}/assinaturas`,
+    "/titular/me/assinaturas",
   );
   return data;
 };
 
-export const salvarAssinatura = async (
-  titularId: number | string,
-  payload: { tipo: string; assinaturaBase64: string },
-): Promise<AssinaturaDigital> => {
+export const salvarAssinatura = async (payload: {
+  tipo: string;
+  assinaturaBase64: string;
+}): Promise<AssinaturaDigital> => {
   const { data } = await api.post<AssinaturaDigital>(
-    `/titular/${titularId}/assinaturas`,
+    "/titular/me/assinaturas",
     payload,
   );
   return data;

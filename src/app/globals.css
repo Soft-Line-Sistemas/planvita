@@ -179,7 +179,7 @@
 }
 
 .animate-slide-in-right {
-interface CadastroClienteWizardProps {
+  animation: slide-in-right 0.5s ease-out;
 }
 
 /* Transições suaves para todos os elementos interativos */

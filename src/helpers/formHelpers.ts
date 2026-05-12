@@ -32,6 +32,20 @@ export const formatWhatsApp = (value: string) =>
       (_, a, b, c) => `(${a}) ${b}${c ? `-${c}` : ""}`,
     );
 
+export const getWhatsAppFromPhone = (phone: string) => {
+  const digits = phone.replace(/\D/g, "");
+
+  if (digits.length < 10) return "";
+  if (digits.length === 10) return formatWhatsApp(digits);
+
+  // For 11-digit mobile numbers, remove the "9" after DDD when present.
+  if (digits[2] === "9") {
+    return formatWhatsApp(`${digits.slice(0, 2)}${digits.slice(3, 11)}`);
+  }
+
+  return formatWhatsApp(digits.slice(0, 10));
+};
+
 export const formatCEP = (value: string) =>
   value
     .replace(/\D/g, "")
