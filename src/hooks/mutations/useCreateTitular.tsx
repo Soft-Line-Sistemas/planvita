@@ -10,6 +10,7 @@ import {
   responsavelFinanceiroSchema,
 } from "@/components/Titular/schemas";
 import type { Dependente } from "@/types/DependentesType";
+import type { Plano } from "@/types/PlanType";
 import { useRouter } from "next/navigation";
 
 type Step1Values = z.infer<typeof dadosPessoaisSchema>;
@@ -18,7 +19,7 @@ type Step3Values = z.infer<typeof responsavelFinanceiroSchema>;
 
 type PlanoFormValues = {
   planoId?: number;
-  plano?: any;
+  plano?: Plano | null;
 };
 
 export type CreateTitularInput = {

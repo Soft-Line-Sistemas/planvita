@@ -6,6 +6,14 @@ export type MetodoPagamento = "Boleto" | "PIX" | "Cartão de Crédito";
 
 export interface Pagamento {
   id: string;
+  cliente: {
+    id?: string;
+    nome: string;
+    cpf: string;
+    email: string;
+    telefone?: string;
+    plano?: string;
+  };
   valor: number;
   dataVencimento: string;
   dataPagamento: string | null;
