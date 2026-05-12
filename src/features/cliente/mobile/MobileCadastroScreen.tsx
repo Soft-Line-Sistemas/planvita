@@ -898,7 +898,7 @@ function Step4Form({
   dependentes: Dependente[];
   errors: DepErrors[];
   onChange: (deps: Dependente[]) => void;
-  onFieldEdited: (idx: number, field: keyof Dependente) => void;
+  onFieldEdited: (idx: number, field: keyof DepErrors) => void;
   limiteBeneficiarios: number;
   editingDepIndex: number | null;
   onEditingDepIndexChange: (idx: number | null) => void;
@@ -944,7 +944,7 @@ function Step4Form({
     }
   };
 
-  const handleChange = <K extends keyof Dependente>(
+  const handleChange = <K extends keyof Dependente & keyof DepErrors>(
     idx: number,
     field: K,
     value: Dependente[K],

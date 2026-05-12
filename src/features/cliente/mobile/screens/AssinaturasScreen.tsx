@@ -20,7 +20,9 @@ const TIPOS_ASSINATURA = [
   { id: "CORRESPONSAVEL_ASSINATURA_2", label: "Corresponsável financeiro - 2" },
 ] as const;
 
-const TIPOS_ASSINATURA_IDS = new Set(TIPOS_ASSINATURA.map((item) => item.id));
+const TIPOS_ASSINATURA_IDS = new Set<string>(
+  TIPOS_ASSINATURA.map((item) => item.id),
+);
 const ASSINATURA_TIPO_ALIASES: Record<string, string> = {
   TITULARASSINATURA1: "TITULAR_ASSINATURA_1",
   TITULARASSINATURA2: "TITULAR_ASSINATURA_2",

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import api from "@/utils/api";
 import { Cliente } from "@/types/ClientType";
+import type { Plano } from "@/types/PlanType";
 
 interface ClientesApiResponse {
   data: Cliente[];
@@ -31,30 +32,31 @@ export const useClientes = (params: {
       const response = await api.get(`/titular?${queryParams.toString()}`);
       const payload = response.data as ClientesApiResponse;
       if (Array.isArray(payload?.data)) {
+        const buildPlanoFallback = (id: string, nome: string): Plano => ({
+          id,
+          nome,
+          valorMensal: 0,
+          idadeMaxima: null,
+          coberturaMaxima: 0,
+          carenciaDias: 0,
+          vigenciaMeses: 12,
+          ativo: false,
+          totalClientes: 0,
+          receitaMensal: 0,
+          assistenciaFuneral: 0,
+          auxilioCemiterio: null,
+          taxaInclusaCemiterioPublico: false,
+          coberturas: [],
+          beneficios: [],
+          beneficiarios: [],
+        });
+
         payload.data = payload.data.map((cliente) => {
           if (cliente.plano?.id) return cliente;
           const planoBasico =
             params.plano && params.plano !== "todos"
-              ? {
-                  id: params.plano,
-                  nome: params.plano,
-                  valorMensal: 0,
-                  coberturas: {
-                    servicosPadrao: [],
-                    coberturaTranslado: [],
-                    servicosEspecificos: [],
-                  },
-                }
-              : (cliente.plano ?? {
-                  id: "sem-plano",
-                  nome: "Sem plano",
-                  valorMensal: 0,
-                  coberturas: {
-                    servicosPadrao: [],
-                    coberturaTranslado: [],
-                    servicosEspecificos: [],
-                  },
-                });
+              ? buildPlanoFallback(params.plano, params.plano)
+              : buildPlanoFallback("sem-plano", "Sem plano");
 
           return {
             ...cliente,

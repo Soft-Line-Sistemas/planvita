@@ -161,32 +161,13 @@ const mapPagamentos = (titular: TitularApi): Pagamento[] => {
 };
 
 const mapPlanoCoberturas = (plan?: PlanoApi | null) => {
-  const base = {
-    servicosPadrao: [] as { nome: string; descricao: string }[],
-    coberturaTranslado: [] as { nome: string; descricao: string }[],
-    servicosEspecificos: [] as { nome: string; descricao: string }[],
-  };
+  if (!plan?.coberturas) return [];
 
-  if (!plan?.coberturas) return base;
-
-  plan.coberturas.forEach((cobertura) => {
-    const target = cobertura.tipo?.toLowerCase() ?? "";
-    const descricao = cobertura.descricao ?? "Cobertura do plano";
-    const entry = {
-      nome: cobertura.tipo,
-      descricao,
-    };
-
-    if (target.includes("translado")) {
-      base.coberturaTranslado.push(entry);
-    } else if (target.includes("especific") || target.includes("servico")) {
-      base.servicosEspecificos.push(entry);
-    } else {
-      base.servicosPadrao.push(entry);
-    }
-  });
-
-  return base;
+  return plan.coberturas.map((cobertura) => ({
+    id: cobertura.id,
+    tipo: cobertura.tipo,
+    descricao: cobertura.descricao ?? "Cobertura do plano",
+  }));
 };
 
 export const mapClienteFromApi = (payload: TitularApi): Cliente => {
@@ -230,8 +211,19 @@ export const mapClienteFromApi = (payload: TitularApi): Cliente => {
       id: payload.plano ? String(payload.plano.id) : "",
       nome: payload.plano?.nome ?? "Plano não informado",
       valorMensal: Number(payload.plano?.valorMensal ?? 0),
-      vigenciaMeses: Number(payload.plano?.vigenciaMeses ?? 0) || undefined,
+      idadeMaxima: null,
+      coberturaMaxima: 0,
+      carenciaDias: 0,
+      vigenciaMeses: Number(payload.plano?.vigenciaMeses ?? 0),
+      ativo: false,
+      totalClientes: 0,
+      receitaMensal: 0,
+      assistenciaFuneral: 0,
+      auxilioCemiterio: null,
+      taxaInclusaCemiterioPublico: false,
+      beneficios: [],
       coberturas: mapPlanoCoberturas(payload.plano),
+      beneficiarios: [],
     },
     consultor: {
       nome: payload.vendedor?.nome ?? "Não informado",
@@ -265,6 +257,7 @@ export const mapClienteFromApi = (payload: TitularApi): Cliente => {
     dependentes: (payload.dependentes ?? []).map((dep) => ({
       id: String(dep.id),
       nome: dep.nome,
+      telefone: "",
       cpf: dep.cpf ?? "",
       dataNascimento: toISODate(dep.dataNascimento),
       idade: calcularIdade(dep.dataNascimento),
@@ -277,6 +270,7 @@ export const mapClienteFromApi = (payload: TitularApi): Cliente => {
     })),
     pagamentos: mapPagamentos(payload).map((pagamento) => ({
       id: pagamento.id,
+      cliente: pagamento.cliente,
       valor: pagamento.valor,
       dataVencimento: pagamento.dataVencimento,
       dataPagamento: pagamento.dataPagamento,

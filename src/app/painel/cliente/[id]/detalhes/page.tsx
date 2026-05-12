@@ -279,6 +279,70 @@ const DetalhesCliente = () => {
   const valorMensalComAdicionais =
     Number(cliente.plano.valorMensal ?? 0) + totalAdicionaisDependentes;
   const titularIdNumber = Number(cliente.id);
+  const planoCoberturas = cliente.plano.coberturas as unknown;
+  const coberturasNormalizadas = (() => {
+    if (Array.isArray(planoCoberturas)) {
+      return planoCoberturas.map((item) => ({
+        descricao: item.descricao,
+        tipo: item.tipo,
+      }));
+    }
+
+    if (planoCoberturas && typeof planoCoberturas === "object") {
+      const grouped = planoCoberturas as {
+        servicosPadrao?: Array<{ descricao: string; nome: string }>;
+        coberturaTranslado?: Array<{ descricao: string; nome: string }>;
+        servicosEspecificos?: Array<{ descricao: string; nome: string }>;
+      };
+
+      return [
+        ...(grouped.servicosPadrao ?? []),
+        ...(grouped.coberturaTranslado ?? []),
+        ...(grouped.servicosEspecificos ?? []),
+      ].map((item) => ({
+        descricao: item.descricao,
+        tipo: item.nome,
+      }));
+    }
+
+    return [];
+  })();
+  const coberturasPorGrupo = (() => {
+    if (
+      planoCoberturas &&
+      typeof planoCoberturas === "object" &&
+      !Array.isArray(planoCoberturas)
+    ) {
+      const grouped = planoCoberturas as {
+        servicosPadrao?: Array<{ nome: string; descricao: string }>;
+        coberturaTranslado?: Array<{
+          nome: string;
+          descricao: string;
+          observacoes?: string | null;
+        }>;
+        servicosEspecificos?: Array<{ nome: string; descricao: string }>;
+      };
+
+      return {
+        servicosPadrao: grouped.servicosPadrao ?? [],
+        coberturaTranslado: grouped.coberturaTranslado ?? [],
+        servicosEspecificos: grouped.servicosEspecificos ?? [],
+      };
+    }
+
+    return {
+      servicosPadrao: coberturasNormalizadas.map((item) => ({
+        nome: item.tipo,
+        descricao: item.descricao,
+      })),
+      coberturaTranslado: [] as Array<{
+        nome: string;
+        descricao: string;
+        observacoes?: string | null;
+      }>,
+      servicosEspecificos: [] as Array<{ nome: string; descricao: string }>,
+    };
+  })();
   const clienteCarteirinha = mapTitularToCarteirinha({
     id: Number.isFinite(titularIdNumber) ? titularIdNumber : null,
     nome: cliente.nome,
@@ -292,14 +356,7 @@ const DetalhesCliente = () => {
       nome: cliente.plano.nome,
       valorMensal: Number(cliente.plano.valorMensal ?? 0),
       vigenciaMeses: Number(cliente.plano.vigenciaMeses ?? 12),
-      coberturas: [
-        ...(cliente.plano.coberturas.servicosPadrao ?? []),
-        ...(cliente.plano.coberturas.coberturaTranslado ?? []),
-        ...(cliente.plano.coberturas.servicosEspecificos ?? []),
-      ].map((item) => ({
-        descricao: item.descricao,
-        tipo: item.nome,
-      })),
+      coberturas: coberturasNormalizadas,
     },
     dependentes: (cliente.dependentes ?? []).map((dep) => {
       const depIdNumber = Number(dep.id);
@@ -543,24 +600,22 @@ const DetalhesCliente = () => {
                 Serviços Padrão Inclusos
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {cliente.plano.coberturas.servicosPadrao.map(
-                  (servico, index) => (
-                    <div
-                      key={index}
-                      className="flex items-start space-x-3 p-4 bg-green-50 rounded-lg"
-                    >
-                      <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {servico.nome}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {servico.descricao}
-                        </p>
-                      </div>
+                {coberturasPorGrupo.servicosPadrao.map((servico, index) => (
+                  <div
+                    key={index}
+                    className="flex items-start space-x-3 p-4 bg-green-50 rounded-lg"
+                  >
+                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {servico.nome}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {servico.descricao}
+                      </p>
                     </div>
-                  ),
-                )}
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -570,7 +625,7 @@ const DetalhesCliente = () => {
                 Cobertura e Translado
               </h3>
               <div className="space-y-4">
-                {cliente.plano.coberturas.coberturaTranslado.map(
+                {coberturasPorGrupo.coberturaTranslado.map(
                   (cobertura, index) => (
                     <div
                       key={index}
@@ -602,7 +657,7 @@ const DetalhesCliente = () => {
                 Serviços Específicos do Plano
               </h3>
               <div className="space-y-4">
-                {cliente.plano.coberturas.servicosEspecificos.map(
+                {coberturasPorGrupo.servicosEspecificos.map(
                   (servico, index) => (
                     <div
                       key={index}
