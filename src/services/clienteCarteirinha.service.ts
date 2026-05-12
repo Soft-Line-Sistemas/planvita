@@ -29,6 +29,7 @@ type PlanoResponse = {
 
 type TitularResponse = {
   id?: number | null;
+  tenantSlug?: string | null;
   nome?: string | null;
   cpf?: string | null;
   email?: string | null;
@@ -88,6 +89,7 @@ export const mapTitularToCarteirinha = (
 
   return {
     titularId: titular?.id ?? null,
+    tenantSlug: titular?.tenantSlug ?? null,
     cpf: formatCpf(titular?.cpf ?? ""),
     nome: titular?.nome ?? "Titular não identificado",
     numeroCarteirinha,

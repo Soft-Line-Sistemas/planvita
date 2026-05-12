@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Sistema Planvita",
     start_url: "/cliente",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#ffffff",
+    background_color: "#3a9b28",
+    theme_color: "#3a9b28",
     icons: [
       {
         src: "/logo.ico",

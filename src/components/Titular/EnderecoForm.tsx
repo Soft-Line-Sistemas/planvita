@@ -121,8 +121,9 @@ export const EnderecoForm = ({ form }: Props) => {
         </div>
       </div>
 
-      {/* Linha 2 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Linha 2 e 3 Combinadas em 3 colunas */}
+      {/* Bairro, Rua e Número em 3 colunas */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
           <Label htmlFor="bairro" className="inline-flex items-center gap-1">
             Bairro <span className="text-red-500">*</span>
@@ -152,10 +153,6 @@ export const EnderecoForm = ({ form }: Props) => {
             </p>
           )}
         </div>
-      </div>
-
-      {/* Linha 3 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="numero" className="inline-flex items-center gap-1">
             Número <span className="text-red-500">*</span>
@@ -167,7 +164,12 @@ export const EnderecoForm = ({ form }: Props) => {
             </p>
           )}
         </div>
-        <div>
+      </div>
+
+      {/* Linha 3 (Complemento) */}
+      {/* Complemento e Ponto de Referência em 3 colunas (ocupando espaço) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-1">
           <Label
             htmlFor="complemento"
             className="inline-flex items-center gap-1"
@@ -180,11 +182,7 @@ export const EnderecoForm = ({ form }: Props) => {
             {...form.register("complemento")}
           />
         </div>
-      </div>
-
-      {/* Linha 4 */}
-      <div className="grid grid-cols-1 gap-4">
-        <div>
+        <div className="lg:col-span-2">
           <Label
             htmlFor="pontoReferencia"
             className="inline-flex items-center gap-1"
