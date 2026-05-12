@@ -24,6 +24,7 @@ export interface DependentePlano {
 
 export interface ClientePlano {
   titularId?: number | string | null;
+  tenantSlug?: string | null;
   cpf: string;
   nome: string;
   numeroCarteirinha: string;

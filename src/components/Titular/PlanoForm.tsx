@@ -16,9 +16,9 @@ import {
   type ParticipanteMin,
 } from "@/utils/planos";
 
-type PlanoFormFields = {
+export type PlanoFormFields = {
   planoId?: number;
-  billingType?: "PIX" | "BOLETO" | "CREDIT_CARD";
+  plano?: Plano | null;
 };
 
 interface PlanoFormProps {
@@ -47,26 +47,6 @@ export function PlanoForm({
   participantes,
   modoCliente = false,
 }: PlanoFormProps) {
-  const {
-    ref: planoIdRef,
-    name: planoIdName,
-    onBlur: planoIdOnBlur,
-    onChange: planoIdOnChange,
-  } = form.register("planoId", {
-    required: "Selecione um plano para continuar.",
-    valueAsNumber: true,
-    validate: (value) =>
-      typeof value === "number" && Number.isFinite(value) && value > 0
-        ? true
-        : "Selecione um plano para continuar.",
-  });
-  const {
-    ref: billingTypeRef,
-    name: billingTypeName,
-    onBlur: billingTypeOnBlur,
-    onChange: billingTypeOnChange,
-  } = form.register("billingType");
-
   // ----- Helpers -----
   const formatCurrency = (n: number) =>
     new Intl.NumberFormat("pt-BR", {
@@ -179,12 +159,15 @@ export function PlanoForm({
       participantes.map((p) => ({
         dataNascimento: p.dataNascimento ?? null,
         idade: typeof p.idade === "number" ? p.idade : null,
-        nome: p.nome ?? undefined,
         parentesco: typeof p.parentesco === "string" ? p.parentesco : undefined,
       })),
     [participantes],
   );
-  const enabled = participantesPayload.length > 0;
+  const enabled =
+    participantesPayload.length > 0 &&
+    participantesPayload.every((p) =>
+      Boolean(p.dataNascimento || p.idade !== null),
+    );
 
   // ----- Query (e “sanitização” dos planos para garantir arrays) -----
   const {
@@ -313,21 +296,19 @@ export function PlanoForm({
     setSelectedId(idStr);
     if (idStr) {
       form.setValue("planoId", Number(idStr), { shouldDirty: true });
+      form.setValue("plano", planoPadrao, { shouldDirty: true });
     } else {
       form.resetField("planoId");
+      form.resetField("plano");
     }
   }, [planoPadrao, form]);
 
-  useEffect(() => {
-    const currentBillingType = form.getValues("billingType");
-    if (!currentBillingType) {
-      form.setValue("billingType", "PIX", { shouldDirty: false });
-    }
-  }, [form]);
-
   const onSelectPlano = (idStr: string) => {
     setSelectedId(idStr);
+    const planoEncontrado =
+      elegiveis?.find((p) => String(p.id) === idStr) || null;
     form.setValue("planoId", Number(idStr), { shouldDirty: true });
+    form.setValue("plano", planoEncontrado, { shouldDirty: true });
   };
 
   // ----- Card de opção -----
@@ -401,7 +382,7 @@ export function PlanoForm({
         {elegiveis && elegiveis.length > 0 ? (
           <div className="space-y-3">
             <Label>Planos disponíveis</Label>
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {elegiveis.map((pl) => (
                 <PlanoOption key={String(pl.id)} plano={pl} />
               ))}
@@ -414,34 +395,6 @@ export function PlanoForm({
             </p>
           )
         )}
-
-        {form.formState.errors.planoId?.message && (
-          <p className="text-sm text-red-600">
-            {String(form.formState.errors.planoId.message)}
-          </p>
-        )}
-
-        <div className="space-y-2">
-          <Label htmlFor="billingType">Forma de pagamento da recorrência</Label>
-          <select
-            id="billingType"
-            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            value={form.watch("billingType") ?? "PIX"}
-            onChange={(event) =>
-              form.setValue(
-                "billingType",
-                event.target.value as "PIX" | "BOLETO" | "CREDIT_CARD",
-                { shouldDirty: true },
-              )
-            }
-          >
-            <option value="PIX">PIX</option>
-            <option value="BOLETO">Boleto</option>
-          </select>
-          <p className="text-xs text-gray-500">
-            Esse método será usado na criação inicial da recorrência no Asaas.
-          </p>
-        </div>
 
         {/* Participantes */}
         {participantes?.length > 0 && (
@@ -457,20 +410,7 @@ export function PlanoForm({
           </div>
         )}
 
-        <input
-          type="hidden"
-          name={planoIdName}
-          ref={planoIdRef}
-          onBlur={planoIdOnBlur}
-          onChange={planoIdOnChange}
-        />
-        <input
-          type="hidden"
-          name={billingTypeName}
-          ref={billingTypeRef}
-          onBlur={billingTypeOnBlur}
-          onChange={billingTypeOnChange}
-        />
+        <input type="hidden" {...form.register("planoId")} />
       </CardContent>
     </Card>
   );

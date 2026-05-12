@@ -1,0 +1,31 @@
+ID,Nome Task,Status,Depende Cliente,Complexidade,Horas Estimadas,Prazo Dias (início 20/03/2026),Observações
+WI-802,Emitir parecer final Go ou No-Go,todo,SIM,Média,8,1,Cliente precisa validar resultado técnico e decidir go-live
+WI-800,Validar pendencias criticas e altas,todo,SIM,Alta,16,2,Cliente precisa validar que não há bloqueios críticos
+WI-799,Emitir relatorio diario de status,todo,NÃO,Média,4,1,Task interna de gestão - não depende do cliente
+WI-798,Executar regressao final completa,todo,SIM,Alta,24,3,Cliente precisa executar testes de regressão
+WI-796,Congelamento de escopo pre-go-live,todo,NÃO,Baixa,2,0,Task de gestão - não depende do cliente
+WI-795,Triagem diaria de bugs,in development,NÃO,Media,8,1,Task interna de desenvolvimento
+WI-794,Retestar todas as correcaoes entregue,in development,SIM,Alta,16,2,Cliente precisa retestar correções
+WI-792,Aplicar correcaoes durante homologacao,in development,SIM,Media,12,2,Cliente precisa testar ajustes solicitados
+WI-791,Implementar bloqueio automatico por falta de pagamento,ready to test,NÃO,Media,8,0,Implementado - aguardando deploy/teste
+WI-790,Executar rodada 2 de testes em banco limpo,todo,SIM,Alta,24,3,Cliente precisa executar testes
+WI-788,Executar rodada 6 de testes em banco limpo,todo,SIM,Alta,24,5,Cliente precisa executar testes
+WI-789,Executar rodada 5 de testes em banco limpo,todo,SIM,Alta,24,4,Cliente precisa executar testes
+WI-787,Executar rodada 4 de testes em banco limpo,todo,SIM,Alta,24,4,Cliente precisa executar testes
+WI-786,Executar rodada 3 de testes em banco limpo,todo,SIM,Alta,24,3,Cliente precisa executar testes
+WI-783,Preparar checklist operacional diario,todo,NÃO,Baixa,4,1,Task interna de gestão
+WI-776,Possibilitar o vinclo de Consultor,ready to test,NÃO,Media,8,0,Implementado - aguardando deploy
+WI-739,A lógica do plano ir direcionado ao plano correto,ready to test,NÃO,Alta,16,0,Implementado - aguardando test
+WI-736,Aplicar carência de 35 dias,in development,NÃO,Alta,12,1,Desenvolvimento em andamento
+WI-735,Cobrir com testes,in development,NÃO,Alta,16,2,Desenvolvimento em andamento
+WI-734,Garantir consistência nos 2 fluxos,in development,NÃO,Media,12,1,Desenvolvimento em andamento
+WI-733,Mudar gatilho da comissão,in development,NÃO,Media,8,1,Desenvolvimento em andamento
+WI-732,Criar rastreabilidade da cobrança,in development,NÃO,Media,12,2,Desenvolvimento em andamento
+WI-731,Comissionamento,ready to test,NÃO,Alta,24,0,Implementado - aguardando test
+WI-595,Indicador (KPI) - Novas Vidas,planned,NÃO,Alta,16,5,Desenvolvimento
+WI-590,Indicador (KPI) - Liquidez de caixa,planned,NÃO,Alta,20,7,Desenvolvimento
+WI-594,Indicador (KPI) - Taxa de cancelamento,planned,NÃO,Media,12,4,Desenvolvimento
+WI-593,Indicador (KPI) - Receita Recorrente Mensal,planned,NÃO,Media,12,3,Desenvolvimento
+WI-592,Indicador (KPI) - EBITDA Operacional,planned,NÃO,Alta,24,8,Desenvolvimento
+WI-591,Indicador (KPI) - Taxa de Inadimplência Global,planned,NÃO,Media,12,4,Desenvolvimento
+WI-589,Indicador (KPI) - Performance Link Vendedor,planned,NÃO,Media,12,3,Desenvolvimento

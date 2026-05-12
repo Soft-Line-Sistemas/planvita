@@ -18,7 +18,7 @@ type Step3Values = z.infer<typeof responsavelFinanceiroSchema>;
 
 type PlanoFormValues = {
   planoId?: number;
-  billingType?: "PIX" | "BOLETO" | "CREDIT_CARD";
+  plano?: any;
 };
 
 export type CreateTitularInput = {
