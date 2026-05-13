@@ -10,9 +10,9 @@ export const metadata: Metadata = {
   description: "Sistema Planvita",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/logo.ico",
-    shortcut: "/logo.ico",
-    apple: "/logo.png",
+    icon: "/cliente-mobile/Icone app.png",
+    shortcut: "/cliente-mobile/Icone app.png",
+    apple: "/cliente-mobile/Icone app.png",
   },
 };
 

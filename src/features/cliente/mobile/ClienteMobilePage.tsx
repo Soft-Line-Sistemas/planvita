@@ -5,6 +5,7 @@ import "@/app/styles/cliente-mobile.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 
 import type { ClientePlano } from "@/types/ClientePlano";
 import { mapTitularToCarteirinha } from "@/services/clienteCarteirinha.service";
@@ -704,7 +705,11 @@ export default function ClienteMobilePage() {
      Render – Loading state
      ================================================================ */
   if (!authChecked) {
-    return <div className="cm-loading" aria-label="Carregando" />;
+    return (
+      <div className="cm-loading" aria-label="Carregando">
+        <Loader2 size={32} className="cm-spinner" aria-hidden />
+      </div>
+    );
   }
 
   /* ===================================================================
