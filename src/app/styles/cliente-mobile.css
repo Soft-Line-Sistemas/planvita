@@ -1708,36 +1708,17 @@
 .cm-splash-logo {
   width: 282px;
   max-width: 82vw;
-  height: auto;
+  height: 91.47px;
   object-fit: contain;
 }
 
 .cm-splash-domain {
   position: absolute;
-  bottom: 80px;
-  color: rgba(255, 255, 255, 0.85);
+  bottom: 15px;
+  color: #ffffff;
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.4px;
-}
-
-@media (prefers-color-scheme: light) {
-  .cm-loading,
-  .cm-splash-root {
-    background: #ffffff;
-  }
-
-  .cm-splash-domain {
-    color: #1e5a14;
-  }
-
-  .cm-logo-dark {
-    display: none !important;
-  }
-
-  .cm-logo-light {
-    display: block !important;
-  }
 }
 
 /* ===================================================================
