@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import Image from "next/image";
 
 const SLIDES = [
@@ -26,52 +26,7 @@ type Props = {
 };
 
 export default function SplashScreen({ onComplete }: Props) {
-  const [phase, setPhase] = useState<"splash" | "carousel">("splash");
   const [slideIndex, setSlideIndex] = useState(0);
-
-  const goToCarousel = useCallback(() => setPhase("carousel"), []);
-
-  useEffect(() => {
-    if (phase !== "splash") return;
-    const t = setTimeout(goToCarousel, 2200);
-    return () => clearTimeout(t);
-  }, [phase, goToCarousel]);
-
-  if (phase === "splash") {
-    return (
-      <div
-        className="cm-splash-root"
-        onClick={goToCarousel}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            goToCarousel();
-          }
-        }}
-        role="button"
-        tabIndex={0}
-        aria-label="Continuar"
-      >
-        <Image
-          className="cm-splash-logo cm-logo-dark"
-          src="/cliente-mobile/Camada 1.png"
-          alt="Planvita"
-          width={240}
-          height={73}
-          priority
-        />
-        <Image
-          className="cm-splash-logo cm-logo-light"
-          src="/cliente-mobile/logo.svg"
-          alt="Planvita"
-          width={282}
-          height={89}
-          priority
-        />
-        <span className="cm-splash-domain">planvita.com.br</span>
-      </div>
-    );
-  }
 
   const slide = SLIDES[Math.min(slideIndex, SLIDES.length - 1)];
   const isLast = slideIndex >= SLIDES.length - 1;
