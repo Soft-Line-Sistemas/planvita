@@ -2,7 +2,7 @@
 
 import "@/app/styles/cliente-mobile.css";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useForm, type Resolver, type UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -2138,6 +2138,9 @@ export default function MobileCadastroScreen() {
   const isDev = process.env.NODE_ENV === "development";
   const [currentStep, setCurrentStep] = useState(1);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const isHandlingPopStateRef = useRef(false);
+  const lastHistoryStepRef = useRef<number | null>(null);
+  const historyBootstrappedRef = useRef(false);
 
   /* Step forms */
   const step1Form = useForm<Step1Values>({
@@ -2187,6 +2190,53 @@ export default function MobileCadastroScreen() {
     if (currentStep !== 5) {
       setEditingDepIndex(null);
     }
+  }, [currentStep]);
+
+  /* Sync wizard step with browser history for Android back button */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const onPopState = (event: PopStateEvent) => {
+      const stepFromHistory = Number(event.state?.clienteCadastroStep);
+      if (Number.isInteger(stepFromHistory) && stepFromHistory >= 1) {
+        isHandlingPopStateRef.current = true;
+        setCurrentStep(Math.min(stepFromHistory, STEPS.length));
+        setSubmitError(null);
+        return;
+      }
+      window.location.href = "/cliente";
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (!historyBootstrappedRef.current) {
+      window.history.replaceState(
+        { ...(window.history.state ?? {}), clienteCadastroStep: currentStep },
+        "",
+      );
+      lastHistoryStepRef.current = currentStep;
+      historyBootstrappedRef.current = true;
+      return;
+    }
+
+    if (isHandlingPopStateRef.current) {
+      lastHistoryStepRef.current = currentStep;
+      isHandlingPopStateRef.current = false;
+      return;
+    }
+
+    if (lastHistoryStepRef.current === currentStep) return;
+    lastHistoryStepRef.current = currentStep;
+
+    window.history.pushState(
+      { ...(window.history.state ?? {}), clienteCadastroStep: currentStep },
+      "",
+    );
   }, [currentStep]);
 
   useEffect(() => {

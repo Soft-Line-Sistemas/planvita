@@ -154,7 +154,7 @@ export default function CarteirinhaScreen({ cliente, onBack }: Props) {
           <div className="cm-carteirinha-vertical-card" ref={cardRef}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/cliente-mobile/icon-8 1@2x.png"
+              src="/cliente-mobile/icon-8-1-2x.png"
               alt=""
               width={612}
               height={662}

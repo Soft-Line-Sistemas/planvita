@@ -1,5 +1,6 @@
 import api from "@/utils/api";
 import type { ClientePlano } from "@/types/ClientePlano";
+import { API_VERSION, getApiUrl } from "@/config/api-config";
 
 const normalizeCpf = (value: string) => value.replace(/\D/g, "");
 
@@ -92,10 +93,17 @@ export const mapTitularToCarteirinha = (
         ? "suspenso"
         : "inativo";
 
+  const fotoPerfilQuery = titular?.fotoPerfil?.dataUpload
+    ? `?t=${encodeURIComponent(titular.fotoPerfil.dataUpload)}`
+    : "";
+  const fotoPerfilProxyUrl = titular?.fotoPerfil
+    ? `${getApiUrl()}/${API_VERSION}/titular/me/foto/arquivo${fotoPerfilQuery}`
+    : null;
+
   return {
     titularId: titular?.id ?? null,
     tenantSlug: titular?.tenantSlug ?? null,
-    fotoPerfilUrl: titular?.fotoPerfil?.arquivoUrl ?? null,
+    fotoPerfilUrl: fotoPerfilProxyUrl,
     cpf: formatCpf(titular?.cpf ?? ""),
     nome: titular?.nome ?? "Titular não identificado",
     numeroCarteirinha,

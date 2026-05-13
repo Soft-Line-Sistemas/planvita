@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import type { ClientePlano } from "@/types/ClientePlano";
 import { mapTitularToCarteirinha } from "@/services/clienteCarteirinha.service";
 import { listarContasDoCliente } from "@/services/financeiro/contasCliente.service";
+import { API_VERSION, getApiUrl } from "@/config/api-config";
 import api from "@/utils/api";
 import getTenantFromHost from "@/utils/getTenantFromHost";
 
@@ -213,6 +214,9 @@ export default function ClienteMobilePage() {
     useState(false);
   const [mostrarHistoricoCompletoFaturas, setMostrarHistoricoCompletoFaturas] =
     useState(false);
+  const isHandlingPopStateRef = useRef(false);
+  const lastHistoryKeyRef = useRef<string | null>(null);
+  const historyBootstrappedRef = useRef(false);
 
   const goTo = useCallback((s: ScreenId) => setScreen(s), []);
   const goBack = useCallback(() => {
@@ -238,6 +242,55 @@ export default function ClienteMobilePage() {
     setActiveTab("ajustes");
     setScreen("ajustes");
   }, []);
+
+  /* ===== Browser history sync for Android back button ===== */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const onPopState = (event: PopStateEvent) => {
+      const navState = event.state?.clienteMobileNav as
+        | { screen?: ScreenId; activeTab?: TabId }
+        | undefined;
+      if (!navState?.screen || !navState?.activeTab) return;
+
+      isHandlingPopStateRef.current = true;
+      setActiveTab(navState.activeTab);
+      setScreen(navState.screen);
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !cliente) return;
+    const navState = { screen, activeTab };
+    const historyKey = `${activeTab}:${screen}`;
+
+    if (!historyBootstrappedRef.current) {
+      window.history.replaceState(
+        { ...(window.history.state ?? {}), clienteMobileNav: navState },
+        "",
+      );
+      lastHistoryKeyRef.current = historyKey;
+      historyBootstrappedRef.current = true;
+      return;
+    }
+
+    if (isHandlingPopStateRef.current) {
+      lastHistoryKeyRef.current = historyKey;
+      isHandlingPopStateRef.current = false;
+      return;
+    }
+
+    if (lastHistoryKeyRef.current === historyKey) return;
+    lastHistoryKeyRef.current = historyKey;
+
+    window.history.pushState(
+      { ...(window.history.state ?? {}), clienteMobileNav: navState },
+      "",
+    );
+  }, [activeTab, cliente, screen]);
 
   /* --- URL params handled ref --- */
   const urlParamsHandledRef = useRef(false);
@@ -626,7 +679,10 @@ export default function ClienteMobilePage() {
   }, []);
 
   const handleFotoPerfilChange = useCallback((fotoPerfilUrl: string | null) => {
-    setCliente((prev) => (prev ? { ...prev, fotoPerfilUrl } : prev));
+    const proxyUrl = fotoPerfilUrl
+      ? `${getApiUrl()}/${API_VERSION}/titular/me/foto/arquivo?t=${Date.now()}`
+      : null;
+    setCliente((prev) => (prev ? { ...prev, fotoPerfilUrl: proxyUrl } : prev));
   }, []);
 
   /* ===================================================================
