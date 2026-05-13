@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import NextImage from "next/image";
 import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import type { ClientePlano } from "@/types/ClientePlano";
 import { changePassword } from "@/services/auth-cliente.service";
@@ -42,14 +42,26 @@ function extractMessage(err: unknown): string {
 
 const FOTO_MAX_BYTES = 5 * 1024 * 1024;
 const FOTO_ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp"];
+const CROP_SIZE = 240;
+const CROP_OUTPUT_SIZE = 512;
 
 function formatFotoMessage(err: unknown): string {
-  const e = err as { response?: { data?: { message?: unknown } } };
+  const e = err as {
+    message?: string;
+    response?: { status?: number; data?: { message?: unknown } };
+  };
   const message =
     typeof e?.response?.data?.message === "string"
       ? e.response.data.message
       : null;
-  return message || "Não foi possível alterar a foto do perfil.";
+  if (message) return message;
+  if (typeof e?.message === "string" && e.message.trim()) {
+    return `Falha ao enviar foto: ${e.message}`;
+  }
+  if (typeof e?.response?.status === "number") {
+    return `Falha ao enviar foto (HTTP ${e.response.status}).`;
+  }
+  return "Não foi possível alterar a foto do perfil.";
 }
 
 async function fileToBase64(file: File): Promise<string> {
@@ -64,6 +76,19 @@ async function fileToBase64(file: File): Promise<string> {
     };
     reader.onerror = () => reject(new Error("Falha ao processar arquivo."));
     reader.readAsDataURL(file);
+  });
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+async function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Falha ao carregar imagem."));
+    img.src = src;
   });
 }
 
@@ -131,7 +156,7 @@ function AlterarSenhaView({ onClose }: { onClose: () => void }) {
             onClick={onClose}
             aria-label="Voltar"
           >
-            <Image
+            <NextImage
               src="/cliente-mobile/Vector-30.png"
               alt=""
               width={20}
@@ -184,7 +209,7 @@ function AlterarSenhaView({ onClose }: { onClose: () => void }) {
         ) : (
           <>
             <div className="cm-alterar-senha-heading">
-              <Image
+              <NextImage
                 src="/cliente-mobile/Vector-21.png"
                 alt=""
                 width={22}
@@ -282,6 +307,36 @@ function AlterarFotoModal({
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [draftImage, setDraftImage] = useState<string | null>(null);
+  const [draftFilename, setDraftFilename] = useState<string>("foto-perfil.png");
+  const [imgNatural, setImgNatural] = useState<{ w: number; h: number } | null>(
+    null,
+  );
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+  const [offsetStart, setOffsetStart] = useState({ x: 0, y: 0 });
+
+  const baseScale = imgNatural
+    ? Math.max(CROP_SIZE / imgNatural.w, CROP_SIZE / imgNatural.h)
+    : 1;
+  const renderScale = baseScale * zoom;
+  const renderW = imgNatural ? imgNatural.w * renderScale : CROP_SIZE;
+  const renderH = imgNatural ? imgNatural.h * renderScale : CROP_SIZE;
+  const maxOffsetX = Math.max(0, (renderW - CROP_SIZE) / 2);
+  const maxOffsetY = Math.max(0, (renderH - CROP_SIZE) / 2);
+
+  const clampOffset = (next: { x: number; y: number }) => ({
+    x: clamp(next.x, -maxOffsetX, maxOffsetX),
+    y: clamp(next.y, -maxOffsetY, maxOffsetY),
+  });
+
+  useEffect(() => {
+    setOffset((prev) => clampOffset(prev));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zoom, imgNatural?.w, imgNatural?.h]);
 
   const handleSelecionarArquivo = async (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -305,13 +360,99 @@ function AlterarFotoModal({
     setLoading(true);
     try {
       const imageBase64 = await fileToBase64(file);
+      const img = await loadImage(imageBase64);
+      setDraftImage(imageBase64);
+      setDraftFilename(file.name || "foto-perfil.png");
+      setImgNatural({
+        w: img.naturalWidth || img.width,
+        h: img.naturalHeight || img.height,
+      });
+      setZoom(1);
+      setOffset({ x: 0, y: 0 });
+    } catch (err) {
+      setError(formatFotoMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!draftImage) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDragStart({ x: event.clientX, y: event.clientY });
+    setOffsetStart(offset);
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragStart) return;
+    const dx = event.clientX - dragStart.x;
+    const dy = event.clientY - dragStart.y;
+    setOffset(clampOffset({ x: offsetStart.x + dx, y: offsetStart.y + dy }));
+  };
+
+  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setDragStart(null);
+  };
+
+  const handleConfirmarRecorte = async () => {
+    if (!draftImage || !imgNatural) return;
+
+    setMessage(null);
+    setError(null);
+    setLoading(true);
+    try {
+      const img = await loadImage(draftImage);
+      const canvas = document.createElement("canvas");
+      canvas.width = CROP_OUTPUT_SIZE;
+      canvas.height = CROP_OUTPUT_SIZE;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Falha ao preparar recorte.");
+
+      const scale = renderScale;
+      const sw = CROP_SIZE / scale;
+      const sh = sw;
+      const sx = (renderW / 2 - CROP_SIZE / 2 - offset.x) / scale;
+      const sy = (renderH / 2 - CROP_SIZE / 2 - offset.y) / scale;
+      const sxClamped = clamp(sx, 0, Math.max(0, imgNatural.w - sw));
+      const syClamped = clamp(sy, 0, Math.max(0, imgNatural.h - sh));
+
+      ctx.clearRect(0, 0, CROP_OUTPUT_SIZE, CROP_OUTPUT_SIZE);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(
+        CROP_OUTPUT_SIZE / 2,
+        CROP_OUTPUT_SIZE / 2,
+        CROP_OUTPUT_SIZE / 2,
+        0,
+        Math.PI * 2,
+      );
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(
+        img,
+        sxClamped,
+        syClamped,
+        sw,
+        sh,
+        0,
+        0,
+        CROP_OUTPUT_SIZE,
+        CROP_OUTPUT_SIZE,
+      );
+      ctx.restore();
+
+      const imageBase64 = canvas.toDataURL("image/png");
       const foto = await salvarFotoPerfilCliente({
         imageBase64,
-        filename: file.name,
-        mimeType: file.type as "image/png" | "image/jpeg" | "image/webp",
+        filename: draftFilename,
+        mimeType: "image/png",
       });
       onFotoPerfilChange(foto?.arquivoUrl ?? null);
       setMessage("Foto atualizada com sucesso.");
+      setDraftImage(null);
       setTimeout(onClose, 900);
     } catch (err) {
       setError(formatFotoMessage(err));
@@ -350,7 +491,7 @@ function AlterarFotoModal({
           onClick={onClose}
           aria-label="Fechar"
         >
-          <Image
+          <NextImage
             src="/cliente-mobile/Vector-39.png"
             alt=""
             width={31}
@@ -360,7 +501,7 @@ function AlterarFotoModal({
         </button>
 
         <div className="cm-foto-modal-heading">
-          <Image
+          <NextImage
             src="/cliente-mobile/Vector-49.png"
             alt=""
             width={29}
@@ -416,6 +557,63 @@ function AlterarFotoModal({
           >
             Tirar foto
           </button>
+          {draftImage && imgNatural && (
+            <div style={{ marginTop: 8 }}>
+              <div
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
+                style={{
+                  width: CROP_SIZE,
+                  height: CROP_SIZE,
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  margin: "0 auto 10px",
+                  border: "2px solid #d7d7d7",
+                  position: "relative",
+                  touchAction: "none",
+                  background: "#f3f3f3",
+                  cursor: "grab",
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={draftImage}
+                  alt="Pré-visualização da foto"
+                  draggable={false}
+                  style={{
+                    position: "absolute",
+                    left: "50%",
+                    top: "50%",
+                    width: `${renderW}px`,
+                    height: `${renderH}px`,
+                    transform: `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px))`,
+                    userSelect: "none",
+                    maxWidth: "none",
+                    pointerEvents: "none",
+                  }}
+                />
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.01}
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                style={{ width: "100%", marginBottom: 10 }}
+              />
+              <button
+                type="button"
+                className="cm-btn-solid"
+                onClick={handleConfirmarRecorte}
+                disabled={loading}
+              >
+                Confirmar recorte
+              </button>
+            </div>
+          )}
           {hasFotoPerfil && (
             <button
               type="button"
@@ -477,7 +675,7 @@ export default function AjustesScreen({
             onClick={onBack}
             aria-label="Voltar"
           >
-            <Image
+            <NextImage
               src="/cliente-mobile/Vector-30.png"
               alt=""
               width={20}
@@ -507,7 +705,7 @@ export default function AjustesScreen({
             onClick={() => setShowChangePwd(true)}
           >
             <span className="cm-settings-item-label">Alterar senha</span>
-            <Image
+            <NextImage
               src="/cliente-mobile/Vector-32.png"
               alt=""
               width={12}
@@ -525,7 +723,7 @@ export default function AjustesScreen({
             <span className="cm-settings-item-label">
               Alterar dados de contato
             </span>
-            <Image
+            <NextImage
               src="/cliente-mobile/Vector-32.png"
               alt=""
               width={12}
@@ -543,7 +741,7 @@ export default function AjustesScreen({
             <span className="cm-settings-item-label">
               Alterar foto de Perfil
             </span>
-            <Image
+            <NextImage
               src="/cliente-mobile/Vector-32.png"
               alt=""
               width={12}
@@ -561,7 +759,7 @@ export default function AjustesScreen({
             onClick={onLogout}
             style={{ display: "flex", alignItems: "center", gap: 10 }}
           >
-            <Image
+            <NextImage
               src="/cliente-mobile/Vector.png"
               alt=""
               width={14}
