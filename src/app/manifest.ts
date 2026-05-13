@@ -11,17 +11,12 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#3a9b28",
     icons: [
       {
-        src: "/logo.ico",
-        sizes: "64x64 48x48 32x32 24x24 16x16",
-        type: "image/x-icon",
-      },
-      {
-        src: "/logo.png",
+        src: "/cliente-mobile/Camada 1.png",
         sizes: "192x192",
         type: "image/png",
       },
       {
-        src: "/logo.png",
+        src: "/cliente-mobile/Camada 1.png",
         sizes: "512x512",
         type: "image/png",
       },

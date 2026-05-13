@@ -705,24 +705,28 @@ export default function ClienteMobilePage() {
      ================================================================ */
   if (!authChecked) {
     return (
-      <div className="cm-loading">
-        <div className="cm-loading-splash-icon">
-          <Image
-            className="cm-logo-dark"
-            src="/cliente-mobile/Camada 1.png"
-            alt="Planvita"
-            width={282}
-            height={89}
-            priority
-          />
-          <Image
-            className="cm-logo-light"
-            src="/cliente-mobile/logo.svg"
-            alt="Planvita"
-            width={282}
-            height={89}
-            priority
-          />
+      <div className="cm-loading" aria-label="Carregando">
+        <div className="cm-loading-wrapper">
+          <div className="cm-loading-ring" />
+          <div className="cm-loading-ring cm-loading-ring--delayed" />
+          <div className="cm-loading-icon">
+            <Image
+              className="cm-logo-dark"
+              src="/cliente-mobile/Camada 1.png"
+              alt="Planvita"
+              width={88}
+              height={28}
+              priority
+            />
+            <Image
+              className="cm-logo-light"
+              src="/cliente-mobile/logo.svg"
+              alt="Planvita"
+              width={110}
+              height={35}
+              priority
+            />
+          </div>
         </div>
       </div>
     );
