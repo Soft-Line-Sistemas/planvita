@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Planvita",
-    short_name: "Planvita",
-    description: "Sistema Planvita",
+    name: "Campo do Bosque",
+    short_name: "Campo do Bosque",
+    description: "Campo do Bosque",
     start_url: "/cliente",
     display: "standalone",
     background_color: "#3a9b28",
