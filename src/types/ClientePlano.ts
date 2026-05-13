@@ -19,12 +19,17 @@ export interface DependentePlano {
   nome: string;
   dataNascimento?: string | null;
   tipo?: string | null;
+  parentesco?: string | null;
+  idade?: number | null;
+  carenciaRestante?: number | null;
+  carenciaDias?: number | null;
   valorAdicionalMensal?: number;
 }
 
 export interface ClientePlano {
   titularId?: number | string | null;
   tenantSlug?: string | null;
+  fotoPerfilUrl?: string | null;
   cpf: string;
   nome: string;
   numeroCarteirinha: string;

@@ -36,6 +36,11 @@ type TitularResponse = {
   telefone?: string | null;
   statusPlano?: string | null;
   dataContratacao?: string | null;
+  fotoPerfil?: {
+    id?: number | null;
+    arquivoUrl?: string | null;
+    dataUpload?: string | null;
+  } | null;
   plano?: PlanoResponse | null;
   dependentes?: Array<{
     id?: number | null;
@@ -90,6 +95,7 @@ export const mapTitularToCarteirinha = (
   return {
     titularId: titular?.id ?? null,
     tenantSlug: titular?.tenantSlug ?? null,
+    fotoPerfilUrl: titular?.fotoPerfil?.arquivoUrl ?? null,
     cpf: formatCpf(titular?.cpf ?? ""),
     nome: titular?.nome ?? "Titular não identificado",
     numeroCarteirinha,

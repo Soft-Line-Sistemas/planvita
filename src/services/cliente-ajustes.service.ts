@@ -11,14 +11,26 @@ export type FotoPerfilPayload = {
   mimeType?: "image/png" | "image/jpeg" | "image/webp";
 };
 
+export type FotoPerfilResponse = {
+  id: number;
+  titularId: number;
+  arquivoUrl: string;
+  dataUpload: string;
+};
+
 export const alterarSenhaCliente = async (
   payload: ChangeClientePasswordPayload,
 ): Promise<void> => {
   await api.post("/auth/cliente/change-password", payload);
 };
 
-export const salvarFotoPerfilCliente = async (payload: FotoPerfilPayload) => {
-  const { data } = await api.post("/titular/me/foto", payload);
+export const salvarFotoPerfilCliente = async (
+  payload: FotoPerfilPayload,
+): Promise<FotoPerfilResponse> => {
+  const { data } = await api.post<FotoPerfilResponse>(
+    "/titular/me/foto",
+    payload,
+  );
   return data;
 };
 

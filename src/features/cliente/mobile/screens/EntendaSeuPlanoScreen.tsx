@@ -1,6 +1,8 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import type { ClientePlano } from "@/types/ClientePlano";
 
 type Props = {
@@ -8,7 +10,15 @@ type Props = {
   onBack: () => void;
 };
 
-const CONTRATO_URL = "/docs/contrato.docx";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
+const API_VERSION =
+  process.env.NEXT_PUBLIC_API_VERSION || process.env.API_VERSION || "v1";
+const ASSINATURA_API_BASE = API_BASE_URL
+  ? `${API_BASE_URL}/${API_VERSION}`
+  : undefined;
+const CONTRATO_URL = ASSINATURA_API_BASE
+  ? `${ASSINATURA_API_BASE}/titular/me/contrato/arquivo?format=pdf`
+  : "/docs/contrato.docx";
 
 function formatDate(isoDate: string) {
   const d = new Date(isoDate);
@@ -18,6 +28,26 @@ function formatDate(isoDate: string) {
     month: "long",
     year: "numeric",
   });
+}
+
+function formatBirthDate(isoDate?: string | null) {
+  if (!isoDate) return "—";
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("pt-BR");
+}
+
+function getAgeFromBirthDate(isoDate?: string | null) {
+  if (!isoDate) return null;
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const monthDiff = now.getMonth() - d.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < d.getDate())) {
+    age -= 1;
+  }
+  return age >= 0 ? age : null;
 }
 
 function formatCpf(cpf: string) {
@@ -51,12 +81,40 @@ const STATUS_BADGE: Record<
 };
 
 export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
+  const [baixandoContrato, setBaixandoContrato] = useState(false);
   const { plano } = cliente;
   const badge = STATUS_BADGE[plano.status] ?? {
     bg: "#F0F0F0",
     border: "#DDD",
     color: "#666",
     label: plano.status,
+  };
+
+  const handleDownloadContrato = async () => {
+    setBaixandoContrato(true);
+    try {
+      const response = await fetch(CONTRATO_URL, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Não foi possível gerar o contrato em PDF.");
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = "contrato-assinado.pdf";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      alert(
+        error instanceof Error ? error.message : "Falha ao baixar contrato.",
+      );
+    } finally {
+      setBaixandoContrato(false);
+    }
   };
 
   return (
@@ -97,7 +155,7 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
           className="cm-card"
           style={{
             display: "flex",
-            alignItems: "flex-start",
+            alignItems: "center",
             gap: 14,
             padding: "18px 16px 22px",
           }}
@@ -376,56 +434,142 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
               <span>Dependentes ({cliente.dependentes!.length})</span>
             </div>
             <div style={{ display: "grid", gap: 8, marginBottom: 20 }}>
-              {cliente.dependentes!.map((dep) => (
-                <div
-                  key={dep.id}
-                  style={{
-                    borderRadius: 20,
-                    background: "#F4F4F4",
-                    border: "1px solid #E9E9E9",
-                    padding: "18px 22px",
-                    display: "grid",
-                    gap: 4,
-                  }}
-                >
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 16,
-                      fontWeight: 700,
-                      color: "#535353",
-                    }}
-                  >
-                    {dep.nome}
-                  </p>
-                  {dep.tipo && (
-                    <p
+              {cliente.dependentes!.map((dep) =>
+                (() => {
+                  const parentesco = dep.parentesco ?? dep.tipo ?? "—";
+                  const idadeCalculada = getAgeFromBirthDate(
+                    dep.dataNascimento,
+                  );
+                  const idade =
+                    typeof dep.idade === "number" ? dep.idade : idadeCalculada;
+                  const carencia =
+                    typeof dep.carenciaRestante === "number"
+                      ? dep.carenciaRestante
+                      : typeof dep.carenciaDias === "number"
+                        ? dep.carenciaDias
+                        : null;
+
+                  return (
+                    <div
+                      key={dep.id}
                       style={{
-                        margin: 0,
-                        fontSize: 11,
-                        color: "var(--cm-green-primary)",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                        marginTop: 2,
+                        borderRadius: 20,
+                        background: "#F4F4F4",
+                        border: "1px solid #E9E9E9",
+                        padding: "18px 22px",
+                        display: "grid",
+                        gap: 2,
                       }}
                     >
-                      {dep.tipo}
-                    </p>
-                  )}
-                  {dep.dataNascimento && (
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: 12,
-                        color: "var(--cm-gray-400)",
-                        marginTop: 2,
-                      }}
-                    >
-                      Nasc.: {formatDate(dep.dataNascimento)}
-                    </p>
-                  )}
-                </div>
-              ))}
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: 16,
+                          fontWeight: 700,
+                          color: "#535353",
+                          lineHeight: "24px",
+                        }}
+                      >
+                        {dep.nome}
+                      </p>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: 14,
+                          fontWeight: 500,
+                          color: "#535353",
+                          lineHeight: "20px",
+                        }}
+                      >
+                        Parentesco: {parentesco}
+                      </p>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: 14,
+                          fontWeight: 500,
+                          color: "#535353",
+                          lineHeight: "20px",
+                        }}
+                      >
+                        Idade: {idade != null ? `${idade} anos` : "—"}
+                      </p>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: 14,
+                          fontWeight: 500,
+                          color: "#535353",
+                          lineHeight: "20px",
+                        }}
+                      >
+                        Data Nascimento: {formatBirthDate(dep.dataNascimento)}
+                      </p>
+                      {carencia != null ? (
+                        <span
+                          style={{
+                            marginTop: 8,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 8,
+                            width: "fit-content",
+                            height: 25,
+                            padding: "0 12px",
+                            borderRadius: 40,
+                            background: "#FFE9C9",
+                            border: "1px solid #FFCF89",
+                            color: "#DF8A18",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            lineHeight: "20px",
+                          }}
+                        >
+                          <span
+                            aria-hidden
+                            style={{
+                              width: 11,
+                              height: 11,
+                              borderRadius: "50%",
+                              background: "#DF8A18",
+                              display: "inline-block",
+                              flexShrink: 0,
+                            }}
+                          />
+                          {`Carência: ${carencia} dias`}
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            marginTop: 8,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 8,
+                            width: "fit-content",
+                            height: 25,
+                            padding: "0 12px",
+                            borderRadius: 40,
+                            background: "#E3FEC8",
+                            border: "1px solid #BFF08E",
+                            color: "#658D3E",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            lineHeight: "20px",
+                          }}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src="/cliente-mobile/Vector-37.png"
+                            alt=""
+                            style={{ width: 11, height: 11, flexShrink: 0 }}
+                            aria-hidden
+                          />
+                          Coberto
+                        </span>
+                      )}
+                    </div>
+                  );
+                })(),
+              )}
             </div>
           </>
         )}
@@ -466,11 +610,21 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
               <div
                 style={{
                   position: "absolute",
-                  left: 5,
+                  left: 6,
                   top: 10,
                   bottom: 10,
                   width: 1,
                   background: "#D3D3D3",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  left: 6,
+                  top: 5,
+                  height: 86,
+                  width: 1,
+                  background: "var(--cm-green-primary)",
                 }}
               />
               <div style={{ position: "relative", marginBottom: 16 }}>
@@ -498,7 +652,12 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
                 <p
                   style={{ margin: "2px 0 0", fontSize: 13, color: "#535353" }}
                 >
-                  {badge.label}
+                  {formatDate(new Date().toISOString())}
+                </p>
+                <p
+                  style={{ margin: "2px 0 0", fontSize: 13, color: "#535353" }}
+                >
+                  Plano {badge.label}
                 </p>
               </div>
               <div style={{ position: "relative" }}>
@@ -549,18 +708,23 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
             gap: 10,
             width: "100%",
           }}
-          onClick={() =>
-            window.open(CONTRATO_URL, "_blank", "noopener,noreferrer")
-          }
+          onClick={() => handleDownloadContrato()}
+          disabled={baixandoContrato}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/cliente-mobile/Vector-24.png"
-            alt=""
-            style={{ width: 13, height: 16 }}
-            aria-hidden
-          />
-          <span>Download do contrato</span>
+          {baixandoContrato ? (
+            <Loader2 size={16} className="cm-spinner" aria-hidden />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src="/cliente-mobile/Vector-24.png"
+              alt=""
+              style={{ width: 13, height: 16 }}
+              aria-hidden
+            />
+          )}
+          <span>
+            {baixandoContrato ? "Gerando PDF..." : "Download do contrato"}
+          </span>
         </button>
       </div>
     </div>

@@ -71,8 +71,12 @@ function extractContasArray(data: unknown): ContaFinanceiraApiPayload[] {
   return [];
 }
 
-export const listarContasDoCliente = async (): Promise<ContaFinanceira[]> => {
-  const { data } = await api.get("/financeiro/cliente/contas");
+export const listarContasDoCliente = async (options?: {
+  historico?: boolean;
+}): Promise<ContaFinanceira[]> => {
+  const { data } = await api.get("/financeiro/cliente/contas", {
+    params: options?.historico ? { historico: "1" } : undefined,
+  });
   const debug =
     typeof window !== "undefined" && process.env.NODE_ENV !== "production";
   if (debug) {

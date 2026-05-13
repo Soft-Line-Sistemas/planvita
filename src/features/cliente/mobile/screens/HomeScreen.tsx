@@ -15,6 +15,7 @@ type Props = {
   diasPosSuspensao: number;
   goTo: (screen: ScreenId) => void;
   changeTab: (tab: TabId) => void;
+  onOpenFotoAjustes: () => void;
   onLogout: () => void;
 };
 
@@ -39,6 +40,7 @@ export default function HomeScreen({
   diasPosSuspensao,
   goTo,
   changeTab,
+  onOpenFotoAjustes,
   onLogout,
 }: Props) {
   const primeiroNome = cliente.nome.split(" ")[0] ?? cliente.nome;
@@ -99,11 +101,23 @@ export default function HomeScreen({
         <div className="cm-plan-card">
           <div className="cm-plan-card-info">
             <div className="cm-plan-avatar-wrap">
-              <div className="cm-plan-avatar">{initial}</div>
-              <span className="cm-plan-avatar-edit" aria-hidden="true">
+              <div className="cm-plan-avatar">
+                {cliente.fotoPerfilUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={cliente.fotoPerfilUrl} alt="Foto do perfil" />
+                ) : (
+                  initial
+                )}
+              </div>
+              <button
+                type="button"
+                className="cm-plan-avatar-edit"
+                aria-label="Alterar foto de perfil"
+                onClick={onOpenFotoAjustes}
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/cliente-mobile/Vector-22.png" alt="" />
-              </span>
+              </button>
             </div>
             <div className="cm-plan-details">
               <p className="cm-plan-name">{cliente.nome}</p>

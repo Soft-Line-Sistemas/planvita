@@ -30,14 +30,15 @@ const ASSINATURA_TIPO_ALIASES: Record<string, string> = {
   CORRESPONSAVELASSINATURA2: "CORRESPONSAVEL_ASSINATURA_2",
 };
 
-const CONTRATO_URL = "/docs/contrato.docx";
-
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
 const API_VERSION =
   process.env.NEXT_PUBLIC_API_VERSION || process.env.API_VERSION || "v1";
 const ASSINATURA_API_BASE = API_BASE_URL
   ? `${API_BASE_URL}/${API_VERSION}`
   : undefined;
+const CONTRATO_DOWNLOAD_URL = ASSINATURA_API_BASE
+  ? `${ASSINATURA_API_BASE}/titular/me/contrato/arquivo?format=pdf`
+  : "/docs/contrato.docx";
 
 function formatDate(isoDate: string) {
   const d = new Date(isoDate);
@@ -300,6 +301,7 @@ type Props = {
 export default function AssinaturasScreen({ titularId, onBack }: Props) {
   const [salvandoTipo, setSalvandoTipo] = useState<string | null>(null);
   const [msgErro, setMsgErro] = useState<string | null>(null);
+  const [baixandoContrato, setBaixandoContrato] = useState(false);
 
   const {
     data: assinaturas = [],
@@ -348,6 +350,35 @@ export default function AssinaturasScreen({ titularId, onBack }: Props) {
     },
     [refetch],
   );
+
+  const handleDownloadContrato = useCallback(async () => {
+    setBaixandoContrato(true);
+    try {
+      const response = await fetch(CONTRATO_DOWNLOAD_URL, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Não foi possível gerar o contrato em PDF.");
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = "contrato-assinado.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      setMsgErro(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível baixar o contrato.",
+      );
+    } finally {
+      setBaixandoContrato(false);
+    }
+  }, []);
 
   return (
     <div
@@ -404,21 +435,27 @@ export default function AssinaturasScreen({ titularId, onBack }: Props) {
               <p className="cm-assinatura-subtitle">
                 Leia o contrato antes de realizar as assinaturas.
               </p>
-              <a
-                href={CONTRATO_URL}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={handleDownloadContrato}
+                disabled={baixandoContrato}
                 className="cm-btn-outline"
                 style={{ textDecoration: "none" }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/cliente-mobile/Vector-20.png"
-                  alt=""
-                  style={{ width: 15, height: 15 }}
-                />
-                <span>Baixar Contrato</span>
-              </a>
+                {baixandoContrato ? (
+                  <Loader2 size={15} className="cm-spinner" />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src="/cliente-mobile/Vector-20.png"
+                    alt=""
+                    style={{ width: 15, height: 15 }}
+                  />
+                )}
+                <span>
+                  {baixandoContrato ? "Gerando PDF..." : "Baixar Contrato"}
+                </span>
+              </button>
             </div>
 
             {msgErro && (

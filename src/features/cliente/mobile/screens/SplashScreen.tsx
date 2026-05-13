@@ -5,18 +5,18 @@ import Image from "next/image";
 
 const SLIDES = [
   {
-    title: "Bem-vindo à Planvita",
-    body: "Assistência familiar de qualidade para você e sua família em momentos que mais importam.",
+    title: "Cuidado para toda a família",
+    body: "Conte com o Campo do Bosque para oferecer apoio, segurança e tranquilidade em todos os momentos.",
     bg: "/cliente-mobile/carrossel-1.jpg",
   },
   {
-    title: "Carteirinha digital",
-    body: "Acesse sua carteirinha de qualquer lugar, a qualquer hora, direto pelo aplicativo.",
+    title: "Sua carteirinha sempre à mão",
+    body: "Acesse sua carteirinha digital do Campo do Bosque sempre que precisar, de forma rápida e prática.",
     bg: "/cliente-mobile/carrossel-2.jpg",
   },
   {
-    title: "Gerencie com facilidade",
-    body: "Acompanhe faturas, dependentes e muito mais na palma da sua mão.",
+    title: "Tudo em um só lugar",
+    body: "Consulte faturas, acompanhe dependentes e gerencie seu plano Campo do Bosque com facilidade pelo celular.",
     bg: "/cliente-mobile/carrossel-2.jpg",
   },
 ] as const;
@@ -81,15 +81,7 @@ export default function SplashScreen({ onComplete }: Props) {
       <div className="cm-carousel-overlay" aria-hidden="true" />
 
       {/* Logo */}
-      <div className="cm-carousel-logo-wrap">
-        <Image
-          src="/cliente-mobile/Camada 1.png"
-          alt="Planvita"
-          width={160}
-          height={49}
-          priority
-        />
-      </div>
+      <div className="cm-carousel-logo-wrap" />
 
       {/* Content */}
       <div className="cm-carousel-content">
@@ -118,11 +110,13 @@ export default function SplashScreen({ onComplete }: Props) {
           type="button"
           className="cm-carousel-btn-primary"
           onClick={() => {
-            if (isLast) onComplete();
-            else setSlideIndex((n) => n + 1);
+            if (isLast) {
+              window.location.href = "/cliente/cadastro";
+              return;
+            } else setSlideIndex((n) => n + 1);
           }}
         >
-          {isLast ? "Começar" : "Próximo"}
+          {isLast ? "Começar agora" : "Próximo"}
         </button>
         <button
           type="button"

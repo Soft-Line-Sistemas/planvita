@@ -5,11 +5,51 @@ import Image from "next/image";
 
 type Props = {
   onBack: () => void;
+  tenantSlug?: string | null;
 };
 
-export default function AtendimentoScreen({ onBack }: Props) {
+type AtendimentoTenantConfig = {
+  centralNumber: string;
+  sacNumber: string;
+  whatsappNumber: string;
+};
+
+const TENANT_ATENDIMENTO_CONFIG: Record<string, AtendimentoTenantConfig> = {
+  bosque: {
+    centralNumber: "71 3034-7323",
+    sacNumber: "71 3034-7323",
+    whatsappNumber: "71 3034-7323",
+  },
+  pax: {
+    centralNumber: "71 3034-7323",
+    sacNumber: "71 3034-7323",
+    whatsappNumber: "71 3034-7323",
+  },
+  lider: {
+    centralNumber: "71 3034-7323",
+    sacNumber: "71 3034-7323",
+    whatsappNumber: "71 3034-7323",
+  },
+};
+
+function normalizePhone(phone: string): string {
+  return phone.replace(/\D/g, "");
+}
+
+function getAtendimentoConfig(
+  tenantSlug?: string | null,
+): AtendimentoTenantConfig {
+  const tenant = (tenantSlug ?? "").trim().toLowerCase();
+  return TENANT_ATENDIMENTO_CONFIG[tenant] ?? TENANT_ATENDIMENTO_CONFIG.bosque;
+}
+
+export default function AtendimentoScreen({ onBack, tenantSlug }: Props) {
   const [centralOpen, setCentralOpen] = useState(true);
   const [sacOpen, setSacOpen] = useState(false);
+  const atendimentoConfig = getAtendimentoConfig(tenantSlug);
+  const centralTel = normalizePhone(atendimentoConfig.centralNumber);
+  const sacTel = normalizePhone(atendimentoConfig.sacNumber);
+  const whatsappTel = normalizePhone(atendimentoConfig.whatsappNumber);
 
   return (
     <div
@@ -74,7 +114,7 @@ export default function AtendimentoScreen({ onBack }: Props) {
                 <button
                   type="button"
                   className="cm-btn-phone-card"
-                  onClick={() => window.open("tel:40040021", "_self")}
+                  onClick={() => window.open(`tel:${centralTel}`, "_self")}
                 >
                   <div
                     style={{
@@ -84,7 +124,9 @@ export default function AtendimentoScreen({ onBack }: Props) {
                     }}
                   >
                     <p className="cm-phone-label">Central de Relacionamento</p>
-                    <p className="cm-phone-number">4004 0021</p>
+                    <p className="cm-phone-number">
+                      {atendimentoConfig.centralNumber}
+                    </p>
                   </div>
                   <span className="cm-phone-call">Ligar</span>
                 </button>
@@ -93,7 +135,7 @@ export default function AtendimentoScreen({ onBack }: Props) {
                   type="button"
                   className="cm-btn-whatsapp"
                   onClick={() =>
-                    window.open("https://wa.me/5571999999999", "_blank")
+                    window.open(`https://wa.me/55${whatsappTel}`, "_blank")
                   }
                 >
                   Iniciar conversa pelo WhatsApp
@@ -129,7 +171,7 @@ export default function AtendimentoScreen({ onBack }: Props) {
                 <button
                   type="button"
                   className="cm-btn-phone-card"
-                  onClick={() => window.open("tel:08001234567", "_self")}
+                  onClick={() => window.open(`tel:${sacTel}`, "_self")}
                 >
                   <div
                     style={{
@@ -138,8 +180,10 @@ export default function AtendimentoScreen({ onBack }: Props) {
                       alignItems: "flex-start",
                     }}
                   >
-                    <p className="cm-phone-label">SAC Gratuito</p>
-                    <p className="cm-phone-number">0800 123 4567</p>
+                    <p className="cm-phone-label">SAC</p>
+                    <p className="cm-phone-number">
+                      {atendimentoConfig.sacNumber}
+                    </p>
                   </div>
                   <span className="cm-phone-call">Ligar</span>
                 </button>

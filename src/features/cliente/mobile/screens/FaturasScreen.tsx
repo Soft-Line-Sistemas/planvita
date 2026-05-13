@@ -4,17 +4,18 @@ import { useState, useMemo } from "react";
 import Image from "next/image";
 import { Loader2, CheckCircle, Copy, ExternalLink, X } from "lucide-react";
 import type { ContaFinanceira } from "@/services/financeiro/contasCliente.service";
-import { AsaasWingsMark } from "@/components/ui/AsaasWingsMark";
 
 type Props = {
   contas: ContaFinanceira[];
   isLoading: boolean;
   errorMessage?: string | null;
   onBack: () => void;
+  mostrarHistoricoCompleto: boolean;
+  onHistoricoCompletoChange: (enabled: boolean) => void;
 };
 
 type FilterStatus = "todos" | "pendente" | "pago" | "vencido";
-type FilterPeriodo = "todos" | "30" | "60" | "90" | "ano";
+type FilterPeriodo = "todos" | "30" | "60" | "90" | "ano" | "historico";
 
 type PixModal = {
   descricao: string;
@@ -49,6 +50,29 @@ function formatDateLong(isoDate: string) {
     month: "long",
     year: "numeric",
   });
+}
+
+function getReferenciaMensalAnterior(isoDate: string) {
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return "Mês/ano indisponível";
+  d.setMonth(d.getMonth() - 1);
+  return d.toLocaleDateString("pt-BR", {
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+function isCobrancaRecorrente(conta: ContaFinanceira) {
+  const descricao = String(conta.descricao ?? "").toLowerCase();
+  return (
+    Boolean(conta.asaasSubscriptionId) || descricao.includes("mensalidade")
+  );
+}
+
+function getFaturaTitulo(conta: ContaFinanceira) {
+  if (!isCobrancaRecorrente(conta)) return conta.descricao;
+  const referencia = getReferenciaMensalAnterior(conta.vencimento);
+  return `Mensalidade referente a ${referencia}`;
 }
 
 function getStatusClass(status: string) {
@@ -189,9 +213,13 @@ export default function FaturasScreen({
   isLoading,
   errorMessage,
   onBack,
+  mostrarHistoricoCompleto,
+  onHistoricoCompletoChange,
 }: Props) {
   const [filtroStatus, setFiltroStatus] = useState<FilterStatus>("todos");
-  const [filtroPeriodo, setFiltroPeriodo] = useState<FilterPeriodo>("todos");
+  const [filtroPeriodo, setFiltroPeriodo] = useState<FilterPeriodo>(
+    mostrarHistoricoCompleto ? "historico" : "todos",
+  );
   const [pixModal, setPixModal] = useState<PixModal | null>(null);
   const [copiado, setCopiado] = useState<number | null>(null);
 
@@ -305,15 +333,18 @@ export default function FaturasScreen({
                 <select
                   aria-label="Filtrar por período"
                   value={filtroPeriodo}
-                  onChange={(e) =>
-                    setFiltroPeriodo(e.target.value as FilterPeriodo)
-                  }
+                  onChange={(e) => {
+                    const value = e.target.value as FilterPeriodo;
+                    setFiltroPeriodo(value);
+                    onHistoricoCompletoChange(value === "historico");
+                  }}
                 >
                   <option value="todos">Todo o período</option>
                   <option value="30">Últimos 30 dias</option>
                   <option value="60">Últimos 60 dias</option>
                   <option value="90">Últimos 90 dias</option>
                   <option value="ano">Este ano</option>
+                  <option value="historico">Histórico completo</option>
                 </select>
                 <Image
                   src="/cliente-mobile/Vector-31.png"
@@ -438,13 +469,7 @@ export default function FaturasScreen({
                     className={`fatura-card ${statusKey} cm-fade-up`}
                   >
                     <div className="fatura-body">
-                      <p className="fatura-title">
-                        {conta.descricao}
-                        {(conta.asaasPaymentId ||
-                          conta.asaasSubscriptionId) && (
-                          <AsaasWingsMark variant="inline" />
-                        )}
-                      </p>
+                      <p className="fatura-title">{getFaturaTitulo(conta)}</p>
                       <div className="fatura-due">
                         <strong>Vencimento</strong>
                         <br />
@@ -500,7 +525,7 @@ export default function FaturasScreen({
                             style={{ height: 44, flex: 1 }}
                             onClick={() =>
                               setPixModal({
-                                descricao: conta.descricao,
+                                descricao: getFaturaTitulo(conta),
                                 valor: conta.valor,
                                 vencimento: conta.vencimento,
                                 codigo: conta.pixQrCode!,

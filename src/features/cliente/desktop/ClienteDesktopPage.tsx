@@ -133,10 +133,12 @@ const TIPOS_ASSINATURA = [
   { id: "CORRESPONSAVEL_ASSINATURA_1", label: "Responsável financeiro - 1" },
   { id: "CORRESPONSAVEL_ASSINATURA_2", label: "Responsável financeiro - 2" },
 ] as const;
-const CONTRATO_URL = "/docs/contrato.docx";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
 const API_VERSION =
   process.env.NEXT_PUBLIC_API_VERSION || process.env.API_VERSION || "v1";
+const CONTRATO_URL = API_BASE_URL
+  ? `${API_BASE_URL}/${API_VERSION}/titular/me/contrato/arquivo?format=pdf`
+  : "/docs/contrato.docx";
 const ENABLE_LEGACY_QUICK_ACCESS =
   process.env.NEXT_PUBLIC_ENABLE_LEGACY_QUICK_ACCESS === "true";
 const ASSINATURA_API_BASE = API_BASE_URL
@@ -229,6 +231,7 @@ export default function ConsultaClientePage() {
   const [assinaturaMensagem, setAssinaturaMensagem] = useState<string | null>(
     null,
   );
+  const [baixandoContrato, setBaixandoContrato] = useState(false);
   const autoBuscaExecutadaRef = useRef(false);
   const tenantAtivo = tenantSelecionado || getTenantFromHost();
   const [authChecked, setAuthChecked] = useState(false);
@@ -292,6 +295,34 @@ export default function ConsultaClientePage() {
     vencimento: string;
     codigo: string;
   } | null>(null);
+
+  const handleDownloadContrato = useCallback(async () => {
+    setBaixandoContrato(true);
+    try {
+      const response = await fetch(CONTRATO_URL, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Não foi possível gerar o contrato em PDF.");
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = "contrato-assinado.pdf";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      setAssinaturaMensagem(
+        error instanceof Error ? error.message : "Falha ao baixar contrato.",
+      );
+    } finally {
+      setBaixandoContrato(false);
+    }
+  }, []);
 
   const resetFirstAccessState = useCallback(() => {
     setFirstAccessStep("request");
@@ -2192,15 +2223,21 @@ export default function ConsultaClientePage() {
                           Leia o contrato antes de realizar as assinaturas.
                         </p>
                       </div>
-                      <a
-                        href={CONTRATO_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        type="button"
+                        onClick={handleDownloadContrato}
+                        disabled={baixandoContrato}
                         className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-emerald-700 font-medium shadow-sm"
                       >
-                        <Download className="size-4" />
-                        Baixar Contrato
-                      </a>
+                        {baixandoContrato ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Download className="size-4" />
+                        )}
+                        {baixandoContrato
+                          ? "Gerando PDF..."
+                          : "Baixar Contrato"}
+                      </button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

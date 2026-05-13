@@ -1,15 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import type { ClientePlano } from "@/types/ClientePlano";
 import { changePassword } from "@/services/auth-cliente.service";
+import {
+  removerFotoPerfilCliente,
+  salvarFotoPerfilCliente,
+} from "@/services/cliente-ajustes.service";
 
 type Props = {
   cliente: ClientePlano;
   onLogout: () => void;
   onBack: () => void;
+  onFotoPerfilChange: (fotoPerfilUrl: string | null) => void;
+  openFotoModalOnEnter?: boolean;
+  onOpenFotoModalHandled?: () => void;
 };
 
 /* ===================================================================
@@ -31,6 +38,33 @@ function extractMessage(err: unknown): string {
   return typeof e?.response?.data?.message === "string"
     ? e.response.data.message
     : "Não foi possível alterar a senha.";
+}
+
+const FOTO_MAX_BYTES = 5 * 1024 * 1024;
+const FOTO_ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp"];
+
+function formatFotoMessage(err: unknown): string {
+  const e = err as { response?: { data?: { message?: unknown } } };
+  const message =
+    typeof e?.response?.data?.message === "string"
+      ? e.response.data.message
+      : null;
+  return message || "Não foi possível alterar a foto do perfil.";
+}
+
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error("Falha ao processar arquivo."));
+    };
+    reader.onerror = () => reject(new Error("Falha ao processar arquivo."));
+    reader.readAsDataURL(file);
+  });
 }
 
 /* ===================================================================
@@ -234,12 +268,72 @@ function AlterarSenhaView({ onClose }: { onClose: () => void }) {
    Foto de Perfil Modal
    =================================================================== */
 
-function AlterarFotoModal({ onClose }: { onClose: () => void }) {
-  const [toast, setToast] = useState<string | null>(null);
+function AlterarFotoModal({
+  hasFotoPerfil,
+  onClose,
+  onFotoPerfilChange,
+}: {
+  hasFotoPerfil: boolean;
+  onClose: () => void;
+  onFotoPerfilChange: (fotoPerfilUrl: string | null) => void;
+}) {
+  const inputGaleriaRef = useRef<HTMLInputElement | null>(null);
+  const inputCameraRef = useRef<HTMLInputElement | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const notify = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2800);
+  const handleSelecionarArquivo = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setMessage(null);
+    setError(null);
+
+    if (!FOTO_ALLOWED_MIME.includes(file.type)) {
+      setError("Formato inválido. Envie PNG, JPG ou WEBP.");
+      return;
+    }
+    if (file.size > FOTO_MAX_BYTES) {
+      setError("Arquivo acima de 5MB. Escolha uma imagem menor.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const imageBase64 = await fileToBase64(file);
+      const foto = await salvarFotoPerfilCliente({
+        imageBase64,
+        filename: file.name,
+        mimeType: file.type as "image/png" | "image/jpeg" | "image/webp",
+      });
+      onFotoPerfilChange(foto?.arquivoUrl ?? null);
+      setMessage("Foto atualizada com sucesso.");
+      setTimeout(onClose, 900);
+    } catch (err) {
+      setError(formatFotoMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemover = async () => {
+    setMessage(null);
+    setError(null);
+    setLoading(true);
+    try {
+      await removerFotoPerfilCliente();
+      onFotoPerfilChange(null);
+      setMessage("Foto removida com sucesso.");
+      setTimeout(onClose, 900);
+    } catch (err) {
+      setError(formatFotoMessage(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -276,34 +370,62 @@ function AlterarFotoModal({ onClose }: { onClose: () => void }) {
           <h2 id="foto-modal-title">Alterar foto do perfil</h2>
         </div>
 
-        {toast && (
-          <p
-            style={{
-              margin: "0 0 8px",
-              fontSize: 13,
-              color: "var(--cm-green-primary)",
-              textAlign: "center",
-            }}
-          >
-            {toast}
-          </p>
+        {message && <div className="cm-alert cm-alert-success">{message}</div>}
+        {error && (
+          <div className="cm-alert cm-alert-danger">
+            <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span>{error}</span>
+          </div>
         )}
 
         <div className="cm-foto-modal-actions">
+          <input
+            ref={inputGaleriaRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={handleSelecionarArquivo}
+            style={{ display: "none" }}
+          />
+          <input
+            ref={inputCameraRef}
+            type="file"
+            accept="image/*"
+            capture="user"
+            onChange={handleSelecionarArquivo}
+            style={{ display: "none" }}
+          />
           <button
             type="button"
             className="cm-btn-solid"
-            onClick={() => notify("Funcionalidade em breve disponível.")}
+            onClick={() => inputGaleriaRef.current?.click()}
+            disabled={loading}
           >
-            Selecionar da galeria
+            {loading ? (
+              <>
+                <Loader2 size={16} className="cm-spinner" /> Enviando...
+              </>
+            ) : (
+              "Selecionar da galeria"
+            )}
           </button>
           <button
             type="button"
             className="cm-btn-outline"
-            onClick={() => notify("Funcionalidade em breve disponível.")}
+            onClick={() => inputCameraRef.current?.click()}
+            disabled={loading}
           >
             Tirar foto
           </button>
+          {hasFotoPerfil && (
+            <button
+              type="button"
+              className="cm-btn-outline"
+              onClick={handleRemover}
+              disabled={loading}
+            >
+              Remover foto
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -314,9 +436,22 @@ function AlterarFotoModal({ onClose }: { onClose: () => void }) {
    AjustesScreen
    =================================================================== */
 
-export default function AjustesScreen({ cliente, onLogout, onBack }: Props) {
+export default function AjustesScreen({
+  cliente,
+  onLogout,
+  onBack,
+  onFotoPerfilChange,
+  openFotoModalOnEnter = false,
+  onOpenFotoModalHandled,
+}: Props) {
   const [showChangePwd, setShowChangePwd] = useState(false);
   const [showFotoModal, setShowFotoModal] = useState(false);
+
+  useEffect(() => {
+    if (!openFotoModalOnEnter) return;
+    setShowFotoModal(true);
+    onOpenFotoModalHandled?.();
+  }, [openFotoModalOnEnter, onOpenFotoModalHandled]);
 
   if (showChangePwd) {
     return <AlterarSenhaView onClose={() => setShowChangePwd(false)} />;
@@ -439,7 +574,11 @@ export default function AjustesScreen({ cliente, onLogout, onBack }: Props) {
       </div>
 
       {showFotoModal && (
-        <AlterarFotoModal onClose={() => setShowFotoModal(false)} />
+        <AlterarFotoModal
+          hasFotoPerfil={Boolean(cliente.fotoPerfilUrl)}
+          onClose={() => setShowFotoModal(false)}
+          onFotoPerfilChange={onFotoPerfilChange}
+        />
       )}
     </div>
   );
