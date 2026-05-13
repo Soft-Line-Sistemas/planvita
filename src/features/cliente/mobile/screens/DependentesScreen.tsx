@@ -8,24 +8,24 @@ type Props = {
   onBack: () => void;
 };
 
-function formatDate(isoDate: string) {
+function formatBirthDate(isoDate?: string | null) {
+  if (!isoDate) return "—";
   const d = new Date(isoDate);
-  if (isNaN(d.getTime())) return isoDate;
-  return d.toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("pt-BR");
 }
 
-function getAge(birthDate: string): number | null {
-  const d = new Date(birthDate);
+function getAgeFromBirthDate(isoDate?: string | null) {
+  if (!isoDate) return null;
+  const d = new Date(isoDate);
   if (isNaN(d.getTime())) return null;
-  const hoje = new Date();
-  let age = hoje.getFullYear() - d.getFullYear();
-  const m = hoje.getMonth() - d.getMonth();
-  if (m < 0 || (m === 0 && hoje.getDate() < d.getDate())) age--;
-  return age;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const monthDiff = now.getMonth() - d.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < d.getDate())) {
+    age -= 1;
+  }
+  return age >= 0 ? age : null;
 }
 
 export default function DependentesScreen({ cliente, onBack }: Props) {
@@ -96,33 +96,93 @@ export default function DependentesScreen({ cliente, onBack }: Props) {
 
             <div style={{ display: "grid", gap: 12 }}>
               {deps.map((dep) => {
-                const age = dep.dataNascimento
-                  ? getAge(dep.dataNascimento)
-                  : null;
+                const parentesco = dep.parentesco ?? dep.tipo ?? "—";
+                const idadeCalculada = getAgeFromBirthDate(dep.dataNascimento);
+                const idade =
+                  typeof dep.idade === "number" ? dep.idade : idadeCalculada;
+                const carencia =
+                  typeof dep.carenciaRestante === "number"
+                    ? dep.carenciaRestante
+                    : typeof dep.carenciaDias === "number"
+                      ? dep.carenciaDias
+                      : null;
                 return (
                   <div
                     key={dep.id}
                     style={{
                       borderRadius: 20,
-                      background: "#F7FAF5",
-                      border: "1px solid #E0E8DC",
+                      background: "#F4F4F4",
+                      border: "1px solid #E9E9E9",
                       padding: "18px 22px",
                       display: "grid",
-                      gap: 4,
+                      gap: 2,
                     }}
                   >
                     <p
                       style={{
                         margin: 0,
-                        fontSize: 17,
+                        fontSize: 16,
                         fontWeight: 700,
                         color: "#535353",
+                        lineHeight: "24px",
                       }}
                     >
                       {dep.nome}
                     </p>
-
-                    {dep.tipo && (
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 14,
+                        fontWeight: 500,
+                        color: "#535353",
+                        lineHeight: "20px",
+                      }}
+                    >
+                      Parentesco: {parentesco}
+                    </p>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 14,
+                        fontWeight: 500,
+                        color: "#535353",
+                        lineHeight: "20px",
+                      }}
+                    >
+                      Idade: {idade != null ? `${idade} anos` : "—"}
+                    </p>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 14,
+                        fontWeight: 500,
+                        color: "#535353",
+                        lineHeight: "20px",
+                      }}
+                    >
+                      Data Nascimento: {formatBirthDate(dep.dataNascimento)}
+                    </p>
+                    {carencia != null ? (
+                      <span
+                        style={{
+                          marginTop: 6,
+                          width: "fit-content",
+                          height: 24,
+                          padding: "0 12px",
+                          borderRadius: 40,
+                          border: "1px solid #E7CF97",
+                          background: "#FFEFCD",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#9F7A2E",
+                        }}
+                      >
+                        Carência: {carencia} dias
+                      </span>
+                    ) : dep.valorAdicionalMensal &&
+                      dep.valorAdicionalMensal > 0 ? (
                       <span
                         style={{
                           marginTop: 6,
@@ -137,44 +197,15 @@ export default function DependentesScreen({ cliente, onBack }: Props) {
                           fontSize: 12,
                           fontWeight: 600,
                           color: "#658D3E",
-                          gap: 5,
-                          textTransform: "capitalize",
                         }}
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src="/cliente-mobile/Vector-37.png"
-                          alt=""
-                          style={{ width: 11, height: 11 }}
-                          aria-hidden
-                        />
-                        {dep.tipo}
+                        Adicional:{" "}
+                        {dep.valorAdicionalMensal.toLocaleString("pt-BR", {
+                          style: "currency",
+                          currency: "BRL",
+                        })}
                       </span>
-                    )}
-
-                    {age !== null && (
-                      <p
-                        style={{
-                          margin: "4px 0 0",
-                          fontSize: 13,
-                          color: "#535353",
-                        }}
-                      >
-                        Idade: {age} anos
-                      </p>
-                    )}
-
-                    {dep.dataNascimento && (
-                      <p
-                        style={{
-                          margin: "2px 0 0",
-                          fontSize: 13,
-                          color: "#535353",
-                        }}
-                      >
-                        Nasc.: {formatDate(dep.dataNascimento)}
-                      </p>
-                    )}
+                    ) : null}
                   </div>
                 );
               })}

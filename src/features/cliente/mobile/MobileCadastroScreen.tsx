@@ -161,10 +161,9 @@ const STEPS = [
   { id: 3, title: "Responsável financeiro" },
   { id: 4, title: "Endereço do responsável" },
   { id: 5, title: "Dependentes" },
-  { id: 6, title: "Serviços adicionais" },
-  { id: 7, title: "Planos" },
-  { id: 8, title: "Forma de pagamento" },
-  { id: 9, title: "Confirmação de cadastro" },
+  { id: 6, title: "Planos" },
+  { id: 7, title: "Forma de pagamento" },
+  { id: 8, title: "Confirmação de cadastro" },
 ];
 
 /* ================================================================
@@ -1680,6 +1679,7 @@ function Step6Servicos({
     </>
   );
 }
+void Step6Servicos;
 
 /* ================================================================
    Step 7 – Forma de pagamento
@@ -2167,6 +2167,7 @@ export default function MobileCadastroScreen() {
   const [selectedPlano, setSelectedPlano] = useState<Plano | null>(null);
   const [planoError, setPlanoError] = useState<string | null>(null);
   const [servicosAdicionais, setServicosAdicionais] = useState<string[]>([]);
+  void setServicosAdicionais;
   const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamento | "">(
     "",
   );
@@ -2456,14 +2457,12 @@ export default function MobileCadastroScreen() {
         return true;
       }
       case 6:
-        return true;
-      case 7:
         if (!selectedPlano) {
           setPlanoError("Selecione um plano para continuar.");
           return false;
         }
         return true;
-      case 8:
+      case 7:
         if (!metodoPagamento) return false;
         return true;
       default:
@@ -2575,19 +2574,6 @@ export default function MobileCadastroScreen() {
         );
       case 6:
         return (
-          <Step6Servicos
-            selected={servicosAdicionais}
-            onToggle={(id) =>
-              setServicosAdicionais((prev) =>
-                prev.includes(id)
-                  ? prev.filter((item) => item !== id)
-                  : [...prev, id],
-              )
-            }
-          />
-        );
-      case 7:
-        return (
           <Step5Plano
             planos={planosData}
             isLoading={isLoadingPlanos}
@@ -2600,14 +2586,14 @@ export default function MobileCadastroScreen() {
             selectionLocked
           />
         );
-      case 8:
+      case 7:
         return (
           <Step7Pagamento
             metodo={metodoPagamento}
             onMetodoChange={(value) => setMetodoPagamento(value)}
           />
         );
-      case 9:
+      case 8:
         return (
           <Step8Confirmacao
             step1={step1Form.getValues()}

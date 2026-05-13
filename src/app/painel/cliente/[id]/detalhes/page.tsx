@@ -18,6 +18,7 @@ import {
   Plus,
   Download,
   Eye,
+  Loader2,
 } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
@@ -55,6 +56,7 @@ const DetalhesCliente = () => {
     dataNascimento: "",
     parentesco: "",
   });
+  const [baixandoContrato, setBaixandoContrato] = useState(false);
   const { hasPermission } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -213,6 +215,35 @@ const DetalhesCliente = () => {
       dataNascimento: dependenteForm.dataNascimento,
       parentesco: dependenteForm.parentesco || "Outro",
     });
+  };
+
+  const handleBaixarContrato = async () => {
+    if (!clienteId) {
+      toast.error("Cliente não identificado.");
+      return;
+    }
+
+    setBaixandoContrato(true);
+    try {
+      const response = await api.get(`/titular/${clienteId}/contrato/arquivo`, {
+        params: { format: "pdf" },
+        responseType: "blob",
+      });
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = `contrato-${cliente?.nome || clienteId}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (error: unknown) {
+      const { message } = extractApiError(error);
+      toast.error(message || "Não foi possível baixar o contrato.");
+    } finally {
+      setBaixandoContrato(false);
+    }
   };
 
   if (isLoading) {
@@ -545,6 +576,23 @@ const DetalhesCliente = () => {
                       </span>
                     </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={handleBaixarContrato}
+                    disabled={baixandoContrato}
+                    className="w-full mt-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {baixandoContrato ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                    <span>
+                      {baixandoContrato
+                        ? "Gerando contrato..."
+                        : "Baixar contrato"}
+                    </span>
+                  </button>
                 </div>
               </div>
 

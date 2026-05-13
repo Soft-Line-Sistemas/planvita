@@ -65,8 +65,6 @@ const SCREENS_WITH_TABBAR: ScreenId[] = [
   "parcerias",
 ];
 
-const ONBOARDING_KEY = "planvita-onboarded";
-
 const DEFAULT_DIAS_SUSPENSAO = 90;
 const DEFAULT_DIAS_POS_SUSPENSAO = 92;
 
@@ -150,16 +148,10 @@ function getSubdomainFromCurrentHost(): string | null {
    =================================================================== */
 
 export default function ClienteMobilePage() {
-  /* --- Onboarding (splash + carousel — shown once, before login) --- */
-  const [showOnboarding, setShowOnboarding] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return !localStorage.getItem(ONBOARDING_KEY);
-  });
+  /* --- Onboarding (splash + carousel — shown before login) --- */
+  const [showOnboarding, setShowOnboarding] = useState<boolean>(true);
 
   const handleOnboardingComplete = useCallback(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(ONBOARDING_KEY, "1");
-    }
     setShowOnboarding(false);
   }, []);
 
@@ -217,6 +209,10 @@ export default function ClienteMobilePage() {
   /* --- Navigation --- */
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [screen, setScreen] = useState<ScreenId>("home");
+  const [abrirFotoModalAoEntrarAjustes, setAbrirFotoModalAoEntrarAjustes] =
+    useState(false);
+  const [mostrarHistoricoCompletoFaturas, setMostrarHistoricoCompletoFaturas] =
+    useState(false);
 
   const goTo = useCallback((s: ScreenId) => setScreen(s), []);
   const goBack = useCallback(() => {
@@ -236,6 +232,11 @@ export default function ClienteMobilePage() {
   const changeTab = useCallback((tab: TabId) => {
     setActiveTab(tab);
     setScreen(tab);
+  }, []);
+  const goToAjustesComModalFoto = useCallback(() => {
+    setAbrirFotoModalAoEntrarAjustes(true);
+    setActiveTab("ajustes");
+    setScreen("ajustes");
   }, []);
 
   /* --- URL params handled ref --- */
@@ -624,6 +625,10 @@ export default function ClienteMobilePage() {
     setScreen("home");
   }, []);
 
+  const handleFotoPerfilChange = useCallback((fotoPerfilUrl: string | null) => {
+    setCliente((prev) => (prev ? { ...prev, fotoPerfilUrl } : prev));
+  }, []);
+
   /* ===================================================================
      Financeiro query (used by Home + suspension logic)
      ================================================================ */
@@ -632,8 +637,13 @@ export default function ClienteMobilePage() {
     isLoading: isLoadingFinanceiro,
     error: erroFinanceiro,
   } = useQuery({
-    queryKey: ["cliente-financeiro-mobile", cliente?.titularId ?? "anon"],
-    queryFn: () => listarContasDoCliente(),
+    queryKey: [
+      "cliente-financeiro-mobile",
+      cliente?.titularId ?? "anon",
+      mostrarHistoricoCompletoFaturas ? "historico" : "padrao",
+    ],
+    queryFn: () =>
+      listarContasDoCliente({ historico: mostrarHistoricoCompletoFaturas }),
     enabled: Boolean(cliente),
     staleTime: 30 * 1000,
   });
@@ -697,7 +707,7 @@ export default function ClienteMobilePage() {
   /* ===================================================================
      Render – Onboarding splash / carousel (first visit, unauthenticated)
      ================================================================ */
-  if (showOnboarding && !cliente) {
+  if (authChecked && showOnboarding && !cliente) {
     return <SplashScreen onComplete={handleOnboardingComplete} />;
   }
 
@@ -824,6 +834,7 @@ export default function ClienteMobilePage() {
             diasPosSuspensao={diasPosSuspensao}
             goTo={goTo}
             changeTab={changeTab}
+            onOpenFotoAjustes={goToAjustesComModalFoto}
             onLogout={handleLogout}
           />
         )}
@@ -840,6 +851,8 @@ export default function ClienteMobilePage() {
               erroFinanceiro instanceof Error ? erroFinanceiro.message : null
             }
             onBack={goBack}
+            mostrarHistoricoCompleto={mostrarHistoricoCompletoFaturas}
+            onHistoricoCompletoChange={setMostrarHistoricoCompletoFaturas}
           />
         )}
 
@@ -856,13 +869,20 @@ export default function ClienteMobilePage() {
           />
         )}
 
-        {screen === "atendimento" && <AtendimentoScreen onBack={goBack} />}
+        {screen === "atendimento" && (
+          <AtendimentoScreen onBack={goBack} tenantSlug={tenantAtivo} />
+        )}
 
         {screen === "ajustes" && (
           <AjustesScreen
             cliente={cliente}
             onLogout={handleLogout}
             onBack={goBack}
+            onFotoPerfilChange={handleFotoPerfilChange}
+            openFotoModalOnEnter={abrirFotoModalAoEntrarAjustes}
+            onOpenFotoModalHandled={() =>
+              setAbrirFotoModalAoEntrarAjustes(false)
+            }
           />
         )}
 

@@ -341,7 +341,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .cm-plan-avatar-edit img {
@@ -1053,7 +1057,7 @@
 
 .cm-card {
   background: var(--cm-white);
-  border-radius: 12px;
+  border-radius: 20px;
   border: 1px solid var(--cm-gray-200);
   box-shadow: var(--cm-shadow-card);
 }
@@ -1697,7 +1701,7 @@
   align-items: center;
   justify-content: center;
   min-height: 100dvh;
-  background: var(--cm-screen-gradient);
+  background: linear-gradient(180deg, rgba(67, 147, 16, 1) 0%, rgba(102, 200, 39, 1) 100%);
   position: relative;
   cursor: pointer;
   user-select: none;
@@ -1714,7 +1718,7 @@
 
 .cm-splash-domain {
   position: absolute;
-  bottom: 15px;
+  bottom: 100px;
   color: #ffffff;
   font-size: 15px;
   font-weight: 600;
@@ -1745,14 +1749,19 @@
 
 .cm-carousel-overlay {
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 70%;
   background: linear-gradient(
     180deg,
-    rgba(30, 90, 20, 0.45) 0%,
-    rgba(10, 50, 10, 0.78) 60%,
-    rgba(0, 30, 0, 0.92) 100%
+    #43931000 0%,
+    rgba(67, 147, 16, 0.18) 42%,
+    rgba(36, 85, 5, 0.52) 74%,
+    #245505 100%
   );
   z-index: 1;
+  pointer-events: none;
 }
 
 .cm-carousel-logo-wrap {
@@ -1828,18 +1837,37 @@
 }
 
 .cm-carousel-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: white;
   width: 100%;
-  height: 48px;
+  height: 50px;
   border: none;
-  border-radius: 24px;
-  background: var(--cm-green-action);
-  color: #ffffff;
-  font-size: 17px;
+  border-radius: 999px;
+  background: #1eba4b;
+  color: #ffffff !important;
+  font-size: 15px;
   font-weight: 700;
   cursor: pointer;
   font-family: var(--cm-font);
-  letter-spacing: -0.3px;
+  box-shadow: var(--cm-shadow-btn);
   -webkit-tap-highlight-color: transparent;
+  transition: filter 0.15s;
+}
+
+.cm-carousel-btn-primary span {
+  color: #ffffff !important;
+}
+
+.cm-carousel-btn-primary:active {
+  filter: brightness(0.88);
+}
+
+.cm-carousel-btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .cm-carousel-btn-secondary {
@@ -1927,7 +1955,7 @@
 
 .cm-foto-modal-actions {
   display: grid;
-  gap: 13px;
+  gap: 4px;
 }
 
 .cm-foto-modal-actions > .cm-btn-solid,
