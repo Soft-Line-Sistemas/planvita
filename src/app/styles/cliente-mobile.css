@@ -2450,7 +2450,7 @@
   --cm-green-lightest: #f2faf0;
   --cm-shadow-btn: 0 4px 12px rgba(58, 155, 40, 0.3);
   --cm-font: 'Inter', system-ui, sans-serif;
-  --cm-cad-nav-offset: calc(78px + max(env(safe-area-inset-bottom, 0px), 16px) + 12px);
+  --cm-cad-nav-offset: calc(78px + max(env(safe-area-inset-bottom, 0px), 16px) + 22px);
 
   min-height: 100dvh;
   height: 100dvh;
