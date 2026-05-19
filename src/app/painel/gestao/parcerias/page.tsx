@@ -163,8 +163,10 @@ export default function GestaoParceriasPage() {
                   <p className="text-sm font-medium">{v.titulo}</p>
                   <p className="text-xs text-gray-600">
                     {parceirosPorId[v.parceiroId] ?? "—"} •{" "}
-                    {categoriasPorId[v.categoriaId] ?? "Sem categoria"} •{" "}
-                    {v.status}
+                    {v.categoriaId != null
+                      ? (categoriasPorId[v.categoriaId] ?? "Sem categoria")
+                      : "Sem categoria"}{" "}
+                    • {v.status}
                   </p>
                 </div>
                 {canDelete && (
