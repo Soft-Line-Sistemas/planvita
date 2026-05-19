@@ -1391,21 +1391,32 @@ function Step4Form({
                     <strong>Dependentes Diretos</strong>
                     <p>
                       Titular, cônjuge ou companheiro(a), filhos, enteados,
-                      netos, pais e sogros. Já incluídos na grade familiar do
-                      plano.
+                      netos, pais (ou, na ausência destes, padrasto ou madrasta)
+                      e sogros.
                     </p>
+                    <span className="cm-cad-dep-info-note">
+                      <span className="cm-cad-required">*</span>
+                      Já incluídos na grade familiar do plano (sem custo
+                      adicional).
+                    </span>
                   </section>
                   <section className="cm-cad-dep-info-box">
                     <strong>Dependentes Indiretos</strong>
                     <p>
                       Sobrinhos, tios, irmãos, avós, cunhados, entre outros.
                     </p>
-                    <span>*R$ 9,90 por pessoa (até 60 anos)</span>
+                    <div className="cm-cad-dep-info-pill">
+                      <span className="cm-cad-required">*</span>
+                      <span>R$ 9,90 por pessoa (até 60 anos)</span>
+                    </div>
                   </section>
                   <section className="cm-cad-dep-info-box">
                     <strong>Outros</strong>
                     <p>Pessoas sem grau de parentesco com o titular.</p>
-                    <span>*R$ 14,90 por pessoa (até 70 anos)</span>
+                    <div className="cm-cad-dep-info-pill">
+                      <span className="cm-cad-required">*</span>
+                      <span>R$ 14,90 por pessoa (até 70 anos)</span>
+                    </div>
                   </section>
                 </div>
               </div>
