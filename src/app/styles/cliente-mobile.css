@@ -2588,7 +2588,8 @@
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  padding: 18px 20px 110px;
+  padding: 18px 20px 24px;
+  scroll-padding-bottom: 24px;
 }
 
 .cm-cad-scroll::-webkit-scrollbar {
@@ -3703,9 +3704,7 @@
 
 /* Bottom navigation bar */
 .cm-cad-nav {
-  position: fixed;
-  left: 0;
-  right: 0;
+  position: sticky;
   bottom: 0;
   z-index: 40;
   display: flex;
