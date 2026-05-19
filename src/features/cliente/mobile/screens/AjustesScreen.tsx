@@ -478,12 +478,17 @@ function AlterarFotoModal({
   };
 
   return (
-    <div className="cm-foto-modal-overlay" role="presentation">
+    <div
+      className="cm-foto-modal-overlay"
+      role="presentation"
+      onClick={onClose}
+    >
       <div
         className="cm-foto-modal-card"
         role="dialog"
         aria-modal="true"
         aria-labelledby="foto-modal-title"
+        onClick={(ev) => ev.stopPropagation()}
       >
         <button
           type="button"

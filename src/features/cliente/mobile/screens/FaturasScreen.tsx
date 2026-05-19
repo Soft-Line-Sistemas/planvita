@@ -85,7 +85,18 @@ function getStatusClass(status: string) {
 function StatusBadge({ status }: { status: string }) {
   const s = status.toUpperCase();
   if (s === "PAGO" || s === "RECEBIDO")
-    return <span className="status-badge pago">✓ Pago</span>;
+    return (
+      <span className="status-badge pago">
+        <Image
+          src="/cliente-mobile/Vector-25.svg"
+          alt=""
+          width={12}
+          height={12}
+          aria-hidden
+        />
+        Pago
+      </span>
+    );
   if (s === "PENDENTE")
     return (
       <span className="status-badge atual">

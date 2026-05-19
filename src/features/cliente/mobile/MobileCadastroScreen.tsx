@@ -154,6 +154,7 @@ const SERVICO_ADICIONAL_LABELS: Record<string, string> = {
 
 const BOSQUE_DEFAULT = "campo-do-bosque" as const;
 const MAX_DEP = 8;
+const ENABLE_PARCERIAS_CADASTRO = false;
 
 const STEPS = [
   { id: 1, title: "Titular" },
@@ -162,8 +163,9 @@ const STEPS = [
   { id: 4, title: "Endereço do responsável" },
   { id: 5, title: "Dependentes" },
   { id: 6, title: "Planos" },
-  { id: 7, title: "Forma de pagamento" },
-  { id: 8, title: "Confirmação de cadastro" },
+  { id: 7, title: "Serviços adicionais" },
+  { id: 8, title: "Forma de pagamento" },
+  { id: 9, title: "Confirmação de cadastro" },
 ];
 
 /* ================================================================
@@ -1135,6 +1137,7 @@ function Step4Form({
                 justifyContent: "center",
                 padding: "24vh 18px 0",
               }}
+              onClick={closeDepModal}
             >
               <div
                 className="cm-cad-dep-modal-card"
@@ -1150,6 +1153,7 @@ function Step4Form({
                   padding: "36px 16px 22px",
                   position: "relative",
                 }}
+                onClick={(ev) => ev.stopPropagation()}
               >
                 <button
                   type="button"
@@ -1345,6 +1349,7 @@ function Step4Form({
                 justifyContent: "center",
                 padding: "14vh 18px 0",
               }}
+              onClick={() => setDepInfoModalOpen(false)}
             >
               <div
                 className="cm-cad-dep-info-modal-card"
@@ -1360,6 +1365,7 @@ function Step4Form({
                   padding: "18px 18px 18px",
                   position: "relative",
                 }}
+                onClick={(ev) => ev.stopPropagation()}
               >
                 <button
                   type="button"
@@ -1680,6 +1686,26 @@ function Step6Servicos({
   );
 }
 void Step6Servicos;
+
+/**
+ * Componente interno para futura liberação do Clube de benefícios no cadastro.
+ * Mantido por flag para não expor no fluxo público agora.
+ */
+function CadastroParceriasInternalPreview() {
+  if (!ENABLE_PARCERIAS_CADASTRO) return null;
+  return (
+    <div className="cm-cad-dep-resumo-card">
+      <div className="cm-cad-dep-resumo-main">
+        <p className="cm-cad-dep-resumo-line">
+          Clube de benefícios (preview interno)
+        </p>
+        <p className="cm-cad-conf-muted">
+          Estrutura preparada para ativação futura sem impacto no fluxo atual.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 /* ================================================================
    Step 7 – Forma de pagamento
@@ -2024,6 +2050,7 @@ function Step8Confirmacao({
             )}
           </div>
         </div>
+        <CadastroParceriasInternalPreview />
       </div>
 
       {plano && planoModalOpen && typeof document !== "undefined"
@@ -2041,6 +2068,7 @@ function Step8Confirmacao({
                 justifyContent: "center",
                 padding: "18px",
               }}
+              onClick={() => setPlanoModalOpen(false)}
             >
               <div
                 className="cm-cad-plan-modal-card"
@@ -2056,6 +2084,7 @@ function Step8Confirmacao({
                   padding: "18px 16px 16px",
                   position: "relative",
                 }}
+                onClick={(ev) => ev.stopPropagation()}
               >
                 <button
                   type="button"
@@ -2170,7 +2199,6 @@ export default function MobileCadastroScreen() {
   const [selectedPlano, setSelectedPlano] = useState<Plano | null>(null);
   const [planoError, setPlanoError] = useState<string | null>(null);
   const [servicosAdicionais, setServicosAdicionais] = useState<string[]>([]);
-  void setServicosAdicionais;
   const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamento | "">(
     "",
   );
@@ -2513,6 +2541,8 @@ export default function MobileCadastroScreen() {
         }
         return true;
       case 7:
+        return true;
+      case 8:
         if (!metodoPagamento) return false;
         return true;
       default:
@@ -2638,12 +2668,25 @@ export default function MobileCadastroScreen() {
         );
       case 7:
         return (
+          <Step6Servicos
+            selected={servicosAdicionais}
+            onToggle={(id) =>
+              setServicosAdicionais((prev) =>
+                prev.includes(id)
+                  ? prev.filter((item) => item !== id)
+                  : [...prev, id],
+              )
+            }
+          />
+        );
+      case 8:
+        return (
           <Step7Pagamento
             metodo={metodoPagamento}
             onMetodoChange={(value) => setMetodoPagamento(value)}
           />
         );
-      case 8:
+      case 9:
         return (
           <Step8Confirmacao
             step1={step1Form.getValues()}

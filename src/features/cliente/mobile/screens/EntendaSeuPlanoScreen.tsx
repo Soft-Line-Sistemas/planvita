@@ -83,6 +83,9 @@ const STATUS_BADGE: Record<
 export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
   const [baixandoContrato, setBaixandoContrato] = useState(false);
   const { plano } = cliente;
+  const nomeTrimmed = cliente.nome.trim();
+  const primeiroNome = nomeTrimmed.split(/\s+/)[0] || nomeTrimmed;
+  const initial = primeiroNome.charAt(0).toUpperCase() || "?";
   const badge = STATUS_BADGE[plano.status] ?? {
     bg: "#F0F0F0",
     border: "#DDD",
@@ -164,7 +167,12 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
             className="cm-plan-avatar"
             style={{ width: 56, height: 56, fontSize: 22, flexShrink: 0 }}
           >
-            {cliente.nome.charAt(0).toUpperCase()}
+            {cliente.fotoPerfilUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={cliente.fotoPerfilUrl} alt="Foto do perfil" />
+            ) : (
+              initial
+            )}
           </div>
           <div style={{ minWidth: 0 }}>
             <p

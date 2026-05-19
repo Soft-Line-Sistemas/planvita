@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import type { ClientePlano } from "@/types/ClientePlano";
 import { mapTitularToCarteirinha } from "@/services/clienteCarteirinha.service";
 import { listarContasDoCliente } from "@/services/financeiro/contasCliente.service";
+import { listarVantagensCliente } from "@/services/parcerias.service";
 import { API_VERSION, getApiUrl } from "@/config/api-config";
 import api from "@/utils/api";
 import getTenantFromHost from "@/utils/getTenantFromHost";
@@ -760,6 +761,21 @@ export default function ClienteMobilePage() {
     };
   }, [cliente, suspensoPorRegra]);
 
+  const { data: parceriasDisponiveis = [] } = useQuery({
+    queryKey: ["parcerias", "cliente", "gate"],
+    queryFn: () => listarVantagensCliente({ limit: 1 }),
+    enabled: Boolean(cliente),
+    staleTime: 60_000,
+  });
+  const hasParcerias = parceriasDisponiveis.length > 0;
+
+  useEffect(() => {
+    if (!hasParcerias && screen === "parcerias") {
+      setScreen("home");
+      setActiveTab("home");
+    }
+  }, [hasParcerias, screen]);
+
   /* ===================================================================
      Render – Onboarding splash / carousel (first visit, unauthenticated)
      ================================================================ */
@@ -892,6 +908,7 @@ export default function ClienteMobilePage() {
             changeTab={changeTab}
             onOpenFotoAjustes={goToAjustesComModalFoto}
             onLogout={handleLogout}
+            hasParcerias={hasParcerias}
           />
         )}
 
@@ -950,7 +967,12 @@ export default function ClienteMobilePage() {
           <DependentesScreen cliente={clienteExibicao} onBack={goBack} />
         )}
 
-        {screen === "parcerias" && <ParceriasScreen onBack={goBack} />}
+        {screen === "parcerias" && hasParcerias && (
+          <ParceriasScreen
+            onBack={goBack}
+            onGoAtendimento={() => changeTab("atendimento")}
+          />
+        )}
       </div>
 
       {/* Bottom tab bar — in document flow */}
