@@ -44,14 +44,14 @@ export type ScreenId =
   | "parcerias";
 
 const TABS: { id: TabId; icon: string; label: string }[] = [
-  { id: "home", icon: "/cliente-mobile/Vector-8.png", label: "Início" },
+  { id: "home", icon: "/cliente-mobile/Vector-8.svg", label: "Início" },
   {
     id: "atendimento",
-    icon: "/cliente-mobile/Vector-9.png",
+    icon: "/cliente-mobile/Vector-9.svg",
     label: "Atendimento",
   },
-  { id: "faturas", icon: "/cliente-mobile/Vector(1).png", label: "Faturas" },
-  { id: "ajustes", icon: "/cliente-mobile/Vector-10.png", label: "Ajustes" },
+  { id: "faturas", icon: "/cliente-mobile/Vector-11.svg", label: "Faturas" },
+  { id: "ajustes", icon: "/cliente-mobile/Vector-10.svg", label: "Ajustes" },
 ];
 
 const SCREENS_WITH_TABBAR: ScreenId[] = [

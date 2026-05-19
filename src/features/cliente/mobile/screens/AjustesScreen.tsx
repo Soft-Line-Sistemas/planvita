@@ -157,7 +157,7 @@ function AlterarSenhaView({ onClose }: { onClose: () => void }) {
             aria-label="Voltar"
           >
             <NextImage
-              src="/cliente-mobile/Vector-30.png"
+              src="/cliente-mobile/Vector-30.svg"
               alt=""
               width={20}
               height={17}
@@ -210,7 +210,7 @@ function AlterarSenhaView({ onClose }: { onClose: () => void }) {
           <>
             <div className="cm-alterar-senha-heading">
               <NextImage
-                src="/cliente-mobile/Vector-21.png"
+                src="/cliente-mobile/Vector-21.svg"
                 alt=""
                 width={22}
                 height={26}
@@ -492,7 +492,7 @@ function AlterarFotoModal({
           aria-label="Fechar"
         >
           <NextImage
-            src="/cliente-mobile/Vector-39.png"
+            src="/cliente-mobile/Vector-39.svg"
             alt=""
             width={31}
             height={31}
@@ -502,7 +502,7 @@ function AlterarFotoModal({
 
         <div className="cm-foto-modal-heading">
           <NextImage
-            src="/cliente-mobile/Vector-49.png"
+            src="/cliente-mobile/Vector-49.svg"
             alt=""
             width={29}
             height={23}
@@ -676,7 +676,7 @@ export default function AjustesScreen({
             aria-label="Voltar"
           >
             <NextImage
-              src="/cliente-mobile/Vector-30.png"
+              src="/cliente-mobile/Vector-30.svg"
               alt=""
               width={20}
               height={17}
@@ -706,7 +706,7 @@ export default function AjustesScreen({
           >
             <span className="cm-settings-item-label">Alterar senha</span>
             <NextImage
-              src="/cliente-mobile/Vector-32.png"
+              src="/cliente-mobile/Vector-32.svg"
               alt=""
               width={12}
               height={12}
@@ -724,7 +724,7 @@ export default function AjustesScreen({
               Alterar dados de contato
             </span>
             <NextImage
-              src="/cliente-mobile/Vector-32.png"
+              src="/cliente-mobile/Vector-32.svg"
               alt=""
               width={12}
               height={12}
@@ -742,7 +742,7 @@ export default function AjustesScreen({
               Alterar foto de Perfil
             </span>
             <NextImage
-              src="/cliente-mobile/Vector-32.png"
+              src="/cliente-mobile/Vector-32.svg"
               alt=""
               width={12}
               height={12}
@@ -760,7 +760,7 @@ export default function AjustesScreen({
             style={{ display: "flex", alignItems: "center", gap: 10 }}
           >
             <NextImage
-              src="/cliente-mobile/Vector.png"
+              src="/cliente-mobile/Vector.svg"
               alt=""
               width={14}
               height={14}

@@ -1397,10 +1397,12 @@
   font-size: 13px;
 }
 
-.cm-assinatura-card.highlighted .cm-assinatura-status-row,
+.cm-assinatura-card.highlighted .cm-assinatura-status-row {
+  border: 1px dashed var(--cm-gray-200);
+}
+
 .cm-assinatura-status-row.centered {
   justify-content: center;
-  border: 1px dashed var(--cm-gray-200);
 }
 
 .cm-assinatura-status-icon {
@@ -2853,7 +2855,7 @@
   box-sizing: border-box;
   -webkit-appearance: none;
   appearance: none;
-  background-image: url("/cliente-mobile/Arrow - Right 4.png");
+  background-image: url("/cliente-mobile/Arrow - Right 4.svg");
   background-repeat: no-repeat;
   background-position: right 14px center;
   background-size: 15px 15px;

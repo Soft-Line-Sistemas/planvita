@@ -90,7 +90,7 @@ function StatusBadge({ status }: { status: string }) {
     return (
       <span className="status-badge atual">
         <Image
-          src="/cliente-mobile/Vector-42.png"
+          src="/cliente-mobile/Vector-42.svg"
           alt=""
           width={12}
           height={12}
@@ -102,7 +102,7 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span className="status-badge vencido">
       <Image
-        src="/cliente-mobile/Vector-41.png"
+        src="/cliente-mobile/Vector-41.svg"
         alt=""
         width={12}
         height={12}
@@ -300,7 +300,7 @@ export default function FaturasScreen({
               aria-label="Voltar"
             >
               <Image
-                src="/cliente-mobile/Vector-30.png"
+                src="/cliente-mobile/Vector-30.svg"
                 alt=""
                 width={20}
                 height={17}
@@ -320,7 +320,7 @@ export default function FaturasScreen({
           <div className="cm-faturas-filter">
             <div className="cm-filter-label">
               <Image
-                src="/cliente-mobile/Vector-19.png"
+                src="/cliente-mobile/Vector-19.svg"
                 alt=""
                 width={14}
                 height={14}
@@ -347,7 +347,7 @@ export default function FaturasScreen({
                   <option value="historico">Histórico completo</option>
                 </select>
                 <Image
-                  src="/cliente-mobile/Vector-31.png"
+                  src="/cliente-mobile/Vector-31.svg"
                   alt=""
                   width={12}
                   height={8}
@@ -369,7 +369,7 @@ export default function FaturasScreen({
                   <option value="vencido">Vencido</option>
                 </select>
                 <Image
-                  src="/cliente-mobile/Vector-31.png"
+                  src="/cliente-mobile/Vector-31.svg"
                   alt=""
                   width={12}
                   height={8}
@@ -386,7 +386,7 @@ export default function FaturasScreen({
                 {emAberto} fatura{emAberto !== 1 ? "s" : ""} em aberto
               </span>
               <Image
-                src="/cliente-mobile/Vector-43.png"
+                src="/cliente-mobile/Vector-43.svg"
                 alt=""
                 width={12}
                 height={12}
@@ -499,7 +499,7 @@ export default function FaturasScreen({
                           ) : (
                             <>
                               <Image
-                                src="/cliente-mobile/Vector-18.png"
+                                src="/cliente-mobile/Vector-18.svg"
                                 alt=""
                                 width={16}
                                 height={16}

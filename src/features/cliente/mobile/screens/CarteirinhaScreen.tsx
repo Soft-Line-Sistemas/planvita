@@ -138,7 +138,7 @@ export default function CarteirinhaScreen({ cliente, onBack }: Props) {
             aria-label="Voltar"
           >
             <Image
-              src="/cliente-mobile/Vector-30.png"
+              src="/cliente-mobile/Vector-30.svg"
               alt=""
               width={20}
               height={17}
@@ -289,7 +289,7 @@ export default function CarteirinhaScreen({ cliente, onBack }: Props) {
                     }}
                   >
                     <Image
-                      src="/cliente-mobile/Vector-39.png"
+                      src="/cliente-mobile/Vector-39.svg"
                       alt=""
                       width={31}
                       height={31}
@@ -336,7 +336,7 @@ export default function CarteirinhaScreen({ cliente, onBack }: Props) {
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src="/cliente-mobile/Vector-34.png"
+                            src="/cliente-mobile/Vector-34.svg"
                             alt=""
                             style={{
                               width: 13,

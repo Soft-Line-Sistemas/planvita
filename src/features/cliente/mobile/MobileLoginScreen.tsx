@@ -201,7 +201,7 @@ function LoginView({
         </h1>
 
         <PillInput
-          iconSrc="/cliente-mobile/Vector-12.png"
+          iconSrc="/cliente-mobile/Vector-12.svg"
           type="text"
           value={loginValue}
           onChange={setLoginValue}
@@ -212,7 +212,7 @@ function LoginView({
         />
 
         <PillInput
-          iconSrc="/cliente-mobile/Vector-13.png"
+          iconSrc="/cliente-mobile/Vector-13.svg"
           type="password"
           value={senhaValue}
           onChange={setSenhaValue}
@@ -330,7 +330,7 @@ function FirstAccessView({
           aria-label="Voltar"
         >
           <Image
-            src="/cliente-mobile/Vector-30.png"
+            src="/cliente-mobile/Vector-30.svg"
             alt=""
             width={20}
             height={17}
@@ -348,7 +348,7 @@ function FirstAccessView({
           <>
             <div className="cm-alterar-senha-heading">
               <Image
-                src="/cliente-mobile/Vector-21.png"
+                src="/cliente-mobile/Vector-21.svg"
                 alt=""
                 width={22}
                 height={26}
@@ -403,7 +403,7 @@ function FirstAccessView({
           <>
             <div className="cm-alterar-senha-heading">
               <Image
-                src="/cliente-mobile/Vector-21.png"
+                src="/cliente-mobile/Vector-21.svg"
                 alt=""
                 width={22}
                 height={26}
@@ -473,7 +473,7 @@ function FirstAccessView({
           <>
             <div className="cm-alterar-senha-heading">
               <Image
-                src="/cliente-mobile/Vector-21.png"
+                src="/cliente-mobile/Vector-21.svg"
                 alt=""
                 width={22}
                 height={26}
@@ -593,7 +593,7 @@ function ForgotView({
           aria-label="Voltar"
         >
           <Image
-            src="/cliente-mobile/Vector-30.png"
+            src="/cliente-mobile/Vector-30.svg"
             alt=""
             width={20}
             height={17}
@@ -611,7 +611,7 @@ function ForgotView({
           <>
             <div className="cm-alterar-senha-heading">
               <Image
-                src="/cliente-mobile/Vector-21.png"
+                src="/cliente-mobile/Vector-21.svg"
                 alt=""
                 width={22}
                 height={26}
@@ -666,7 +666,7 @@ function ForgotView({
           <>
             <div className="cm-alterar-senha-heading">
               <Image
-                src="/cliente-mobile/Vector-21.png"
+                src="/cliente-mobile/Vector-21.svg"
                 alt=""
                 width={22}
                 height={26}
@@ -725,7 +725,7 @@ function ForgotView({
           <>
             <div className="cm-alterar-senha-heading">
               <Image
-                src="/cliente-mobile/Vector-21.png"
+                src="/cliente-mobile/Vector-21.svg"
                 alt=""
                 width={22}
                 height={26}

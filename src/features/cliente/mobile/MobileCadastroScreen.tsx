@@ -1054,7 +1054,7 @@ function Step4Form({
       {dependentes.length > 0 ? (
         <div className="cm-cad-dep-count-bar" role="status">
           <Image
-            src="/cliente-mobile/Vector-29.png"
+            src="/cliente-mobile/Vector-29.svg"
             alt=""
             width={22}
             height={22}
@@ -1101,7 +1101,7 @@ function Step4Form({
               aria-label={`Editar dependente ${idx + 1}`}
             >
               <Image
-                src="/cliente-mobile/Vector-17.png"
+                src="/cliente-mobile/Vector-17.svg"
                 alt=""
                 width={27}
                 height={27}
@@ -1158,7 +1158,7 @@ function Step4Form({
                   aria-label="Fechar"
                 >
                   <Image
-                    src="/cliente-mobile/Vector-39.png"
+                    src="/cliente-mobile/Vector-39.svg"
                     alt=""
                     width={31}
                     height={31}
@@ -1251,7 +1251,7 @@ function Step4Form({
                     onClick={() => setDepInfoModalOpen(true)}
                   >
                     <Image
-                      src="/cliente-mobile/Vector-40.png"
+                      src="/cliente-mobile/Vector-40.svg"
                       alt=""
                       width={17}
                       height={17}
@@ -1368,7 +1368,7 @@ function Step4Form({
                   aria-label="Fechar"
                 >
                   <Image
-                    src="/cliente-mobile/Vector-39.png"
+                    src="/cliente-mobile/Vector-39.svg"
                     alt=""
                     width={31}
                     height={31}
@@ -1468,7 +1468,7 @@ function Step5Plano({
     return (
       <>
         <CadastroSectionHead
-          iconSrc="/cliente-mobile/Vector-7.png"
+          iconSrc="/cliente-mobile/Vector-7.svg"
           iconWidth={31}
           iconHeight={38}
           title="Planos"
@@ -1486,7 +1486,7 @@ function Step5Plano({
     return (
       <>
         <CadastroSectionHead
-          iconSrc="/cliente-mobile/Vector-7.png"
+          iconSrc="/cliente-mobile/Vector-7.svg"
           iconWidth={31}
           iconHeight={38}
           title="Planos"
@@ -1504,7 +1504,7 @@ function Step5Plano({
       {error && <ErrBox message={error} />}
 
       <CadastroSectionHead
-        iconSrc="/cliente-mobile/Vector-7.png"
+        iconSrc="/cliente-mobile/Vector-7.svg"
         iconWidth={31}
         iconHeight={38}
         title="Planos"
@@ -1612,7 +1612,7 @@ function Step6Servicos({
       title: "Clube de benefícios",
       desc: "Descontos de até 40% em parceiros.",
       badge: "Grátis",
-      iconSrc: "/cliente-mobile/Vector-16.png",
+      iconSrc: "/cliente-mobile/Vector-16.svg",
       iconW: 31,
       iconH: 30,
     },
@@ -1621,7 +1621,7 @@ function Step6Servicos({
       title: "Telemedicina",
       desc: "Atendimento médico à distância com profissionais qualificados.",
       badge: "R$ 19,90",
-      iconSrc: "/cliente-mobile/Vector-14.png",
+      iconSrc: "/cliente-mobile/Vector-14.svg",
       iconW: 30,
       iconH: 30,
     },
@@ -1630,7 +1630,7 @@ function Step6Servicos({
       title: "Pet",
       desc: "Este benefício está bloqueado temporariamente.",
       badge: "Em breve",
-      iconSrc: "/cliente-mobile/Vector-15.png",
+      iconSrc: "/cliente-mobile/Vector-15.svg",
       iconW: 33,
       iconH: 30,
       disabled: true,
@@ -1721,7 +1721,7 @@ function Step7Pagamento({
   return (
     <>
       <CadastroSectionHead
-        iconSrc="/cliente-mobile/Vector-2.png"
+        iconSrc="/cliente-mobile/Vector-2.svg"
         iconWidth={35}
         iconHeight={37}
         title="Forma de pagamento"
@@ -2064,7 +2064,7 @@ function Step8Confirmacao({
                   onClick={() => setPlanoModalOpen(false)}
                 >
                   <Image
-                    src="/cliente-mobile/Vector-39.png"
+                    src="/cliente-mobile/Vector-39.svg"
                     alt=""
                     width={31}
                     height={31}
@@ -2682,7 +2682,7 @@ export default function MobileCadastroScreen() {
             aria-label="Voltar"
           >
             <Image
-              src="/cliente-mobile/Vector-30.png"
+              src="/cliente-mobile/Vector-30.svg"
               alt=""
               width={20}
               height={17}
