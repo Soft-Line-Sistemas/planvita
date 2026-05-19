@@ -100,6 +100,13 @@ export function Sidebar() {
       requiredPermission: "plano.view",
     },
     {
+      id: "parcerias",
+      label: "Parcerias",
+      icon: HandCoins,
+      href: "/painel/gestao/parcerias",
+      requiredPermission: "parcerias.view",
+    },
+    {
       id: "financeiro",
       label: "Financeiro",
       icon: CreditCard,

@@ -17,6 +17,7 @@ type Props = {
   changeTab: (tab: TabId) => void;
   onOpenFotoAjustes: () => void;
   onLogout: () => void;
+  hasParcerias: boolean;
 };
 
 function formatValidade(isoDate: string) {
@@ -42,9 +43,11 @@ export default function HomeScreen({
   changeTab,
   onOpenFotoAjustes,
   onLogout,
+  hasParcerias,
 }: Props) {
-  const primeiroNome = cliente.nome.split(" ")[0] ?? cliente.nome;
-  const initial = primeiroNome.charAt(0).toUpperCase();
+  const nomeTrimmed = cliente.nome.trim();
+  const primeiroNome = nomeTrimmed.split(/\s+/)[0] || nomeTrimmed;
+  const initial = primeiroNome.charAt(0).toUpperCase() || "?";
   const validade = cliente.plano.vigencia?.fim
     ? formatValidade(cliente.plano.vigencia.fim)
     : "—";
@@ -181,21 +184,23 @@ export default function HomeScreen({
             </span>
           </button>
 
-          <button
-            type="button"
-            className="cm-menu-item"
-            onClick={() => goTo("parcerias")}
-          >
-            <span className="cm-menu-icon">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/cliente-mobile/Vector-1.svg" alt="" />
-            </span>
-            <span className="cm-menu-label">
-              Parcerias e
-              <br />
-              vantagens
-            </span>
-          </button>
+          {hasParcerias ? (
+            <button
+              type="button"
+              className="cm-menu-item"
+              onClick={() => goTo("parcerias")}
+            >
+              <span className="cm-menu-icon">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/cliente-mobile/Vector-1.svg" alt="" />
+              </span>
+              <span className="cm-menu-label">
+                Parcerias e
+                <br />
+                vantagens
+              </span>
+            </button>
+          ) : null}
 
           <button
             type="button"

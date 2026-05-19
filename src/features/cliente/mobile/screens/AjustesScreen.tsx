@@ -2,13 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import NextImage from "next/image";
-import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle, Frown } from "lucide-react";
 import type { ClientePlano } from "@/types/ClientePlano";
 import { changePassword } from "@/services/auth-cliente.service";
 import {
   removerFotoPerfilCliente,
   salvarFotoPerfilCliente,
 } from "@/services/cliente-ajustes.service";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type Props = {
   cliente: ClientePlano;
@@ -478,12 +485,17 @@ function AlterarFotoModal({
   };
 
   return (
-    <div className="cm-foto-modal-overlay" role="presentation">
+    <div
+      className="cm-foto-modal-overlay"
+      role="presentation"
+      onClick={onClose}
+    >
       <div
         className="cm-foto-modal-card"
         role="dialog"
         aria-modal="true"
         aria-labelledby="foto-modal-title"
+        onClick={(ev) => ev.stopPropagation()}
       >
         <button
           type="button"
@@ -644,6 +656,7 @@ export default function AjustesScreen({
 }: Props) {
   const [showChangePwd, setShowChangePwd] = useState(false);
   const [showFotoModal, setShowFotoModal] = useState(false);
+  const [showContatoModal, setShowContatoModal] = useState(false);
 
   useEffect(() => {
     if (!openFotoModalOnEnter) return;
@@ -718,7 +731,7 @@ export default function AjustesScreen({
           <button
             type="button"
             className="cm-settings-item"
-            onClick={() => alert("Alterar dados de contato em breve.")}
+            onClick={() => setShowContatoModal(true)}
           >
             <span className="cm-settings-item-label">
               Alterar dados de contato
@@ -778,6 +791,23 @@ export default function AjustesScreen({
           onFotoPerfilChange={onFotoPerfilChange}
         />
       )}
+
+      <Dialog open={showContatoModal} onOpenChange={setShowContatoModal}>
+        <DialogContent className="max-w-[92vw] rounded-2xl">
+          <DialogHeader>
+            <div className="flex justify-center pb-1">
+              <Frown
+                aria-hidden
+                className="h-12 w-12 text-neutral-500 animate-bounce"
+              />
+            </div>
+            <DialogTitle className="text-center">Ops</DialogTitle>
+            <DialogDescription className="text-center text-base">
+              Alterar dados de contato em breve.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
