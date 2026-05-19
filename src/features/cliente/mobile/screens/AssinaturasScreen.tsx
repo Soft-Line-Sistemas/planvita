@@ -187,7 +187,7 @@ function SignatureCard({
             />
           </div>
         )}
-        <div className="cm-assinatura-status-row">
+        <div className="cm-assinatura-status-row centered">
           <CheckCircle
             size={13}
             className="cm-assinatura-status-icon"
@@ -205,7 +205,7 @@ function SignatureCard({
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/cliente-mobile/Vector-20.png"
+              src="/cliente-mobile/Vector-20.svg"
               alt=""
               style={{ width: 15, height: 15 }}
             />
@@ -239,7 +239,7 @@ function SignatureCard({
         <div className="cm-assinatura-status-row cm-assinatura-status-dashed">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/cliente-mobile/Vector-34.png"
+            src="/cliente-mobile/Vector-34.svg"
             alt=""
             className="cm-assinatura-status-icon"
           />
@@ -252,7 +252,7 @@ function SignatureCard({
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/cliente-mobile/Vector-36.png"
+            src="/cliente-mobile/Vector-36.svg"
             alt=""
             style={{ width: 17, height: 17 }}
           />
@@ -265,10 +265,10 @@ function SignatureCard({
   return (
     <div className="cm-assinatura-card">
       <p className="cm-assinatura-title">{titulo}</p>
-      <div className="cm-assinatura-status-row">
+      <div className="cm-assinatura-status-row centered">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/cliente-mobile/Vector-34.png"
+          src="/cliente-mobile/Vector-34.svg"
           alt=""
           className="cm-assinatura-status-icon"
         />
@@ -282,7 +282,7 @@ function SignatureCard({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/cliente-mobile/Vector-36.png"
+          src="/cliente-mobile/Vector-36.svg"
           alt=""
           style={{ width: 17, height: 17 }}
         />
@@ -400,7 +400,7 @@ export default function AssinaturasScreen({ titularId, onBack }: Props) {
             aria-label="Voltar"
           >
             <Image
-              src="/cliente-mobile/Vector-30.png"
+              src="/cliente-mobile/Vector-30.svg"
               alt=""
               width={20}
               height={17}
@@ -447,7 +447,7 @@ export default function AssinaturasScreen({ titularId, onBack }: Props) {
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src="/cliente-mobile/Vector-20.png"
+                    src="/cliente-mobile/Vector-20.svg"
                     alt=""
                     style={{ width: 15, height: 15 }}
                   />

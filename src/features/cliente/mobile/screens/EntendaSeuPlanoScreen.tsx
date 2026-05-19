@@ -138,7 +138,7 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
             aria-label="Voltar"
           >
             <Image
-              src="/cliente-mobile/Vector-30.png"
+              src="/cliente-mobile/Vector-30.svg"
               alt=""
               width={20}
               height={17}
@@ -221,7 +221,7 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/cliente-mobile/Vector-26.png"
+            src="/cliente-mobile/Vector-26.svg"
             alt=""
             style={{
               width: 16,
@@ -339,7 +339,7 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/cliente-mobile/Vector-27.png"
+                  src="/cliente-mobile/Vector-27.svg"
                   alt=""
                   style={{
                     width: 16,
@@ -382,7 +382,7 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="/cliente-mobile/Vector-25.png"
+                    src="/cliente-mobile/Vector-25.svg"
                     alt=""
                     style={{
                       width: 16,
@@ -426,7 +426,7 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/cliente-mobile/Vector-29.png"
+                src="/cliente-mobile/Vector-29.svg"
                 alt=""
                 style={{ width: 22, height: 22, objectFit: "contain" }}
                 aria-hidden
@@ -558,7 +558,7 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src="/cliente-mobile/Vector-37.png"
+                            src="/cliente-mobile/Vector-37.svg"
                             alt=""
                             style={{ width: 11, height: 11, flexShrink: 0 }}
                             aria-hidden
@@ -593,7 +593,7 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/cliente-mobile/Vector-28.png"
+                src="/cliente-mobile/Vector-28.svg"
                 alt=""
                 style={{ width: 16, height: 16, objectFit: "contain" }}
                 aria-hidden
@@ -716,7 +716,7 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src="/cliente-mobile/Vector-24.png"
+              src="/cliente-mobile/Vector-24.svg"
               alt=""
               style={{ width: 13, height: 16 }}
               aria-hidden

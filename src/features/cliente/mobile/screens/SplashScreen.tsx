@@ -54,7 +54,7 @@ export default function SplashScreen({ onComplete }: Props) {
       >
         <Image
           className="cm-splash-logo"
-          src="/cliente-mobile/Camada 1.png"
+          src="/cliente-mobile/Camada 1.svg"
           alt="Campo do Bosque"
           width={282}
           height={91}

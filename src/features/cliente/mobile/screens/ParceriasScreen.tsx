@@ -28,7 +28,7 @@ export default function ParceriasScreen({ onBack }: Props) {
             aria-label="Voltar"
           >
             <Image
-              src="/cliente-mobile/Vector-30.png"
+              src="/cliente-mobile/Vector-30.svg"
               alt=""
               width={20}
               height={17}
@@ -62,7 +62,7 @@ export default function ParceriasScreen({ onBack }: Props) {
           {/* Icon */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/cliente-mobile/Vector-1.png"
+            src="/cliente-mobile/Vector-1.svg"
             alt=""
             style={{ width: 64, height: 64, opacity: 0.2, marginBottom: 24 }}
             aria-hidden

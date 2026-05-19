@@ -52,7 +52,7 @@ export default function DependentesScreen({ cliente, onBack }: Props) {
             aria-label="Voltar"
           >
             <Image
-              src="/cliente-mobile/Vector-30.png"
+              src="/cliente-mobile/Vector-30.svg"
               alt=""
               width={20}
               height={17}
@@ -77,7 +77,7 @@ export default function DependentesScreen({ cliente, onBack }: Props) {
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/cliente-mobile/Vector-29.png"
+              src="/cliente-mobile/Vector-29.svg"
               alt=""
               style={{ width: 48, height: 48, opacity: 0.25, marginBottom: 16 }}
               aria-hidden

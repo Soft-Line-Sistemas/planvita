@@ -72,7 +72,7 @@ export default function AtendimentoScreen({ onBack, tenantSlug }: Props) {
             aria-label="Voltar"
           >
             <Image
-              src="/cliente-mobile/Vector-30.png"
+              src="/cliente-mobile/Vector-30.svg"
               alt=""
               width={20}
               height={17}
@@ -102,7 +102,7 @@ export default function AtendimentoScreen({ onBack, tenantSlug }: Props) {
               </div>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/cliente-mobile/Vector-33.png"
+                src="/cliente-mobile/Vector-33.svg"
                 alt=""
                 className="cm-accordion-chevron"
                 width={23}
@@ -159,7 +159,7 @@ export default function AtendimentoScreen({ onBack, tenantSlug }: Props) {
               </div>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/cliente-mobile/Vector-33.png"
+                src="/cliente-mobile/Vector-33.svg"
                 alt=""
                 className="cm-accordion-chevron"
                 width={23}

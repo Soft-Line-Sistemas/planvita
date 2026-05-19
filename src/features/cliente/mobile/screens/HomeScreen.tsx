@@ -79,7 +79,7 @@ export default function HomeScreen({
         <div className="cm-home-header-top">
           <div className="cm-home-logo">
             <Image
-              src="/cliente-mobile/Camada 1.png"
+              src="/cliente-mobile/Camada 1.svg"
               alt="Planvita"
               width={113}
               height={34}
@@ -88,7 +88,7 @@ export default function HomeScreen({
           </div>
           <button type="button" className="cm-btn-logout" onClick={onLogout}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/cliente-mobile/Vector.png" alt="" />
+            <img src="/cliente-mobile/Vector.svg" alt="" />
             <span>Sair</span>
           </button>
         </div>
@@ -116,7 +116,7 @@ export default function HomeScreen({
                 onClick={onOpenFotoAjustes}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/cliente-mobile/Vector-22.png" alt="" />
+                <img src="/cliente-mobile/Vector-22.svg" alt="" />
               </button>
             </div>
             <div className="cm-plan-details">
@@ -137,7 +137,7 @@ export default function HomeScreen({
           >
             <span className="cm-btn-carteirinha-icon">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/cliente-mobile/Vector-3.png" alt="" />
+              <img src="/cliente-mobile/Vector-3.svg" alt="" />
             </span>
             Carteirinha Digital
           </button>
@@ -156,7 +156,7 @@ export default function HomeScreen({
           >
             <span className="cm-menu-icon">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/cliente-mobile/Vector-7.png" alt="" />
+              <img src="/cliente-mobile/Vector-7.svg" alt="" />
             </span>
             <span className="cm-menu-label">
               Contrato
@@ -172,7 +172,7 @@ export default function HomeScreen({
           >
             <span className="cm-menu-icon">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/cliente-mobile/Vector-2.png" alt="" />
+              <img src="/cliente-mobile/Vector-2.svg" alt="" />
             </span>
             <span className="cm-menu-label">
               Acesse
@@ -188,7 +188,7 @@ export default function HomeScreen({
           >
             <span className="cm-menu-icon">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/cliente-mobile/Vector-1.png" alt="" />
+              <img src="/cliente-mobile/Vector-1.svg" alt="" />
             </span>
             <span className="cm-menu-label">
               Parcerias e
@@ -204,7 +204,7 @@ export default function HomeScreen({
           >
             <span className="cm-menu-icon">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/cliente-mobile/Vector-5.png" alt="" />
+              <img src="/cliente-mobile/Vector-5.svg" alt="" />
             </span>
             <span className="cm-menu-label">Assinaturas</span>
           </button>
@@ -218,11 +218,17 @@ export default function HomeScreen({
           <div className="cm-btn-atendimento-left">
             <span className="cm-atd-icon">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/cliente-mobile/Vector-6.png" alt="" />
+              <img src="/cliente-mobile/Vector-6.svg" alt="" />
             </span>
             <span>Fale com um atendente</span>
           </div>
-          <span className="cm-atendimento-chevron">›</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/cliente-mobile/Vector-50.svg"
+            alt=""
+            className="cm-atendimento-chevron"
+            aria-hidden="true"
+          />
         </button>
 
         {(cliente.dependentes?.length ?? 0) > 0 && (
