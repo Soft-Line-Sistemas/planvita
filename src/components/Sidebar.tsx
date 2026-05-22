@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -9,7 +8,6 @@ import {
   UserPlus,
   Users,
   FileText,
-  LogOut,
   Menu,
   X,
   Shield,
@@ -17,19 +15,11 @@ import {
   Layers,
   UserCog,
   CreditCard,
-  KeyRound,
-  Bell,
-  Link as LinkIcon,
   HandCoins,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import logoPlanvita from "@/assets/logo-planvita.png";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import api from "@/utils/api";
-import { useMemo } from "react";
-import { toast } from "sonner";
 
 interface MenuItem {
   id: string;
@@ -39,8 +29,12 @@ interface MenuItem {
   requiredPermission?: string;
 }
 
-export function Sidebar() {
-  const [isCollapsed, setIsCollapsed] = useState(true);
+interface SidebarProps {
+  isDesktopCollapsed: boolean;
+}
+
+export function Sidebar({ isDesktopCollapsed }: SidebarProps) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading, hasPermission } = useAuth();
@@ -114,13 +108,6 @@ export function Sidebar() {
       requiredPermission: "finance.view",
     },
     {
-      id: "notificacoes",
-      label: "Notificações",
-      icon: Bell,
-      href: "/painel/gestao/notificacoes",
-      requiredPermission: "notifications.read",
-    },
-    {
       id: "relatorios",
       label: "Relatórios",
       icon: FileText,
@@ -141,48 +128,22 @@ export function Sidebar() {
       href: "/painel/configuracoes",
       requiredPermission: "layout.view",
     },
-    {
-      id: "conta",
-      label: "Minha Conta",
-      icon: KeyRound,
-      href: "/painel/conta",
-    },
   ];
-
-  const handleLogout = async () => {
-    await api.post(`/auth/logout`);
-    router.push("/login");
-  };
-
-  const consultorLink = useMemo(() => {
-    const consultorId = user?.consultor?.id;
-    if (isConsultor && consultorId && typeof window !== "undefined") {
-      return `${window.location.origin}/cliente/cadastro?consultorId=${consultorId}`;
-    }
-    return null;
-  }, [isConsultor, user]);
-
-  const handleCopyLink = () => {
-    if (consultorLink) {
-      navigator.clipboard.writeText(consultorLink);
-      toast.success("Link copiado com sucesso!");
-    }
-  };
 
   return (
     <>
       {/* Botão mobile */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <Button
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           variant="outline"
           size="sm"
           className="bg-white shadow-lg border border-gray-200"
         >
-          {isCollapsed ? (
-            <Menu className="h-4 w-4" />
-          ) : (
+          {isMobileMenuOpen ? (
             <X className="h-4 w-4" />
+          ) : (
+            <Menu className="h-4 w-4" />
           )}
         </Button>
       </div>
@@ -190,35 +151,16 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={`
-          fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white shadow-xl border-r border-gray-200
-          transform transition-transform duration-300 ease-in-out
-          ${isCollapsed ? "-translate-x-full" : "translate-x-0"}
+          fixed lg:static inset-y-0 left-0 z-40 bg-white border-r border-gray-200
+          transform transition-all duration-300 ease-in-out
+          ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
+          ${isDesktopCollapsed ? "lg:w-20" : "lg:w-64"}
           lg:translate-x-0
         `}
       >
         <div className="flex flex-col h-full">
-          {/* Cabeçalho */}
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center justify-center mb-4">
-              <Image
-                src={logoPlanvita}
-                alt="Logo Planvita"
-                width={120}
-                height={40}
-                className="h-auto w-32"
-                priority
-              />
-            </div>
-            <div className="text-center">
-              <h2 className="text-lg font-bold text-green-700">
-                Sistema Planvita
-              </h2>
-              <p className="text-sm text-gray-600">Gestão de Planos</p>
-            </div>
-          </div>
-
           {/* Menu */}
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <nav className="flex-1 px-4 pt-6 pb-4 space-y-2 overflow-y-auto">
             {menuItems
               .filter(
                 (item) =>
@@ -244,71 +186,40 @@ export function Sidebar() {
                 }
 
                 return (
-                  <Link key={id} href={href} passHref>
-                    <Button
-                      asChild
-                      variant={isActive ? "default" : "ghost"}
+                  <div key={id} className="flex items-center gap-[4px]">
+                    <span
+                      className={`h-10 w-[3px] rounded-[20px] ${isActive ? "bg-[#1EBA4B]" : "bg-transparent"}`}
+                    />
+                    <Link
+                      href={href}
+                      onClick={() => setIsMobileMenuOpen(false)}
                       className={`
-          w-full justify-start h-12 transition-all duration-200
+          flex w-full items-center h-12 rounded-[13px] transition-all duration-200 font-semibold
+          ${isDesktopCollapsed ? "justify-center px-0" : "justify-start px-3"}
           ${
             isActive
-              ? "bg-green-600 text-white shadow-md hover:bg-green-700"
-              : "text-gray-700 hover:bg-green-50 hover:text-green-700"
+              ? "bg-[#F2FAF4] text-[#1EBA4B]"
+              : "text-gray-700 hover:bg-green-50 hover:text-gray-800"
           }
         `}
-                      onClick={() => setIsCollapsed(true)}
                     >
-                      <div className="flex items-center w-full">
-                        <Icon className="mr-3 h-5 w-5" />
-                        {label}
-                      </div>
-                    </Button>
-                  </Link>
+                      <Icon
+                        className={`h-5 w-5 ${isDesktopCollapsed ? "" : "mr-3"}`}
+                      />
+                      {!isDesktopCollapsed && label}
+                    </Link>
+                  </div>
                 );
               })}
           </nav>
-
-          {/* Rodapé */}
-          <div className="p-4 border-t border-gray-200 space-y-3">
-            {consultorLink && (
-              <Button
-                onClick={handleCopyLink}
-                variant="outline"
-                className="w-full justify-start border-blue-200 text-blue-700 hover:bg-blue-50"
-              >
-                <LinkIcon className="mr-3 h-4 w-4" />
-                Copiar meu link
-              </Button>
-            )}
-
-            <Card className="p-3 bg-gray-50">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {user?.email}
-                  </p>
-                  <p className="text-xs text-gray-500">{user?.role?.name}</p>
-                </div>
-              </div>
-            </Card>
-
-            <Button
-              onClick={handleLogout}
-              variant="ghost"
-              className="w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700"
-            >
-              <LogOut className="mr-3 h-4 w-4" />
-              Sair
-            </Button>
-          </div>
         </div>
       </aside>
 
       {/* Overlay para mobile */}
-      {!isCollapsed && (
+      {isMobileMenuOpen && (
         <div
           className="lg:hidden fixed inset-0 bg-black/50 z-30"
-          onClick={() => setIsCollapsed(true)}
+          onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
     </>

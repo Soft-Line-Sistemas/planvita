@@ -30,8 +30,8 @@
   --cm-white: #ffffff;
   --cm-tab-bg: #dbe4d6;
   --cm-tab-border: #cfdbc8;
-  --cm-screen-gradient: linear-gradient(180deg, rgba(67, 147, 16, 1) 0%, rgba(102, 200, 39, 1) 100%);
-  --cm-header-gradient: linear-gradient(160deg, #4cbb30 0%, #3a9b28 40%, #5fcb17 100%);
+  --cm-screen-gradient: linear-gradient(180deg, rgba(67, 152, 13, 1) 0%, rgba(102, 200, 39, 1) 100%);
+  --cm-header-gradient: linear-gradient(180deg, rgba(67, 152, 13, 1) 0%, rgba(102, 200, 39, 1) 100%);
   --cm-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.08);
   --cm-shadow-btn: 0 4px 12px rgba(58, 155, 40, 0.3);
   --cm-font: 'Inter', system-ui, sans-serif;
@@ -726,7 +726,7 @@
 
 .cm-login-bg {
   min-height: 100dvh;
-  background: linear-gradient(160deg, #4cbb30 0%, #3a9b28 40%, #2d7a1f 100%);
+  background: linear-gradient(180deg, rgba(67, 152, 13, 1) 0%, rgba(102, 200, 39, 1) 100%);
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -2456,7 +2456,7 @@
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(160deg, #4cbb30 0%, #3a9b28 40%, #2d7a1f 100%);
+  background: linear-gradient(180deg, rgba(67, 152, 13, 1) 0%, rgba(102, 200, 39, 1) 100%);
   font-family: var(--cm-font);
   overflow: hidden;
 }
