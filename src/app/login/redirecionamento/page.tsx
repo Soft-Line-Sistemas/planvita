@@ -42,7 +42,13 @@ export default function SelectTenantPage() {
   };
 
   return (
-    <div className="relative flex items-center justify-center min-h-screen bg-gradient-to-br from-green-400 via-green-500 to-green-700 overflow-hidden">
+    <div
+      className="relative flex min-h-screen items-center justify-center overflow-hidden"
+      style={{
+        background:
+          "linear-gradient(232.74deg, rgba(68,145,19,1) 31.11%, rgba(115,226,44,1) 93.74%)",
+      }}
+    >
       {/* background decorativo */}
       <div
         className="absolute inset-0 opacity-20"
@@ -53,20 +59,20 @@ export default function SelectTenantPage() {
       <div className="absolute inset-0 bg-black/20" />
 
       <div className="relative z-10 w-full max-w-md p-6">
-        <Card className="bg-green-700/90 border border-white/20 shadow-2xl backdrop-blur-xl rounded-2xl">
+        <Card className="rounded-[24px] border border-[#E9E9E9] bg-white shadow-none">
           <CardHeader className="text-center space-y-4">
             <div className="flex justify-center">
               <Image
                 src={logoPlanvita}
                 alt="Logo Planvita"
-                className="w-44 h-auto drop-shadow-lg"
+                className="h-auto w-44"
                 priority
               />
             </div>
-            <CardTitle className="text-3xl font-bold text-white tracking-wide drop-shadow-lg">
+            <CardTitle className="text-3xl font-bold tracking-wide text-[#121317]">
               Seleção de Ambiente
             </CardTitle>
-            <CardDescription className="text-green-100 font-medium">
+            <CardDescription className="font-medium text-[#6E6E6E]">
               Escolha o ambiente que deseja acessar
             </CardDescription>
           </CardHeader>
@@ -74,24 +80,24 @@ export default function SelectTenantPage() {
           <CardContent className="space-y-4 flex flex-col items-center">
             <Button
               onClick={() => handleSelectTenant("lider")}
-              className="w-full bg-white/20 hover:bg-white/30 text-white py-3 rounded-lg font-semibold transition-all"
+              className="w-full rounded-[16px] bg-[#1EBA4B] py-3 font-semibold text-white transition-all hover:bg-green-700"
             >
               Lider
             </Button>
 
             <Button
               onClick={() => handleSelectTenant("pax")}
-              className="w-full bg-white/20 hover:bg-white/30 text-white py-3 rounded-lg font-semibold transition-all"
+              className="w-full rounded-[16px] border border-[#D5D5D5] bg-white py-3 font-semibold text-[#121317] transition-all hover:bg-gray-50"
             >
               Pax
             </Button>
             <Button
               onClick={() => handleSelectTenant("bosque")}
-              className="w-full bg-white/20 hover:bg-white/30 text-white py-3 rounded-lg font-semibold transition-all"
+              className="w-full rounded-[16px] border border-[#D5D5D5] bg-white py-3 font-semibold text-[#121317] transition-all hover:bg-gray-50"
             >
               Campo do bosque
             </Button>
-            <p className="text-center text-sm text-green-100/90 mt-6">
+            <p className="mt-6 text-center text-sm text-[#6E6E6E]">
               Área reservada para funcionários autorizados
             </p>
           </CardContent>
