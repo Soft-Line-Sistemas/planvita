@@ -80,7 +80,7 @@ export default function SelectTenantPage() {
           <CardContent className="space-y-4 flex flex-col items-center">
             <Button
               onClick={() => handleSelectTenant("lider")}
-              className="w-full rounded-[16px] bg-[#1EBA4B] py-3 font-semibold text-white transition-all hover:bg-green-700"
+              className="w-full rounded-[16px] border border-[#D5D5D5] bg-white py-3 font-semibold text-[#121317] transition-all hover:bg-gray-50"
             >
               Lider
             </Button>
