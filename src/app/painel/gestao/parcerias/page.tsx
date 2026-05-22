@@ -59,32 +59,44 @@ export default function GestaoParceriasPage() {
   }
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-gray-900">Parcerias</h1>
         <input
-          className="border rounded-md px-3 py-2 text-sm w-80 max-w-full"
+          className="w-80 max-w-full border border-[#D5D5D5] rounded-[16px] bg-white px-4 py-3 text-sm"
           placeholder="Buscar"
           value={q}
           onChange={(ev) => setQ(ev.target.value)}
         />
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
-          className={`px-3 py-2 rounded ${aba === "vantagens" ? "bg-green-600 text-white" : "bg-gray-100"}`}
+          className={`rounded-[16px] px-4 py-3 text-sm font-semibold border transition-colors ${
+            aba === "vantagens"
+              ? "border-[#1EBA4B] bg-[#F2FAF4] text-[#1EBA4B]"
+              : "border-[#D5D5D5] bg-white text-gray-700 hover:bg-gray-50"
+          }`}
           onClick={() => setAba("vantagens")}
         >
           Vantagens
         </button>
         <button
-          className={`px-3 py-2 rounded ${aba === "parceiros" ? "bg-green-600 text-white" : "bg-gray-100"}`}
+          className={`rounded-[16px] px-4 py-3 text-sm font-semibold border transition-colors ${
+            aba === "parceiros"
+              ? "border-[#1EBA4B] bg-[#F2FAF4] text-[#1EBA4B]"
+              : "border-[#D5D5D5] bg-white text-gray-700 hover:bg-gray-50"
+          }`}
           onClick={() => setAba("parceiros")}
         >
           Parceiros
         </button>
         <button
-          className={`px-3 py-2 rounded ${aba === "categorias" ? "bg-green-600 text-white" : "bg-gray-100"}`}
+          className={`rounded-[16px] px-4 py-3 text-sm font-semibold border transition-colors ${
+            aba === "categorias"
+              ? "border-[#1EBA4B] bg-[#F2FAF4] text-[#1EBA4B]"
+              : "border-[#D5D5D5] bg-white text-gray-700 hover:bg-gray-50"
+          }`}
           onClick={() => setAba("categorias")}
         >
           Categorias
@@ -92,7 +104,7 @@ export default function GestaoParceriasPage() {
       </div>
 
       {aba === "categorias" && (
-        <section className="bg-white border rounded-lg p-4 space-y-3">
+        <section className="bg-white border border-[#E9E9E9] rounded-[24px] p-6 space-y-4">
           {canWrite && (
             <CategoriaForm
               onSave={async (payload) => {
@@ -101,9 +113,9 @@ export default function GestaoParceriasPage() {
               }}
             />
           )}
-          <div className="divide-y">
+          <div className="divide-y divide-gray-100">
             {categorias.map((c) => (
-              <div key={c.id} className="py-2 text-sm">
+              <div key={c.id} className="py-3 text-sm text-gray-700">
                 {c.nome} ({c.slug})
               </div>
             ))}
@@ -112,7 +124,7 @@ export default function GestaoParceriasPage() {
       )}
 
       {aba === "parceiros" && (
-        <section className="bg-white border rounded-lg p-4 space-y-3">
+        <section className="bg-white border border-[#E9E9E9] rounded-[24px] p-6 space-y-4">
           {canWrite && (
             <ParceiroForm
               onSave={async (payload) => {
@@ -121,11 +133,11 @@ export default function GestaoParceriasPage() {
               }}
             />
           )}
-          <div className="divide-y">
+          <div className="divide-y divide-gray-100">
             {(
               parceiros as Array<{ id: number; nome: string; slug: string }>
             ).map((p) => (
-              <div key={p.id} className="py-2 text-sm">
+              <div key={p.id} className="py-3 text-sm text-gray-700">
                 {p.nome} ({p.slug})
               </div>
             ))}
@@ -134,7 +146,7 @@ export default function GestaoParceriasPage() {
       )}
 
       {aba === "vantagens" && (
-        <section className="bg-white border rounded-lg p-4 space-y-3">
+        <section className="bg-white border border-[#E9E9E9] rounded-[24px] p-6 space-y-4">
           {canWrite && (
             <VantagemForm
               categorias={categorias}
@@ -145,7 +157,7 @@ export default function GestaoParceriasPage() {
               }}
             />
           )}
-          <div className="divide-y">
+          <div className="divide-y divide-gray-100">
             {(
               vantagens as Array<{
                 id: number;
@@ -160,7 +172,9 @@ export default function GestaoParceriasPage() {
                 className="py-3 flex items-center justify-between gap-4"
               >
                 <div>
-                  <p className="text-sm font-medium">{v.titulo}</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {v.titulo}
+                  </p>
                   <p className="text-xs text-gray-600">
                     {parceirosPorId[v.parceiroId] ?? "—"} •{" "}
                     {v.categoriaId != null
@@ -171,7 +185,7 @@ export default function GestaoParceriasPage() {
                 </div>
                 {canDelete && (
                   <button
-                    className="px-2 py-1 text-xs rounded bg-red-100 text-red-700"
+                    className="rounded-[12px] border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700"
                     onClick={async () => {
                       await excluirVantagemAdmin(v.id);
                       await refetchVantagens();
@@ -197,7 +211,7 @@ function CategoriaForm({
   const [nome, setNome] = useState("");
   return (
     <form
-      className="flex gap-2"
+      className="flex flex-wrap gap-2"
       onSubmit={async (ev) => {
         ev.preventDefault();
         if (!nome.trim()) return;
@@ -206,13 +220,13 @@ function CategoriaForm({
       }}
     >
       <input
-        className="border rounded px-2 py-1 text-sm"
+        className="min-w-[240px] flex-1 border border-[#D5D5D5] rounded-[16px] bg-white px-4 py-3 text-sm"
         placeholder="Nova categoria"
         value={nome}
         onChange={(ev) => setNome(ev.target.value)}
       />
       <button
-        className="px-3 py-1 rounded bg-green-600 text-white text-sm"
+        className="rounded-[16px] bg-[#1EBA4B] px-4 py-3 text-sm font-semibold text-white hover:bg-green-700"
         type="submit"
       >
         Salvar
@@ -235,7 +249,7 @@ function ParceiroForm({
   const [uf, setUf] = useState("");
   return (
     <form
-      className="grid sm:grid-cols-4 gap-2"
+      className="grid gap-2 md:grid-cols-4"
       onSubmit={async (ev) => {
         ev.preventDefault();
         if (!nome.trim()) return;
@@ -246,26 +260,26 @@ function ParceiroForm({
       }}
     >
       <input
-        className="border rounded px-2 py-1 text-sm"
+        className="border border-[#D5D5D5] rounded-[16px] bg-white px-4 py-3 text-sm"
         placeholder="Nome do parceiro"
         value={nome}
         onChange={(ev) => setNome(ev.target.value)}
       />
       <input
-        className="border rounded px-2 py-1 text-sm"
+        className="border border-[#D5D5D5] rounded-[16px] bg-white px-4 py-3 text-sm"
         placeholder="Cidade"
         value={cidade}
         onChange={(ev) => setCidade(ev.target.value)}
       />
       <input
-        className="border rounded px-2 py-1 text-sm"
+        className="border border-[#D5D5D5] rounded-[16px] bg-white px-4 py-3 text-sm"
         placeholder="UF"
         maxLength={2}
         value={uf}
         onChange={(ev) => setUf(ev.target.value.toUpperCase())}
       />
       <button
-        className="px-3 py-1 rounded bg-green-600 text-white text-sm"
+        className="rounded-[16px] bg-[#1EBA4B] px-4 py-3 text-sm font-semibold text-white hover:bg-green-700"
         type="submit"
       >
         Salvar
@@ -303,7 +317,7 @@ function VantagemForm({
 
   return (
     <form
-      className="grid sm:grid-cols-3 gap-2"
+      className="grid gap-2 md:grid-cols-3"
       onSubmit={async (ev) => {
         ev.preventDefault();
         if (!form.titulo || !form.parceiroId) return;
@@ -316,7 +330,7 @@ function VantagemForm({
       }}
     >
       <select
-        className="border rounded px-2 py-1 text-sm"
+        className="border border-[#D5D5D5] rounded-[16px] bg-white px-4 py-3 text-sm"
         value={form.parceiroId}
         onChange={(ev) =>
           setForm((p) => ({ ...p, parceiroId: ev.target.value }))
@@ -330,7 +344,7 @@ function VantagemForm({
         ))}
       </select>
       <select
-        className="border rounded px-2 py-1 text-sm"
+        className="border border-[#D5D5D5] rounded-[16px] bg-white px-4 py-3 text-sm"
         value={form.categoriaId}
         onChange={(ev) =>
           setForm((p) => ({ ...p, categoriaId: ev.target.value }))
@@ -344,13 +358,13 @@ function VantagemForm({
         ))}
       </select>
       <input
-        className="border rounded px-2 py-1 text-sm"
+        className="border border-[#D5D5D5] rounded-[16px] bg-white px-4 py-3 text-sm"
         placeholder="Título"
         value={form.titulo}
         onChange={(ev) => setForm((p) => ({ ...p, titulo: ev.target.value }))}
       />
       <input
-        className="border rounded px-2 py-1 text-sm sm:col-span-2"
+        className="border border-[#D5D5D5] rounded-[16px] bg-white px-4 py-3 text-sm md:col-span-2"
         placeholder="Descrição curta"
         value={form.descricaoCurta}
         onChange={(ev) =>
@@ -358,7 +372,7 @@ function VantagemForm({
         }
       />
       <button
-        className="px-3 py-1 rounded bg-green-600 text-white text-sm"
+        className="rounded-[16px] bg-[#1EBA4B] px-4 py-3 text-sm font-semibold text-white hover:bg-green-700"
         type="submit"
       >
         Salvar vantagem

@@ -4,18 +4,9 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import Image from "next/image";
-import logoPlanvita from "@/assets/logo-planvita.png";
 import { useRouter } from "next/navigation";
 import api from "@/utils/api";
 import { AxiosError } from "axios";
@@ -64,102 +55,113 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative flex items-center justify-center min-h-screen bg-gradient-to-br from-green-400 via-green-500 to-green-700 overflow-hidden">
-      {/* background */}
-      <div
-        className="absolute inset-0 opacity-20"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,...")`,
-        }}
-      />
-      <div className="absolute inset-0 bg-black/20" />
+    <div className="min-h-screen flex flex-col lg:flex-row">
+      <section className="relative hidden lg:block lg:w-1/2 min-h-screen overflow-hidden">
+        <Image
+          src="/adm-pc/login-image.png"
+          alt="Mãos em oração"
+          fill
+          priority
+          className="object-cover"
+        />
+        <Image
+          src="/adm-pc/logo.svg"
+          alt="Campo do Bosque"
+          width={266}
+          height={86}
+          priority
+          className="absolute top-[133px] left-1/2 -translate-x-1/2"
+        />
+      </section>
 
-      <div className="relative z-10 w-full max-w-md p-6">
-        <Card className="bg-green-700/90 border border-white/20 shadow-2xl backdrop-blur-xl rounded-2xl">
-          <CardHeader className="text-center space-y-4">
-            <div className="flex justify-center">
-              <Image
-                src={logoPlanvita}
-                alt="Logo Planvita"
-                className="w-44 h-auto drop-shadow-lg"
-                priority
+      <section
+        className="w-full lg:w-1/2 min-h-screen flex items-center justify-center px-6 py-10"
+        style={{
+          background:
+            "linear-gradient(232.74deg, rgba(68,145,19,1) 31.11%, rgba(115,226,44,1) 93.74%)",
+        }}
+      >
+        <div className="w-full max-w-[560px] flex flex-col items-center text-center">
+          <span className="inline-flex items-center justify-center rounded-[30px] border border-[#7FEF37] px-[30px] py-[10px] text-[10px] font-bold text-[#7FEF37] tracking-[0.04em]">
+            ACESSO RESTRITO
+          </span>
+
+          <h1 className="mt-7 text-[30px] leading-[1.15] font-bold text-[#054A19]">
+            Bem vindo ao Sistema
+            <br />
+            Campo do Bosque
+          </h1>
+
+          <p className="mt-6 text-[16px] font-normal leading-[1.35] text-[#1C5A1F]">
+            Digite seus dados de acesso abaixo e
+            <br />
+            clique em entrar
+          </p>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="mt-10 w-full">
+            <div className="flex flex-col items-center gap-4">
+              <Input
+                id="email"
+                type="email"
+                placeholder="seu@email.com"
+                className={`h-[62px] w-[393px] rounded-[8px] border-[3px] bg-[#EAF1E8] px-8 text-[16px] text-[#5A5A5A] placeholder:text-[#6E6E6E] placeholder:opacity-100 focus-visible:ring-0 ${
+                  errors.email
+                    ? "border-red-600 focus-visible:border-red-600"
+                    : "border-[#7DFF2C] focus-visible:border-[#7DFF2C]"
+                }`}
+                {...register("email")}
+                onFocus={handleFocus}
+              />
+
+              <Input
+                id="password"
+                type="password"
+                placeholder="**********"
+                className={`h-[62px] w-[393px] rounded-[8px] border-[3px] bg-[#EAF1E8] px-8 text-[16px] text-[#5A5A5A] placeholder:text-[#6E6E6E] placeholder:opacity-100 focus-visible:ring-0 ${
+                  errors.password
+                    ? "border-red-600 focus-visible:border-red-600"
+                    : "border-[#7DFF2C] focus-visible:border-[#7DFF2C]"
+                }`}
+                {...register("password")}
+                onFocus={handleFocus}
               />
             </div>
-            <CardTitle className="text-3xl font-bold text-white tracking-wide drop-shadow-lg">
-              Sistema Planvita
-            </CardTitle>
-            <CardDescription className="text-green-100 font-medium">
-              Gestão de Planos Funerários
-              <p
-                className={`mt-1 font-bold uppercase ${
-                  errorMessage ? "text-red-600 font-bold" : "text-yellow-300"
-                }`}
-              >
-                {errorMessage || "Acesso Restrito"}
+
+            {errors.email?.message && (
+              <p className="mt-2 text-sm text-red-600">
+                {errors.email.message}
               </p>
-            </CardDescription>
-          </CardHeader>
+            )}
+            {errors.password?.message && (
+              <p className="mt-2 text-sm text-red-600">
+                {errors.password.message}
+              </p>
+            )}
+            {errorMessage && (
+              <p className="mt-2 text-sm font-semibold text-red-600">
+                {errorMessage}
+              </p>
+            )}
 
-          <CardContent className="space-y-6">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-white font-semibold">
-                  E-mail
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  className="bg-white/90 placeholder-gray-500 border-none focus:ring-2 focus:ring-green-400"
-                  {...register("email")}
-                  onFocus={handleFocus}
-                />
-                {errors.email && (
-                  <p className="text-sm text-red-300">{errors.email.message}</p>
-                )}
-              </div>
+            {/*
+            <button
+              type="button"
+              className="mt-6 w-full bg-transparent border-0 p-0 text-center text-[16px] font-medium text-white cursor-pointer"
+            >
+              Esqueceu sua senha?
+            </button>
+            */}
 
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-white font-semibold">
-                  Senha
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Digite sua senha"
-                  className="bg-white/90 placeholder-gray-500 border-none focus:ring-2 focus:ring-green-400"
-                  {...register("password")}
-                  onFocus={handleFocus}
-                />
-                {errors.password && (
-                  <p className="text-sm text-red-300">
-                    {errors.password.message}
-                  </p>
-                )}
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full bg-green-600 hover:bg-green-700 text-lg font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <div className="flex items-center justify-center">
-                    <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></span>
-                    Entrando...
-                  </div>
-                ) : (
-                  "Entrar no Sistema"
-                )}
-              </Button>
-            </form>
-
-            <p className="text-center text-sm text-green-100/90 mt-6">
-              Área reservada para funcionários autorizados
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+            <Button
+              type="submit"
+              className="mt-7 h-[58px] w-[393px] mx-auto rounded-[55px] border-0 bg-[#115B26] text-[17px] font-bold text-white hover:bg-[#115B26]/90"
+              disabled={isLoading}
+            >
+              {isLoading ? "Entrando..." : "Entra no sistema"}
+            </Button>
+          </form>
+        </div>
+      </section>
     </div>
   );
 }

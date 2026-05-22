@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import logoPlanvita from "@/assets/logo-planvita.png";
 
 import {
@@ -45,7 +45,6 @@ import {
 import api from "@/utils/api";
 
 type CadastroClienteWizardVariant = "dashboard" | "public";
-
 
 interface CadastroClienteWizardProps {
   variant?: CadastroClienteWizardVariant;
@@ -387,47 +386,49 @@ export function CadastroClienteWizard({
   };
 
   const renderStepIndicator = () => (
-    <div className="mb-8 flex items-center justify-center px-4">
-      <div className="flex items-center gap-2 md:gap-4">
-        {steps.map((step, index) => {
-          const isActive = currentStep === step.id;
-          const isCompleted = currentStep > step.id;
+    <div className="mb-8 flex items-center justify-center">
+      <div className="w-full rounded-2xl border border-[#D5D5D5] bg-white px-4 py-4 md:px-6">
+        <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 lg:gap-4">
+          {steps.map((step, index) => {
+            const isActive = currentStep === step.id;
+            const isCompleted = currentStep > step.id;
 
-          return (
-            <div key={step.id} className="flex items-center">
-              <div
-                className={`flex size-10 md:size-12 aspect-square shrink-0 items-center justify-center rounded-full border-2 transition-transform duration-300
+            return (
+              <div key={step.id} className="flex items-center">
+                <div
+                  className={`flex size-8 sm:size-9 md:size-10 lg:size-12 aspect-square shrink-0 items-center justify-center rounded-full border-2 transition-transform duration-300
                   ${
                     isActive
                       ? "scale-110 border-green-600 bg-green-600 text-white shadow-lg"
                       : isCompleted
                         ? "border-green-600 bg-green-100 text-green-600"
-                        : "border-gray-300 bg-gray-100 text-gray-400"
+                        : "border-[#DFDFDF] bg-[#DFDFDF] text-white"
                   }`}
-              >
-                {isCompleted ? (
-                  <Check className="h-5 w-5 md:h-6 md:w-6 leading-none" />
-                ) : (
-                  <span className="text-sm font-bold md:text-base leading-none">
-                    {step.id}
-                  </span>
+                >
+                  {isCompleted ? (
+                    <Check className="h-5 w-5 md:h-6 md:w-6 leading-none" />
+                  ) : (
+                    <span className="text-xs font-bold md:text-sm lg:text-base leading-none">
+                      {step.id}
+                    </span>
+                  )}
+                </div>
+
+                <div className="ml-2 hidden xl:block">
+                  <p
+                    className={`text-sm font-medium ${isActive ? "text-green-600" : "text-gray-500"}`}
+                  >
+                    {step.title}
+                  </p>
+                </div>
+
+                {index < steps.length - 1 && (
+                  <ChevronRight className="mx-1 h-3 w-3 text-gray-400 md:mx-2 md:h-4 md:w-4 shrink-0" />
                 )}
               </div>
-
-              <div className="ml-2 hidden md:block">
-                <p
-                  className={`text-sm font-medium ${isActive ? "text-green-600" : "text-gray-500"}`}
-                >
-                  {step.title}
-                </p>
-              </div>
-
-              {index < steps.length - 1 && (
-                <ChevronRight className="mx-2 h-4 w-4 text-gray-400 md:mx-4 shrink-0" />
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -463,7 +464,8 @@ export function CadastroClienteWizard({
               );
 
             case 5: {
-              const titularData = formData.step1 ?? dadosPessoaisForm.getValues();
+              const titularData =
+                formData.step1 ?? dadosPessoaisForm.getValues();
 
               const participantesList: ParticipanteMin[] = [
                 {
@@ -493,7 +495,8 @@ export function CadastroClienteWizard({
             }
 
             case 6: {
-              const titularData = formData.step1 ?? dadosPessoaisForm.getValues();
+              const titularData =
+                formData.step1 ?? dadosPessoaisForm.getValues();
               const titularResumo: ParticipanteMin = {
                 nome: titularData?.nomeCompleto ?? "",
                 dataNascimento: titularData?.dataNascimento ?? null,
@@ -541,9 +544,8 @@ export function CadastroClienteWizard({
     ? "Cadastre-se na Planvita"
     : "Cadastro de Cliente";
 
-  const headingSubtitle = isPublic
-    ? "Complete os passos abaixo para contratar o seu plano Planvita de forma rápida e segura."
-    : "Preencha os dados do cliente para criar um novo plano.";
+  const headingSubtitle =
+    "Complete os passos abaixo para contratar o seu plano Planvita de forma rápida e segura.";
 
   const containerClasses = isPublic
     ? "min-h-screen bg-gradient-to-br from-emerald-50 via-white to-slate-100 py-10 md:py-16"
@@ -551,37 +553,32 @@ export function CadastroClienteWizard({
 
   return (
     <div className={containerClasses}>
-      <div className="mx-auto max-w-4xl px-4">
-        <div className="mb-8 text-center">
-          <Image
-            src={logoPlanvita}
-            width={isPublic ? 140 : 120}
-            height={isPublic ? 70 : 60}
-            alt="Logo Planvita"
-            className="mx-auto mb-4"
-          />
-          <h1 className="text-2xl font-bold text-green-700 md:text-3xl">
+      <div className="mx-auto w-full px-4 md:px-6">
+        <div className={`mb-8 ${isPublic ? "text-center" : "text-left"}`}>
+          {isPublic && (
+            <Image
+              src={logoPlanvita}
+              width={140}
+              height={70}
+              alt="Logo Planvita"
+              className="mx-auto mb-4"
+            />
+          )}
+          <h1
+            className={
+              isPublic
+                ? "text-2xl font-bold text-green-700 md:text-3xl"
+                : "text-[26px] font-semibold text-[#121317]"
+            }
+          >
             {headingTitle}
           </h1>
-          <p className="mt-2 text-gray-600">{headingSubtitle}</p>
+          {isPublic && <p className="mt-2 text-gray-600">{headingSubtitle}</p>}
         </div>
 
         {renderStepIndicator()}
 
         <Card className="border-0 shadow-lg">
-          <CardHeader className="border-b border-green-100 bg-green-50">
-            <CardTitle className="flex items-center text-xl text-green-700">
-              {(() => {
-                const step = steps.find((s) => s.id === currentStep);
-                if (step?.icon) {
-                  const Icon = step.icon;
-                  return <Icon className="mr-3 h-6 w-6" />;
-                }
-                return null;
-              })()}
-              {steps.find((s) => s.id === currentStep)?.title}
-            </CardTitle>
-          </CardHeader>
           <CardContent className="p-6 md:p-8">
             {renderCurrentStep()}
 
@@ -591,7 +588,7 @@ export function CadastroClienteWizard({
                 onClick={handlePrevious}
                 variant="outline"
                 disabled={currentStep === 1}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 rounded-[16px] border border-[#D5D5D5] bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
               >
                 <ChevronLeft className="h-4 w-4" /> Voltar
               </Button>
@@ -601,7 +598,7 @@ export function CadastroClienteWizard({
                   type="button"
                   onClick={handleNext}
                   disabled={!canContinueStep4}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                  className="flex items-center gap-2 rounded-[16px] bg-[#1EBA4B] px-4 py-3 text-sm font-semibold text-white hover:bg-green-700"
                 >
                   Continuar <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -610,7 +607,7 @@ export function CadastroClienteWizard({
                   type="button"
                   onClick={handleFinish}
                   disabled={isPending}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                  className="flex items-center gap-2 rounded-[16px] bg-[#1EBA4B] px-4 py-3 text-sm font-semibold text-white hover:bg-green-700"
                 >
                   <Check className="h-4 w-4" />
                   {isPending ? "Finalizando..." : "Finalizar Cadastro"}

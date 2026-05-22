@@ -217,6 +217,65 @@ textarea {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
 }
 
+/* Painel desktop com visual de containers inspirado no mobile */
+.pc-panel-root {
+  background: #f5f7f9;
+}
+
+.pc-panel-content {
+  min-height: 100%;
+}
+
+.pc-panel-root [data-slot="card"] {
+  border-radius: 24px;
+  border: 1px solid #e9e9e9 !important;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.pc-panel-root .card-hover:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: #e9e9e9 !important;
+}
+
+.pc-panel-root input,
+.pc-panel-root select,
+.pc-panel-root textarea {
+  border: 1px solid #d5d5d5 !important;
+  border-radius: 16px !important;
+  background: #ffffff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.pc-panel-root [data-slot="select-trigger"] {
+  border: 1px solid #d5d5d5 !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.pc-panel-root input:hover,
+.pc-panel-root input:focus,
+.pc-panel-root input:focus-visible,
+.pc-panel-root select:hover,
+.pc-panel-root select:focus,
+.pc-panel-root select:focus-visible,
+.pc-panel-root textarea:hover,
+.pc-panel-root textarea:focus,
+.pc-panel-root textarea:focus-visible {
+  border-color: #3a9b28 !important;
+  box-shadow: 0 0 0 3px rgba(58, 155, 40, 0.1) !important;
+}
+
+.pc-panel-root [data-slot="select-trigger"]:hover,
+.pc-panel-root [data-slot="select-trigger"]:focus,
+.pc-panel-root [data-slot="select-trigger"]:focus-visible,
+.pc-panel-root [data-slot="select-trigger"][data-state="open"] {
+  border-color: #3a9b28 !important;
+  box-shadow: 0 0 0 3px rgba(58, 155, 40, 0.1) !important;
+}
+
 /* Animação para o stepper */
 .stepper-item {
   transition: all 0.3s ease;
