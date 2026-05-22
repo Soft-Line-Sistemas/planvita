@@ -456,7 +456,7 @@ export default function NotificacoesRecorrentesPage() {
 
       {isPeriodic ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="bg-gradient-to-br from-emerald-600 to-green-700 text-white">
+          <Card className="!bg-gradient-to-br !from-emerald-600 !to-green-700 !text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-lg font-medium flex items-center gap-2">
                 <Clock3 className="w-5 h-5" />
