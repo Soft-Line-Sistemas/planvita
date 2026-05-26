@@ -54,6 +54,7 @@ import {
 import CarteirinhaAsImage from "@/components/CarteirinhaAsImage";
 import { useQuery } from "@tanstack/react-query";
 import { listarContasDoCliente } from "@/services/financeiro/contasCliente.service";
+import { reconsultarContaReceber } from "@/services/financeiro/contas.service";
 import {
   listarAssinaturas,
   salvarAssinatura,
@@ -1180,6 +1181,31 @@ export default function ConsultaClientePage() {
     }
   };
 
+  const reconsultarContaAsaasSeNecessario = async (conta: {
+    id: number;
+    status: string;
+    asaasPaymentId?: string | null;
+    asaasSubscriptionId?: string | null;
+  }) => {
+    const vinculadaAsaas = Boolean(
+      conta.asaasPaymentId || conta.asaasSubscriptionId,
+    );
+    if (!vinculadaAsaas) return;
+
+    const status = String(conta.status ?? "").toUpperCase();
+    const podeEstarDefasada = ["PENDENTE", "ATRASADO", "VENCIDO"].includes(
+      status,
+    );
+    if (!podeEstarDefasada) return;
+
+    try {
+      await reconsultarContaReceber(conta.id);
+      await refetchFinanceiro();
+    } catch {
+      // Mantém a ação do usuário mesmo sem sucesso na reconsulta.
+    }
+  };
+
   return (
     <main className="min-h-screen bg-linear-to-br from-slate-100 via-white to-slate-100 pb-16">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 pt-16">
@@ -2115,9 +2141,15 @@ export default function ConsultaClientePage() {
                                       size="sm"
                                       variant="outline"
                                       className="gap-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                                      onClick={() =>
-                                        window.open(conta.paymentUrl!, "_blank")
-                                      }
+                                      onClick={async () => {
+                                        await reconsultarContaAsaasSeNecessario(
+                                          conta,
+                                        );
+                                        window.open(
+                                          conta.paymentUrl!,
+                                          "_blank",
+                                        );
+                                      }}
                                     >
                                       <Barcode className="h-4 w-4" />
                                       {conta.status === "PENDENTE" ||
@@ -2133,14 +2165,17 @@ export default function ConsultaClientePage() {
                                         size="sm"
                                         variant="outline"
                                         className="gap-2 text-indigo-700 border-indigo-200 hover:bg-indigo-50"
-                                        onClick={() =>
+                                        onClick={async () => {
+                                          await reconsultarContaAsaasSeNecessario(
+                                            conta,
+                                          );
                                           setPixSelecionado({
                                             descricao: conta.descricao,
                                             valor: conta.valor,
                                             vencimento: conta.vencimento,
                                             codigo: conta.pixQrCode!,
-                                          })
-                                        }
+                                          });
+                                        }}
                                       >
                                         <QrCode className="h-4 w-4" />
                                         Ver QR Code PIX
@@ -2149,9 +2184,12 @@ export default function ConsultaClientePage() {
                                         size="sm"
                                         variant="outline"
                                         className="gap-2 text-sky-700 border-sky-200 hover:bg-sky-50"
-                                        onClick={() =>
-                                          copiarCodigoPix(conta.pixQrCode!)
-                                        }
+                                        onClick={async () => {
+                                          await reconsultarContaAsaasSeNecessario(
+                                            conta,
+                                          );
+                                          copiarCodigoPix(conta.pixQrCode!);
+                                        }}
                                       >
                                         <Copy className="h-4 w-4" />
                                         Copiar PIX

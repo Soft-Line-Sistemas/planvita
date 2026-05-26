@@ -14,7 +14,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 
 export default function GestaoParceriasPage() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, loading } = useAuth();
   const canView = hasPermission("parcerias.view");
   const canWrite =
     hasPermission("parcerias.create") || hasPermission("parcerias.update");
@@ -49,6 +49,14 @@ export default function GestaoParceriasPage() {
     const items = parceiros as Array<{ id: number; nome: string }>;
     return Object.fromEntries(items.map((p) => [p.id, p.nome]));
   }, [parceiros]);
+
+  if (loading) {
+    return (
+      <div className="p-8 text-sm text-gray-700 animate-pulse">
+        Carregando...
+      </div>
+    );
+  }
 
   if (!canView) {
     return (

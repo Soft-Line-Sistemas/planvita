@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { motion } from "framer-motion";
-import { Shield, PlusCircle } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 type Role = {
@@ -39,7 +39,7 @@ type Permission = {
 };
 
 export default function RolesPermissionsPage() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, loading: authLoading } = useAuth();
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [newRoleName, setNewRoleName] = useState("");
@@ -47,6 +47,7 @@ export default function RolesPermissionsPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!hasPermission("role.view")) {
       setLoading(false);
       return;
@@ -67,7 +68,7 @@ export default function RolesPermissionsPage() {
       }
     };
     fetchData();
-  }, [hasPermission]);
+  }, [authLoading, hasPermission]);
 
   const canCreateRole = useMemo(
     () => hasPermission("role.create"),
@@ -180,7 +181,7 @@ export default function RolesPermissionsPage() {
     return "indeterminate";
   };
 
-  if (loading)
+  if (authLoading || loading)
     return (
       <div className="flex justify-center items-center h-64 text-muted-foreground animate-pulse">
         Carregando dados...
@@ -211,12 +212,9 @@ export default function RolesPermissionsPage() {
     >
       {/* Cabeçalho */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Shield className="w-6 h-6 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">
-            Gerenciar Permissões
-          </h1>
-        </div>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Gerenciar Permissões
+        </h1>
       </div>
 
       <Separator />

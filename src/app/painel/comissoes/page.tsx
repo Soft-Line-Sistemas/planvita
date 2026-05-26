@@ -37,7 +37,7 @@ const moeda = new Intl.NumberFormat("pt-BR", {
 });
 
 export default function MinhasComissoesPage() {
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, loading: authLoading } = useAuth();
   const canView = hasPermission("titular.view");
 
   const { data, isLoading, isError } = useQuery<ComissoesResponse>({
@@ -48,6 +48,10 @@ export default function MinhasComissoesPage() {
     },
     enabled: canView,
   });
+
+  if (authLoading) {
+    return <div className="p-6 animate-pulse">Carregando...</div>;
+  }
 
   if (!canView) {
     return (
