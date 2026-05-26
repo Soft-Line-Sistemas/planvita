@@ -2,20 +2,21 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
-  Home,
+  LayoutDashboard,
   UserPlus,
   Users,
   FileText,
   Menu,
   X,
-  Shield,
-  ClipboardCheck,
+  ShieldCheck,
   Layers,
-  UserCog,
+  SquareUserRound,
   CreditCard,
   HandCoins,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -25,6 +26,7 @@ interface MenuItem {
   id: string;
   label: string;
   icon: React.ElementType;
+  iconSrc?: string;
   href: string;
   requiredPermission?: string;
 }
@@ -50,7 +52,7 @@ export function Sidebar({ isDesktopCollapsed }: SidebarProps) {
     {
       id: "dashboard",
       label: "Dashboard",
-      icon: Home,
+      icon: LayoutDashboard,
       href: "/painel/dashboard",
       requiredPermission: "dashboard.view",
     },
@@ -82,7 +84,7 @@ export function Sidebar({ isDesktopCollapsed }: SidebarProps) {
     {
       id: "colaboradores",
       label: "Colaboradores",
-      icon: UserCog,
+      icon: SquareUserRound,
       href: "/painel/colaboradores",
       requiredPermission: "user.view",
     },
@@ -117,14 +119,14 @@ export function Sidebar({ isDesktopCollapsed }: SidebarProps) {
     {
       id: "permissions",
       label: "Permissões",
-      icon: Shield,
+      icon: ShieldCheck,
       href: "/painel/permissoes",
       requiredPermission: "role.view",
     },
     {
       id: "configuracoes",
-      label: "Regras",
-      icon: ClipboardCheck,
+      label: "Configurações",
+      icon: Settings,
       href: "/painel/configuracoes",
       requiredPermission: "layout.view",
     },
@@ -168,7 +170,7 @@ export function Sidebar({ isDesktopCollapsed }: SidebarProps) {
                   hasPermission(item.requiredPermission) ||
                   loading,
               )
-              .map(({ id, label, icon: Icon, href }) => {
+              .map(({ id, label, icon: Icon, iconSrc, href }) => {
                 let isActive = false;
 
                 const exactPaths = ["/painel/cliente/cadastro"];
@@ -203,9 +205,20 @@ export function Sidebar({ isDesktopCollapsed }: SidebarProps) {
           }
         `}
                     >
-                      <Icon
-                        className={`h-5 w-5 ${isDesktopCollapsed ? "" : "mr-3"}`}
-                      />
+                      {iconSrc ? (
+                        <Image
+                          src={iconSrc}
+                          alt=""
+                          width={20}
+                          height={20}
+                          aria-hidden="true"
+                          className={`h-5 w-5 ${isActive ? "" : "grayscale brightness-0 opacity-80"} ${isDesktopCollapsed ? "" : "mr-3"}`}
+                        />
+                      ) : (
+                        <Icon
+                          className={`h-5 w-5 ${isDesktopCollapsed ? "" : "mr-3"}`}
+                        />
+                      )}
                       {!isDesktopCollapsed && label}
                     </Link>
                   </div>

@@ -5,7 +5,15 @@ import { CadastroClienteWizard } from "@/components/CadastroClienteWizard";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function PainelCadastroClientePage() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="text-sm text-gray-600 animate-pulse">Carregando...</div>
+      </div>
+    );
+  }
 
   if (!hasPermission("titular.create")) {
     return (

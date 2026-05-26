@@ -5,14 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  ChartNoAxesColumn,
-  CircleDollarSign,
-  Pencil,
-  Search,
-  UserPlus,
-  Users,
-} from "lucide-react";
+import { Pencil, Search, UserPlus, Users } from "lucide-react";
 import { Cliente as ClienteType } from "@/types/ClientType";
 import { Pagamento } from "@/types/PaymentType";
 import { useClientes } from "@/hooks/queries/useClientes";
@@ -33,12 +26,29 @@ type DashboardCliente = {
 
 const statusPlanoToDashboard = (
   status?: string | null,
+  pagamentos: Pagamento[] = [],
 ): DashboardCliente["status"] => {
   const normalized = (status ?? "").toUpperCase();
   if (normalized.includes("PEND")) return "Pendente";
   if (normalized.includes("INAT") || normalized.includes("CANCEL"))
     return "Cancelado";
-  return "Pago";
+
+  if (pagamentos.length > 0) {
+    const ultimoPagamento = [...pagamentos].sort((a, b) => {
+      const dataA = new Date(
+        a.dataVencimento || a.dataPagamento || 0,
+      ).getTime();
+      const dataB = new Date(
+        b.dataVencimento || b.dataPagamento || 0,
+      ).getTime();
+      return dataB - dataA;
+    })[0];
+
+    if (["PAGO", "RECEBIDO"].includes(ultimoPagamento.status)) return "Pago";
+    return "Pendente";
+  }
+
+  return "Pendente";
 };
 
 const mapClienteToDashboard = (
@@ -51,7 +61,7 @@ const mapClienteToDashboard = (
   email: cliente.email,
   telefone: cliente.telefone,
   plano: cliente.plano?.nome ?? "Plano não informado",
-  status: statusPlanoToDashboard(cliente.statusPlano),
+  status: statusPlanoToDashboard(cliente.statusPlano, cliente.pagamentos),
   dataContrato: cliente.dataContratacao ?? "",
   valor: Number(cliente.plano?.valorMensal ?? 0),
 });
@@ -239,7 +249,7 @@ export default function Dashboard() {
           <CardHeader className="pb-1">
             <CardTitle className="flex items-center justify-between text-[22px] font-semibold text-[#202020]">
               Novos este mês
-              <Users className="h-[18px] w-[18px] text-[#1EBA4B]" />
+              <UserPlus className="h-[18px] w-[18px] text-[#1EBA4B]" />
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
@@ -256,7 +266,20 @@ export default function Dashboard() {
           <CardHeader className="pb-1">
             <CardTitle className="flex items-center justify-between text-[22px] font-semibold text-[#202020]">
               Receita Mensal
-              <CircleDollarSign className="h-[18px] w-[18px] text-[#1EBA4B]" />
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 22 22"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+                className="h-[18px] w-[18px]"
+              >
+                <path
+                  d="M16.5 6.41663H18.9439C17.1628 3.31006 13.7217 1.48957 9.98261 1.8874C5.79348 2.33382 2.38168 5.72638 1.89677 9.91094C1.25511 15.4494 5.58723 20.1665 11.0001 20.1665C16.0546 20.1665 20.1667 16.0544 20.1667 10.9999C20.1667 10.493 20.5764 10.0833 21.0833 10.0833C21.5903 10.0833 22 10.493 22 10.9999C22 17.2094 16.8291 22.2336 10.5665 21.9916C4.90891 21.7725 0.227533 17.0921 0.0084515 11.4353C-0.234463 5.1718 4.79066 0 11.0001 0C14.7621 0 18.1546 1.86449 20.1621 4.89955L20.1667 2.74998C20.1667 2.24307 20.5764 1.83332 21.0833 1.83332C21.5903 1.83332 22 2.24307 22 2.74998V6.40838C22 7.42495 21.1759 8.24995 20.1584 8.24995H16.5C15.9931 8.24995 15.5834 7.8402 15.5834 7.33329C15.5834 6.82637 15.9931 6.41663 16.5 6.41663ZM11.0001 17.4166C11.5061 17.4166 11.9168 17.0068 11.9168 16.4999V15.5832C13.4329 15.5832 14.6667 14.3494 14.6667 12.8333C14.6667 11.5875 13.7739 10.5324 12.5447 10.328L9.75711 9.86419C9.4152 9.80735 9.16678 9.51402 9.16678 9.16661C9.16678 8.66061 9.57836 8.24995 10.0834 8.24995H12.1624C12.4888 8.24995 12.7931 8.42503 12.9572 8.7092C13.2083 9.14736 13.7693 9.29769 14.2093 9.04286C14.6475 8.78986 14.7978 8.22886 14.543 7.7907C14.0535 6.94279 13.1405 6.41663 12.1615 6.41663H11.9158V5.49997C11.9158 4.99305 11.5052 4.5833 10.9992 4.5833C10.4932 4.5833 10.0825 4.99305 10.0825 5.49997V6.41663C8.56637 6.41663 7.33255 7.65045 7.33255 9.16661C7.33255 10.4124 8.22538 11.4674 9.45462 11.6718L12.2413 12.1357C12.5841 12.1925 12.8325 12.4858 12.8325 12.8333C12.8325 13.3392 12.4218 13.7499 11.9158 13.7499H9.83686C9.51053 13.7499 9.2062 13.5748 9.04212 13.2907C8.78821 12.8516 8.22721 12.7013 7.78996 12.957C7.35088 13.21 7.20147 13.771 7.45538 14.2092C7.9458 15.0571 8.85879 15.5832 9.83686 15.5832H10.0825V16.4999C10.0825 17.0068 10.4932 17.4166 10.9992 17.4166H11.0001Z"
+                  fill="#1EBA4B"
+                />
+              </svg>
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
@@ -273,7 +296,20 @@ export default function Dashboard() {
           <CardHeader className="pb-1">
             <CardTitle className="flex items-center justify-between text-[22px] font-semibold text-[#202020]">
               Taxa de conversão
-              <ChartNoAxesColumn className="h-[18px] w-[18px] text-[#1EBA4B]" />
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 22 22"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+                className="h-[18px] w-[18px]"
+              >
+                <path
+                  d="M2.75 20.1667H22V22H2.75C1.23383 22 0 20.7662 0 19.25V0H1.83333V19.25C1.83333 19.7551 2.24492 20.1667 2.75 20.1667ZM15.5833 4.58333V6.41667H18.8705L13.75 11.5372L10.0833 7.8705L3.93525 14.0186L5.23142 15.3148L10.0833 10.4628L13.75 14.1295L20.1667 7.71283V11H22V4.58333H15.5833Z"
+                  fill="#1EBA4B"
+                />
+              </svg>
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">

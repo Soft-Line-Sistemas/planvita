@@ -25,7 +25,7 @@ import type { Cliente } from "@/types/ClientType";
 
 export default function ClientesPage() {
   const router = useRouter();
-  const { hasPermission, user } = useAuth();
+  const { hasPermission, user, loading: authLoading } = useAuth();
   const canViewClientes = hasPermission("titular.view");
   const canCreateClient = hasPermission("titular.create");
 
@@ -100,6 +100,16 @@ export default function ClientesPage() {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(viewModeStorageKey, viewMode);
   }, [viewMode, viewModeStorageKey]);
+
+  if (authLoading) {
+    return (
+      <div className="p-8">
+        <Card>
+          <CardContent className="p-6 animate-pulse">Carregando...</CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!canViewClientes) {
     return (

@@ -216,7 +216,7 @@ const GestaoPlanos = () => {
   const [planoEmExclusao, setPlanoEmExclusao] = useState<string | null>(null);
   const [feedbackMensagem, setFeedbackMensagem] = useState<string | null>(null);
   const router = useRouter();
-  const { hasPermission } = useAuth();
+  const { hasPermission, loading } = useAuth();
   const canView = hasPermission("plano.view");
   const canCreate = hasPermission("plano.create");
   const canUpdate = hasPermission("plano.update");
@@ -319,6 +319,17 @@ const GestaoPlanos = () => {
     () => planos.filter((p) => p.ativo).length,
     [planos],
   );
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="flex items-center gap-2 text-sm text-gray-700">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Carregando...
+        </div>
+      </div>
+    );
+  }
 
   if (!canView) {
     return (

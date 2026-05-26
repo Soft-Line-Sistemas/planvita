@@ -24,7 +24,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { motion } from "framer-motion";
-import { UserCog, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LinksRedesSociais from "@/components/LinksRedesSocias";
 import { Label } from "@/components/ui/label";
@@ -56,7 +56,7 @@ type User = {
 };
 
 export default function AcessoPage() {
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, loading: authLoading } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +81,7 @@ export default function AcessoPage() {
   );
 
   useEffect(() => {
+    if (authLoading) return;
     if (!hasPermission("user.view")) {
       setLoading(false);
       return;
@@ -110,7 +111,7 @@ export default function AcessoPage() {
       }
     };
     load();
-  }, [hasPermission]);
+  }, [authLoading, hasPermission]);
 
   const handleChangeRole = async (userId: number, newRoleId: number) => {
     const roleSelecionada = roles.find((role) => role.id === newRoleId);
@@ -326,7 +327,7 @@ export default function AcessoPage() {
   const roleSelecionadaEhConsultor =
     roleSelecionada?.name?.toLowerCase().trim() === "consultor";
 
-  if (!loading && !hasPermission("user.view")) {
+  if (!authLoading && !loading && !hasPermission("user.view")) {
     return (
       <div className="p-8">
         <Card>
@@ -339,7 +340,7 @@ export default function AcessoPage() {
     );
   }
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex justify-center items-center h-64 text-gray-500 animate-pulse">
         Carregando dados...
@@ -356,12 +357,9 @@ export default function AcessoPage() {
     >
       {/* Cabeçalho */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <UserCog className="w-6 h-6 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">
-            Gerenciar Colaboradores
-          </h1>
-        </div>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Gerenciar Colaboradores
+        </h1>
         <div className="relative w-full sm:w-72">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
           <Input
