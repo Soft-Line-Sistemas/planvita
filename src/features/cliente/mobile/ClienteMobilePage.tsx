@@ -8,7 +8,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 
 import type { ClientePlano } from "@/types/ClientePlano";
-import { mapTitularToCarteirinha } from "@/services/clienteCarteirinha.service";
+import {
+  consultarClientePorCpf,
+  mapTitularToCarteirinha,
+} from "@/services/clienteCarteirinha.service";
 import { listarContasDoCliente } from "@/services/financeiro/contasCliente.service";
 import { listarVantagensCliente } from "@/services/parcerias.service";
 import { API_VERSION, getApiUrl } from "@/config/api-config";
@@ -69,6 +72,16 @@ const SCREENS_WITH_TABBAR: ScreenId[] = [
 
 const DEFAULT_DIAS_SUSPENSAO = 90;
 const DEFAULT_DIAS_POS_SUSPENSAO = 92;
+const TENANTS_CLIENTE = [
+  { slug: "lider", label: "Líder" },
+  { slug: "pax", label: "Pax" },
+  { slug: "bosque", label: "Bosque" },
+] as const;
+
+type TenantCadastro = {
+  tenant: (typeof TENANTS_CLIENTE)[number];
+  cliente: ClientePlano;
+};
 
 /* ===================================================================
    Helpers
@@ -164,6 +177,7 @@ export default function ClienteMobilePage() {
     subdomainFromHost,
   );
   const tenantAtivo = tenantSelecionado || getTenantFromHost();
+  const isMainDomainClienteRoute = !subdomainFromHost;
 
   /* --- Auth state --- */
   const [authChecked, setAuthChecked] = useState(false);
@@ -177,6 +191,10 @@ export default function ClienteMobilePage() {
   const [senhaValue, setSenhaValue] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [cadastrosEncontrados, setCadastrosEncontrados] = useState<
+    TenantCadastro[]
+  >([]);
+  const [modalCadastroAberto, setModalCadastroAberto] = useState(false);
 
   /* --- First access --- */
   const [faStep, setFaStep] = useState<FirstAccessStep>("request");
@@ -242,6 +260,13 @@ export default function ClienteMobilePage() {
     setAbrirFotoModalAoEntrarAjustes(true);
     setActiveTab("ajustes");
     setScreen("ajustes");
+  }, []);
+
+  const selecionarTenant = useCallback((tenant: string) => {
+    setTenantSelecionado(tenant);
+    if (typeof document !== "undefined") {
+      document.cookie = `tenant=${tenant}; path=/; max-age=31536000; SameSite=Lax`;
+    }
   }, []);
 
   /* ===== Browser history sync for Android back button ===== */
@@ -390,6 +415,27 @@ export default function ClienteMobilePage() {
     setScreen("home");
   }, []);
 
+  const tentarDescobrirCadastrosPorCpf = useCallback(
+    async (cpf: string): Promise<TenantCadastro[]> => {
+      const consultas = await Promise.allSettled(
+        TENANTS_CLIENTE.map(async (tenant) => {
+          const clienteEncontrado = await consultarClientePorCpf(cpf, {
+            tenant: tenant.slug,
+          });
+          return { tenant, cliente: clienteEncontrado };
+        }),
+      );
+
+      return consultas
+        .filter(
+          (resultado): resultado is PromiseFulfilledResult<TenantCadastro> =>
+            resultado.status === "fulfilled",
+        )
+        .map((resultado) => resultado.value);
+    },
+    [],
+  );
+
   /* ===================================================================
      Login handler
      ================================================================ */
@@ -409,8 +455,28 @@ export default function ClienteMobilePage() {
 
     setAuthLoading(true);
     try {
+      const loginNormalizado = loginValue.trim();
+      const cpfDigits = normalizeCpf(loginNormalizado);
+
+      if (
+        isMainDomainClienteRoute &&
+        !isEmail(loginNormalizado) &&
+        validateCPF(cpfDigits)
+      ) {
+        const encontrados = await tentarDescobrirCadastrosPorCpf(cpfDigits);
+        if (encontrados.length > 1) {
+          setCadastrosEncontrados(encontrados);
+          setModalCadastroAberto(true);
+          return;
+        }
+
+        if (encontrados.length === 1) {
+          selecionarTenant(encontrados[0].tenant.slug);
+        }
+      }
+
       await api.post("/auth/login", {
-        login: loginValue.trim(),
+        login: loginNormalizado,
         password: senhaValue,
         audience: "cliente",
       });
@@ -428,14 +494,48 @@ export default function ClienteMobilePage() {
         setAuthView("first-access");
         return;
       }
-      setAuthError(
-        extractServerMessage(err) ||
-          "Não foi possível entrar. Verifique seu login e senha.",
-      );
+      setAuthError("Não foi possível entrar. Verifique seu login e senha.");
     } finally {
       setAuthLoading(false);
     }
   };
+
+  const handleSelecionarCadastro = useCallback(
+    async (cadastro: TenantCadastro) => {
+      if (authLoading) return;
+      selecionarTenant(cadastro.tenant.slug);
+      setModalCadastroAberto(false);
+      setCadastrosEncontrados([]);
+
+      setAuthLoading(true);
+      setAuthError(null);
+      try {
+        await api.post("/auth/login", {
+          login: loginValue.trim(),
+          password: senhaValue,
+          audience: "cliente",
+        });
+        await carregarCliente();
+      } catch (err) {
+        const status = (err as { response?: { status?: number } })?.response
+          ?.status;
+        const code = extractServerCode(err);
+        if (status === 428 && code === "FIRST_ACCESS_REQUIRED") {
+          setFaLogin(loginValue.trim());
+          setFaStep("request");
+          setFaInfo(
+            "Seu cadastro ainda não possui senha. Valide seu acesso e crie uma senha.",
+          );
+          setAuthView("first-access");
+          return;
+        }
+        setAuthError("Não foi possível entrar. Verifique seu login e senha.");
+      } finally {
+        setAuthLoading(false);
+      }
+    },
+    [authLoading, carregarCliente, loginValue, selecionarTenant, senhaValue],
+  );
 
   /* ===================================================================
      First access handlers
@@ -799,80 +899,117 @@ export default function ClienteMobilePage() {
      ================================================================ */
   if (!cliente) {
     return (
-      <MobileLoginScreen
-        authView={authView}
-        setAuthView={(v) => {
-          setAuthView(v);
-          /* Reset first-access state when switching away */
-          if (v !== "first-access") {
-            setFaStep("request");
-            setFaOtp("");
-            setFaVerificationToken("");
-            setFaPassword("");
-            setFaPasswordConfirm("");
-            setFaDestination(null);
-            setFaChannel(null);
-            setFaInfo(null);
-            setFaError(null);
-          }
-          /* Reset forgot state when switching away */
-          if (v !== "forgot") {
-            setFgStep("request");
-            setFgOtp("");
-            setFgVerificationToken("");
-            setFgPassword("");
-            setFgPasswordConfirm("");
-            setFgDestination(null);
-            setFgInfo(null);
-            setFgError(null);
-          }
-        }}
-        /* login */
-        loginValue={loginValue}
-        setLoginValue={setLoginValue}
-        senhaValue={senhaValue}
-        setSenhaValue={setSenhaValue}
-        authLoading={authLoading}
-        authError={authError}
-        onLoginSubmit={handleLoginSubmit}
-        /* first access */
-        faStep={faStep}
-        faLogin={faLogin}
-        setFaLogin={setFaLogin}
-        faOtp={faOtp}
-        setFaOtp={setFaOtp}
-        faPassword={faPassword}
-        setFaPassword={setFaPassword}
-        faPasswordConfirm={faPasswordConfirm}
-        setFaPasswordConfirm={setFaPasswordConfirm}
-        faLoading={faLoading}
-        faError={faError}
-        faInfo={faInfo}
-        faDestination={faDestination}
-        faChannel={faChannel}
-        onStartFirstAccess={onStartFirstAccess}
-        onVerifyFirstAccess={onVerifyFirstAccess}
-        onCompleteFirstAccess={onCompleteFirstAccess}
-        /* forgot */
-        fgStep={fgStep}
-        fgLogin={fgLogin}
-        setFgLogin={setFgLogin}
-        fgOtp={fgOtp}
-        setFgOtp={setFgOtp}
-        fgPassword={fgPassword}
-        setFgPassword={setFgPassword}
-        fgPasswordConfirm={fgPasswordConfirm}
-        setFgPasswordConfirm={setFgPasswordConfirm}
-        fgLoading={fgLoading}
-        fgError={fgError}
-        fgInfo={fgInfo}
-        fgDestination={fgDestination}
-        onStartForgot={onStartForgot}
-        onVerifyForgot={onVerifyForgot}
-        onCompleteForgot={onCompleteForgot}
-        /* cadastro redirect */
-        cadastroMessage={cadastroMessage}
-      />
+      <>
+        <MobileLoginScreen
+          authView={authView}
+          setAuthView={(v) => {
+            setAuthView(v);
+            /* Reset first-access state when switching away */
+            if (v !== "first-access") {
+              setFaStep("request");
+              setFaOtp("");
+              setFaVerificationToken("");
+              setFaPassword("");
+              setFaPasswordConfirm("");
+              setFaDestination(null);
+              setFaChannel(null);
+              setFaInfo(null);
+              setFaError(null);
+            }
+            /* Reset forgot state when switching away */
+            if (v !== "forgot") {
+              setFgStep("request");
+              setFgOtp("");
+              setFgVerificationToken("");
+              setFgPassword("");
+              setFgPasswordConfirm("");
+              setFgDestination(null);
+              setFgInfo(null);
+              setFgError(null);
+            }
+          }}
+          /* login */
+          loginValue={loginValue}
+          setLoginValue={setLoginValue}
+          senhaValue={senhaValue}
+          setSenhaValue={setSenhaValue}
+          authLoading={authLoading}
+          authError={authError}
+          onLoginSubmit={handleLoginSubmit}
+          /* first access */
+          faStep={faStep}
+          faLogin={faLogin}
+          setFaLogin={setFaLogin}
+          faOtp={faOtp}
+          setFaOtp={setFaOtp}
+          faPassword={faPassword}
+          setFaPassword={setFaPassword}
+          faPasswordConfirm={faPasswordConfirm}
+          setFaPasswordConfirm={setFaPasswordConfirm}
+          faLoading={faLoading}
+          faError={faError}
+          faInfo={faInfo}
+          faDestination={faDestination}
+          faChannel={faChannel}
+          onStartFirstAccess={onStartFirstAccess}
+          onVerifyFirstAccess={onVerifyFirstAccess}
+          onCompleteFirstAccess={onCompleteFirstAccess}
+          /* forgot */
+          fgStep={fgStep}
+          fgLogin={fgLogin}
+          setFgLogin={setFgLogin}
+          fgOtp={fgOtp}
+          setFgOtp={setFgOtp}
+          fgPassword={fgPassword}
+          setFgPassword={setFgPassword}
+          fgPasswordConfirm={fgPasswordConfirm}
+          setFgPasswordConfirm={setFgPasswordConfirm}
+          fgLoading={fgLoading}
+          fgError={fgError}
+          fgInfo={fgInfo}
+          fgDestination={fgDestination}
+          onStartForgot={onStartForgot}
+          onVerifyForgot={onVerifyForgot}
+          onCompleteForgot={onCompleteForgot}
+          /* cadastro redirect */
+          cadastroMessage={cadastroMessage}
+        />
+
+        {modalCadastroAberto && (
+          <div className="cm-tenant-modal-overlay" role="dialog" aria-modal>
+            <div className="cm-tenant-modal-card">
+              <h2 className="cm-tenant-modal-title">
+                Escolha a unidade para acessar
+              </h2>
+              <p className="cm-tenant-modal-subtitle">
+                Este CPF foi encontrado em mais de uma unidade.
+              </p>
+              <div className="cm-tenant-modal-list">
+                {cadastrosEncontrados.map((cadastro) => (
+                  <button
+                    key={cadastro.tenant.slug}
+                    type="button"
+                    className="cm-tenant-modal-item"
+                    disabled={authLoading}
+                    onClick={() => handleSelecionarCadastro(cadastro)}
+                  >
+                    <span>{cadastro.tenant.label}</span>
+                    <small>{cadastro.cliente.nome}</small>
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="cm-tenant-modal-cancel"
+                onClick={() => setModalCadastroAberto(false)}
+                disabled={authLoading}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 

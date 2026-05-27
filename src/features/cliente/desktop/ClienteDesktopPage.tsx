@@ -1817,7 +1817,7 @@ export default function ConsultaClientePage() {
               <Button
                 variant="ghost"
                 onClick={handleReset}
-                className="text-slate-500 hover:text-slate-900"
+                className="text-[#3a9b28] hover:text-[#115b26] hover:bg-[#f2faf0]"
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Sair / Nova Consulta
@@ -1843,8 +1843,8 @@ export default function ConsultaClientePage() {
                     }
                     className={`px-4 py-2 rounded-full text-sm font-medium border transition ${
                       abaAtiva === (aba as { id: string }).id
-                        ? "bg-emerald-600 text-white border-emerald-600 shadow-md"
-                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                        ? "bg-[#115b26] text-white border-[#115b26] shadow-md"
+                        : "bg-[#fbfff6] text-[#3a9b28] border-[#3a9b28] hover:bg-[#f2faf0]"
                     }`}
                   >
                     {(aba as { label: string }).label}
@@ -2537,8 +2537,10 @@ function AssinaturaCard({
               <Image
                 src={previewUrl}
                 alt="Assinatura"
+                width={320}
+                height={80}
                 unoptimized
-                className="max-h-full max-w-full object-contain"
+                className="h-full w-full object-contain"
               />
             ) : (
               <span className="text-xs text-gray-400">

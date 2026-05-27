@@ -191,11 +191,61 @@
 
 /* Botões aprimorados */
 .btn-primary {
-  @apply bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2;
+  background: #115b26;
+  color: #ffffff;
+  border: 1px solid #115b26;
+  border-radius: 55px;
+  font-weight: 700;
+  transition: filter 0.15s, transform 0.1s;
+}
+
+.btn-primary:hover {
+  background: #0e4d20;
+  border-color: #0e4d20;
+}
+
+.btn-primary:active {
+  filter: brightness(0.92);
+  transform: scale(0.99);
+}
+
+.btn-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(30, 186, 75, 0.2);
 }
 
 .btn-secondary {
-  @apply bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
+  background: #fbfff6;
+  color: #3a9b28;
+  border: 1px solid #3a9b28;
+  border-radius: 55px;
+  font-weight: 700;
+  transition: background 0.15s;
+}
+
+.btn-secondary:hover {
+  background: #f2faf0;
+}
+
+.btn-secondary:active {
+  background: #e8f5e3;
+}
+
+.btn-accent {
+  background: #fbfff6;
+  color: #3a9b28;
+  border: 1px solid #3a9b28;
+  border-radius: 55px;
+  font-weight: 700;
+  transition: background 0.15s;
+}
+
+.btn-accent:hover {
+  background: #f2faf0;
+}
+
+.btn-accent:active {
+  background: #e8f5e3;
 }
 
 .btn-danger {
