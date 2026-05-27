@@ -27,20 +27,17 @@ const COLORS = {
   white: "#FFFFFF",
   emerald50: "#ECFDF5",
   emerald100: "#D1FAE5",
-  emerald200: "#A7F3D0",
-  emerald400: "#34D399",
-  emerald500: "#10B981",
-  emerald600: "#059669",
+  emerald400: "#66C827",
+  emerald500: "#56AF1F",
+  emerald600: "#439310",
   slate900: "#0F172A",
   slate700: "#334155",
   slate500: "#64748B",
   slate400: "#94A3B8",
-  emeraldBorder70: "rgba(16,185,129,0.70)",
+  emeraldBorder70: "rgba(67,147,16,0.30)",
   emerald50_60: "rgba(236,253,245,0.60)",
   emerald50_80: "rgba(236,253,245,0.80)",
-  emerald500_20: "rgba(16,185,129,0.20)",
-  yellow400_20: "rgba(250, 204, 21, 0.20)",
-  slate500_40: "rgba(100, 116, 139, 0.40)",
+  emerald500_20: "rgba(171,240,12,0.90)",
 };
 
 function esc(s: unknown) {
@@ -48,6 +45,21 @@ function esc(s: unknown) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function formatCpfMasked(cpf: string) {
+  const d = cpf.replace(/\D/g, "");
+  if (d.length === 11) {
+    return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+  }
+  return cpf;
+}
+
+function getLeftLogoByTenant(tenantSlug?: string | null): string | null {
+  const tenant = (tenantSlug ?? "").trim().toLowerCase();
+  if (tenant === "lider") return "/cliente-mobile/lider.avif";
+  if (tenant === "bosque") return null;
+  return "/cliente-mobile/image 6.png";
 }
 
 function svgDataUrl(svg: string) {
@@ -69,85 +81,60 @@ export default function CarteirinhaAsImage({
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [cardWidthPx, setCardWidthPx] = useState<number | null>(null);
   const cardWrapRef = useRef<HTMLDivElement | null>(null);
-  const tenantLabel = "Campo do Bosque";
+  const tenantSlug = (cliente.tenantSlug ?? "").trim().toLowerCase();
+  const leftLogoSrc = getLeftLogoByTenant(tenantSlug);
+  const isLiderTenant = tenantSlug === "lider";
+
   const frontSvg = useMemo(() => {
-    const nome = esc(cliente.nome.toUpperCase());
-    const cpf = esc(cliente.cpf);
-    const codigo = esc(cliente.plano.codigo);
+    const nome = esc(cliente.nome);
+    const cpf = esc(formatCpfMasked(cliente.cpf));
     const planoNome = esc(cliente.plano.nome);
-    const vigIni = esc(formatDate(cliente.plano.vigencia.inicio));
-    const vigFim = esc(formatDate(cliente.plano.vigencia.fim));
-    const valorBase = Number(cliente.plano.valorMensal ?? 0);
-    const valorAdicionalDependentes = (cliente.dependentes ?? []).reduce(
-      (acc, dep) => acc + Number(dep.valorAdicionalMensal ?? 0),
-      0,
+    const vigFim = esc(
+      cliente.plano.vigencia?.fim
+        ? formatDate(cliente.plano.vigencia.fim)
+        : "—",
     );
-    const valorAdicional = Number(
-      cliente.plano.valorAdicionalMensal ?? valorAdicionalDependentes,
+    const numero = esc(
+      cliente.numeroCarteirinha || cliente.plano.codigo || "—",
     );
-    const valorTotal = Number(
-      cliente.plano.valorTotalMensal ?? valorBase + valorAdicional,
-    );
-    const valorTotalFmt = esc(formatCurrency(valorTotal));
-    const status = esc(cliente.plano.status);
-    const numero = esc(cliente.numeroCarteirinha);
 
     const html = `
       <div style="width:${WIDTH}px;height:${HEIGHT}px;position:relative;
-        font: normal 400 14px system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica Neue,Arial;
+        font: normal 400 14px Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica Neue,Arial;
         color:${COLORS.white};
       ">
         <div style="
-          position:absolute;inset:0;border-radius:17px;padding:28px;box-sizing:border-box;
-          background: linear-gradient(135deg, ${COLORS.emerald400} 0%, ${COLORS.emerald500} 50%, ${COLORS.emerald600} 100%);
+          position:absolute;inset:0;border-radius:26px;padding:34px 30px 58px 30px;box-sizing:border-box;
+          background: linear-gradient(232.74deg, ${COLORS.emerald400} 31.11%, ${COLORS.emerald500} 46%, ${COLORS.emerald600} 60%);
           box-shadow: 0 25px 50px rgba(0,0,0,.25);
-          display:flex;flex-direction:column;gap:0;
+          display:flex;flex-direction:column;justify-content:space-between;gap:0;
         ">
-          <div style="display:flex;justify-content:space-between;align-items:center;
-              text-transform:uppercase;letter-spacing:.3em;font-weight:600;font-size:14px;">
-            <span>${tenantLabel}</span><span>${codigo}</span>
-          </div>
+          <div style="
+            position:absolute;left:-170px;bottom:-140px;width:480px;height:480px;border-radius:9999px;
+            background:radial-gradient(circle at center, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 68%);
+            pointer-events:none;
+          "></div>
 
-          <div style="margin-top:40px;display:flex;flex-direction:column;gap:16px;">
-            <div>
-              <p style="margin:0;color:${COLORS.emerald200};text-transform:uppercase;font-size:12px">Titular</p>
-              <p style="margin:4px 0 0 0;font-size:18px;font-weight:700;word-break:break-word;">${nome}</p>
-            </div>
-
-            <div>
-              <p style="margin:0;color:${COLORS.emerald200};text-transform:uppercase;font-size:12px">CPF</p>
-              <p style="margin:4px 0 0 0;font-size:14px;letter-spacing:.05em;word-break:break-word;">${cpf}</p>
-            </div>
-
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:14px;">
-              <div>
-                <p style="margin:0;color:${COLORS.emerald200};text-transform:uppercase;font-size:12px">Plano</p>
-                <p style="margin:4px 0 0 0;font-weight:700;word-break:break-word;">${planoNome}</p>
-              </div>
-              <div>
-                <p style="margin:0;color:${COLORS.emerald200};text-transform:uppercase;font-size:12px">Vigência</p>
-                <p style="margin:4px 0 0 0;font-weight:700">${vigIni}</p>
-                <p style="margin:2px 0 0 0;color:${COLORS.emerald100};font-size:12px">até ${vigFim}</p>
-              </div>
-            </div>
-          </div>
-
-          <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:center;font-size:14px;">
-            <div style="display:flex;flex-direction:column">
-              <span style="color:${COLORS.emerald200};text-transform:uppercase;font-size:12px;">Valor mensal</span>
-              <span style="font-weight:700;font-size:18px">${valorTotalFmt}</span>
-            </div>
+          <div style="position:relative;z-index:1;">
             <span style="
-              border-radius:9999px;padding:6px 12px;font-size:12px;font-weight:700;text-transform:capitalize;
-              background:${cliente.plano.status === "ativo" ? COLORS.emerald500_20 : cliente.plano.status === "suspenso" ? COLORS.yellow400_20 : COLORS.slate500_40};
-              color:${COLORS.white};
-              white-space:nowrap;
-            ">${status}</span>
+              display:inline-flex;align-items:center;border:1px solid rgba(17,17,17,0.45);border-radius:999px;
+              padding:6px 14px;color:#111111;font-size:14px;font-weight:600;margin-bottom:18px;
+            ">${numero}</span>
+            <p style="margin:0 0 12px 0;font-size:28px;line-height:1.15;font-weight:700;color:#111111;word-break:break-word;">${nome}</p>
+            <p style="margin:0;color:#111111;font-size:16px;line-height:1.65;">CPF: ${cpf}</p>
+            <div style="width:100%;border-top:.75px solid #71D531;margin:10px 0;"></div>
+            <p style="margin:0;color:#111111;font-size:16px;line-height:1.65;">Vigência ${vigFim}</p>
           </div>
 
-          <p style="margin:24px 0 0 0;color:${COLORS.emerald200};font-size:12px;letter-spacing:.3em;">
-            Carteirinha ${numero}
-          </p>
+          <div style="position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:space-between;gap:10px;">
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <span style="
+                display:inline-flex;align-items:center;background:${COLORS.emerald500_20};border-radius:22px;
+                padding:6px 14px;color:#1E5A14;font-size:16px;font-weight:700;
+              ">Plano: <strong style="margin-left:4px;">${planoNome}</strong></span>
+              <span style="font-size:13px;letter-spacing:.3px;color:#111111;">Agora você faz parte da rede Planvita</span>
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -160,7 +147,7 @@ export default function CarteirinhaAsImage({
       </svg>
     `;
     return svg;
-  }, [cliente, formatCurrency, formatDate, tenantLabel]);
+  }, [cliente, formatDate]);
   const frontSrc = useMemo(() => svgDataUrl(frontSvg), [frontSvg]);
 
   const backSvg = useMemo(() => {
@@ -183,33 +170,49 @@ export default function CarteirinhaAsImage({
       ? `<p style="margin:0;color:${COLORS.slate500};font-size:12px">${esc(cliente.plano.observacoes)}</p>`
       : "";
 
+    const status = esc(cliente.plano.status);
+    const valorBase = Number(cliente.plano.valorMensal ?? 0);
+    const valorAdicionalDependentes = (cliente.dependentes ?? []).reduce(
+      (acc, dep) => acc + Number(dep.valorAdicionalMensal ?? 0),
+      0,
+    );
+    const valorAdicional = Number(
+      cliente.plano.valorAdicionalMensal ?? valorAdicionalDependentes,
+    );
+    const valorTotal = Number(
+      cliente.plano.valorTotalMensal ?? valorBase + valorAdicional,
+    );
+    const valorTotalFmt = esc(formatCurrency(valorTotal));
+
     const html = `
       <div style="width:${WIDTH}px;height:${HEIGHT}px;position:relative;
-        font: normal 400 14px system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica Neue,Arial;
+        font: normal 400 14px Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica Neue,Arial;
         color:${COLORS.slate700};
       ">
         <div style="
-          position:absolute;inset:0;border-radius:17px;padding:28px;box-sizing:border-box;
+          position:absolute;inset:0;border-radius:26px;padding:30px;box-sizing:border-box;
           background: linear-gradient(135deg, ${COLORS.white} 0%, ${COLORS.emerald50} 50%, ${COLORS.white} 100%);
           box-shadow: 0 25px 50px rgba(0,0,0,.25);
-          display:flex;flex-direction:column;gap:0;
+          display:flex;flex-direction:column;gap:0;justify-content:space-between;
         ">
           <div style="display:flex;justify-content:space-between;align-items:center">
-            <h2 style="margin:0;font-size:17px;font-weight:700;color:${COLORS.slate900}">Benefícios do plano</h2>
-            <span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.3em;color:${COLORS.slate400}">${tenantLabel}</span>
+            <h2 style="margin:0;font-size:24px;font-weight:700;color:${COLORS.slate900}">Coberturas e Benefícios</h2>
+            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.18em;color:${COLORS.slate400}">PLANVITA</span>
           </div>
 
-          <ul style="margin:18px 0 0 0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <ul style="margin:16px 0 0 0;padding:0;list-style:none;display:grid;grid-template-columns:1fr;gap:8px;">
             ${coberturaLis}
           </ul>
 
           <div style="
-            margin-top:18px;display:flex;flex-direction:column;gap:10px;border-radius:12px;padding:12px;
+            margin-top:16px;display:flex;flex-direction:column;gap:10px;border-radius:16px;padding:14px;
             border:1px solid ${COLORS.emeraldBorder70};
             background:${COLORS.emerald50_80};color:${COLORS.slate700};
           ">
             <p style="margin:0;line-height:1.25;"><strong>Contato: </strong><span style="word-break:break-word;">${esc(cliente.email)}</span></p>
             <p style="margin:0;line-height:1.25;"><strong>Telefone: </strong><span style="word-break:break-word;">${esc(cliente.telefone)}</span></p>
+            <p style="margin:0;line-height:1.25;"><strong>Valor mensal: </strong>${valorTotalFmt}</p>
+            <p style="margin:0;line-height:1.25;"><strong>Status: </strong><span style="text-transform:capitalize;">${status}</span></p>
             ${obs}
           </div>
         </div>
@@ -224,7 +227,7 @@ export default function CarteirinhaAsImage({
       </svg>
     `;
     return svg;
-  }, [cliente, tenantLabel]);
+  }, [cliente, formatCurrency]);
   const backSrc = useMemo(() => svgDataUrl(backSvg), [backSvg]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -292,6 +295,138 @@ export default function CarteirinhaAsImage({
     [],
   );
 
+  const rasterizeFrontWithOverlays = useCallback(
+    async (baseSvg: string, width: number, height: number) => {
+      const loadImage = (src: string) =>
+        new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new window.Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = src;
+        });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas não suportado");
+
+      const baseImg = await loadImage(svgDataUrl(baseSvg));
+      ctx.drawImage(baseImg, 0, 0, width, height);
+
+      const drawFromRightBottom = (
+        img: HTMLImageElement,
+        drawWidth: number,
+        rightPct: number,
+        bottomPct: number,
+        rotateDeg = 0,
+        opacity = 1,
+      ) => {
+        const drawHeight = drawWidth * (img.naturalHeight / img.naturalWidth);
+        const x = width - width * (rightPct / 100) - drawWidth;
+        const y = height - height * (bottomPct / 100) - drawHeight;
+        ctx.save();
+        ctx.globalAlpha = opacity;
+        if (rotateDeg !== 0) {
+          ctx.translate(x + drawWidth / 2, y + drawHeight / 2);
+          ctx.rotate((rotateDeg * Math.PI) / 180);
+          ctx.drawImage(
+            img,
+            -drawWidth / 2,
+            -drawHeight / 2,
+            drawWidth,
+            drawHeight,
+          );
+        } else {
+          ctx.drawImage(img, x, y, drawWidth, drawHeight);
+        }
+        ctx.restore();
+      };
+
+      const drawFromRightTop = (
+        img: HTMLImageElement,
+        drawWidth: number,
+        rightPct: number,
+        topPct: number,
+        rotateDeg = 0,
+      ) => {
+        const drawHeight = drawWidth * (img.naturalHeight / img.naturalWidth);
+        const x = width - width * (rightPct / 100) - drawWidth;
+        const y = height * (topPct / 100);
+        ctx.save();
+        if (rotateDeg !== 0) {
+          ctx.translate(x + drawWidth / 2, y + drawHeight / 2);
+          ctx.rotate((rotateDeg * Math.PI) / 180);
+          ctx.drawImage(
+            img,
+            -drawWidth / 2,
+            -drawHeight / 2,
+            drawWidth,
+            drawHeight,
+          );
+        } else {
+          ctx.drawImage(img, x, y, drawWidth, drawHeight);
+        }
+        ctx.restore();
+      };
+
+      const ornament = await loadImage("/cliente-mobile/icon-8-1-2x.png");
+      drawFromRightBottom(ornament, width * 0.566, -17.8, -40.1, 0, 0.2);
+
+      const topRight = await loadImage("/cliente-mobile/Camada 3.png");
+      drawFromRightTop(topRight, width * 0.115, 12.2, -11.8, -90);
+
+      if (leftLogoSrc) {
+        const lower = await loadImage(leftLogoSrc);
+        if (isLiderTenant) {
+          drawFromRightBottom(lower, width * 0.245, 9.2, 8.5, 0);
+        } else {
+          drawFromRightBottom(lower, width * 0.048, 9.2, 3.8, -90);
+        }
+      }
+
+      return canvas.toDataURL("image/png");
+    },
+    [isLiderTenant, leftLogoSrc],
+  );
+
+  const rasterizeBackWithBackgroundIcon = useCallback(
+    async (baseSvg: string, width: number, height: number) => {
+      const loadImage = (src: string) =>
+        new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new window.Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = src;
+        });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas não suportado");
+
+      const baseImg = await loadImage(svgDataUrl(baseSvg));
+      ctx.drawImage(baseImg, 0, 0, width, height);
+
+      const ornament = await loadImage("/cliente-mobile/icon-8-1-2x.png");
+      const ornamentW = width * 0.566;
+      const ornamentH =
+        ornamentW * (ornament.naturalHeight / ornament.naturalWidth);
+      const x = width - width * (-17.8 / 100) - ornamentW;
+      const y = height - height * (-40.1 / 100) - ornamentH;
+      ctx.save();
+      ctx.globalAlpha = 0.2;
+      ctx.drawImage(ornament, x, y, ornamentW, ornamentH);
+      ctx.restore();
+
+      return canvas.toDataURL("image/png");
+    },
+    [],
+  );
+
   function stripShadowFromSvg(svg: string) {
     return svg.replace(/box-shadow:[^;"]*;?/g, "");
   }
@@ -320,8 +455,8 @@ export default function CarteirinhaAsImage({
       const targetH = Math.round(HEIGHT * PRINT_SCALE);
 
       const [frontPng, backPng] = await Promise.all([
-        svgToPngDataUrl(svgDataUrl(frontClean), targetW, targetH),
-        svgToPngDataUrl(svgDataUrl(backClean), targetW, targetH),
+        rasterizeFrontWithOverlays(frontClean, targetW, targetH),
+        rasterizeBackWithBackgroundIcon(backClean, targetW, targetH),
       ]);
 
       pdf.addImage(
@@ -351,16 +486,24 @@ export default function CarteirinhaAsImage({
       console.error(err);
       alert("Não foi possível gerar o PDF. Tente novamente.");
     }
-  }, [cliente.numeroCarteirinha, frontSvg, backSvg, svgToPngDataUrl]);
+  }, [
+    cliente.numeroCarteirinha,
+    frontSvg,
+    backSvg,
+    rasterizeFrontWithOverlays,
+    rasterizeBackWithBackgroundIcon,
+    svgToPngDataUrl,
+  ]);
 
   return (
     <div className="flex flex-col items-center gap-6">
       <div
         ref={cardWrapRef}
-        className="relative aspect-[336/212] select-none"
+        className="relative select-none"
         style={{
           width: cardWidthPx ? `${cardWidthPx}px` : "calc(100vw - 16px)",
           maxWidth: "640px",
+          aspectRatio: `${WIDTH} / ${HEIGHT}`,
           perspective: "1200px",
           WebkitPerspective: "1200px",
         }}
@@ -400,6 +543,66 @@ export default function CarteirinhaAsImage({
                 draggable={false}
                 loading="eager"
               />
+              {!isFlipped && (
+                <>
+                  <img
+                    src="/cliente-mobile/icon-8-1-2x.png"
+                    alt=""
+                    aria-hidden
+                    className="absolute pointer-events-none"
+                    style={{
+                      right: "-17.8%",
+                      bottom: "-40.1%",
+                      width: "56.6%",
+                      height: "auto",
+                      opacity: 0.2,
+                      zIndex: 3,
+                    }}
+                  />
+                  <img
+                    src="/cliente-mobile/Camada 3.png"
+                    alt=""
+                    aria-hidden
+                    className="absolute pointer-events-none"
+                    style={{
+                      right: "12.2%",
+                      top: "-50px",
+                      width: "11.5%",
+                      transform: "rotate(-90deg)",
+                      transformOrigin: "center",
+                      height: "auto",
+                      zIndex: 4,
+                    }}
+                  />
+                  {leftLogoSrc ? (
+                    <img
+                      src={leftLogoSrc}
+                      alt=""
+                      aria-hidden
+                      className="absolute pointer-events-none"
+                      style={
+                        isLiderTenant
+                          ? {
+                              width: "24.5%",
+                              right: "9.2%",
+                              bottom: "8.5%",
+                              height: "auto",
+                              zIndex: 4,
+                            }
+                          : {
+                              width: "4.8%",
+                              right: "9.2%",
+                              bottom: "3.8%",
+                              transform: "rotate(-90deg)",
+                              transformOrigin: "center",
+                              height: "auto",
+                              zIndex: 4,
+                            }
+                      }
+                    />
+                  ) : null}
+                </>
+              )}
             </div>
 
             <div
@@ -417,6 +620,22 @@ export default function CarteirinhaAsImage({
                 draggable={false}
                 loading="eager"
               />
+              {isFlipped && (
+                <img
+                  src="/cliente-mobile/icon-8-1-2x.png"
+                  alt=""
+                  aria-hidden
+                  className="absolute pointer-events-none"
+                  style={{
+                    right: "-17.8%",
+                    bottom: "-40.1%",
+                    width: "56.6%",
+                    height: "auto",
+                    opacity: 0.2,
+                    zIndex: 3,
+                  }}
+                />
+              )}
             </div>
           </div>
         </div>
