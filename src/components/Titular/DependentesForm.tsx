@@ -175,9 +175,7 @@ export const DependentesForm = ({
 
                 {/* Telefone */}
                 <div>
-                  <Label className="inline-flex items-center gap-1">
-                    Telefone <span className="text-red-500">*</span>
-                  </Label>
+                  <Label>Telefone</Label>
                   <Input
                     value={dep.telefone}
                     onChange={(e) =>
@@ -197,9 +195,7 @@ export const DependentesForm = ({
 
                 {/* CPF */}
                 <div>
-                  <Label className="inline-flex items-center gap-1">
-                    CPF <span className="text-red-500">*</span>
-                  </Label>
+                  <Label>CPF</Label>
                   <Input
                     value={dep.cpf}
                     onChange={(e) =>

@@ -1,43 +1,81 @@
 // ===== MOCK DATA =====
 const USER = {
-  name: 'Leonardo', fullName: 'Leonardo de Queiroz Silva',
-  cpf: '025.***.***-94', plano: 'Bosque Social', validade: '03/2031',
-  avatar: 'https://i.pravatar.cc/150?img=12'
+  name: "Leonardo",
+  fullName: "Leonardo de Queiroz Silva",
+  cpf: "025.***.***-94",
+  plano: "Bosque Social",
+  validade: "03/2031",
+  avatar: "https://i.pravatar.cc/150?img=12",
 };
 
 const FATURAS = [
-  { id: 1, titulo: 'Plano Mensal - Bosque Social', vencimento: '27 de março de 2026', valor: 'R$ 49,90', status: 'atual' },
-  { id: 2, titulo: 'Plano Mensal - Bosque Social', vencimento: '27 de março de 2026', valor: 'R$ 49,90', status: 'vencido' },
-  { id: 3, titulo: 'Plano Mensal - Bosque Social', vencimento: '27 de março de 2026', valor: 'R$ 49,90', status: 'pago' },
-  { id: 4, titulo: 'Plano Mensal - Bosque Social', vencimento: '27 de fevereiro de 2026', valor: 'R$ 49,90', status: 'pago' },
-  { id: 5, titulo: 'Plano Mensal - Bosque Social', vencimento: '27 de janeiro de 2026', valor: 'R$ 49,90', status: 'pago' },
+  {
+    id: 1,
+    titulo: "Plano Mensal - Bosque Social",
+    vencimento: "27 de março de 2026",
+    valor: "R$ 49,90",
+    status: "atual",
+  },
+  {
+    id: 2,
+    titulo: "Plano Mensal - Bosque Social",
+    vencimento: "27 de março de 2026",
+    valor: "R$ 49,90",
+    status: "vencido",
+  },
+  {
+    id: 3,
+    titulo: "Plano Mensal - Bosque Social",
+    vencimento: "27 de março de 2026",
+    valor: "R$ 49,90",
+    status: "pago",
+  },
+  {
+    id: 4,
+    titulo: "Plano Mensal - Bosque Social",
+    vencimento: "27 de fevereiro de 2026",
+    valor: "R$ 49,90",
+    status: "pago",
+  },
+  {
+    id: 5,
+    titulo: "Plano Mensal - Bosque Social",
+    vencimento: "27 de janeiro de 2026",
+    valor: "R$ 49,90",
+    status: "pago",
+  },
 ];
 
 // ===== ROUTER =====
-let currentScreen = 'splash';
+let currentScreen = "splash";
 let history = [];
 
 function navigate(screenId, addHistory = true) {
-  const prev = document.querySelector('.screen.active');
-  const next = document.getElementById('screen-' + screenId);
+  const prev = document.querySelector(".screen.active");
+  const next = document.getElementById("screen-" + screenId);
   if (!next || currentScreen === screenId) return;
   if (addHistory) history.push(currentScreen);
-  if (prev) { prev.classList.remove('active'); prev.classList.add('prev'); }
-  next.classList.remove('prev');
-  next.classList.add('active');
+  if (prev) {
+    prev.classList.remove("active");
+    prev.classList.add("prev");
+  }
+  next.classList.remove("prev");
+  next.classList.add("active");
   currentScreen = screenId;
-  setTimeout(() => { if (prev) prev.classList.remove('prev'); }, 320);
+  setTimeout(() => {
+    if (prev) prev.classList.remove("prev");
+  }, 320);
 }
 
 function goBack() {
   if (history.length === 0) return;
   const prev = history.pop();
-  const curr = document.querySelector('.screen.active');
-  const target = document.getElementById('screen-' + prev);
+  const curr = document.querySelector(".screen.active");
+  const target = document.getElementById("screen-" + prev);
   if (!target) return;
-  curr.classList.remove('active');
-  target.classList.remove('prev');
-  target.classList.add('active');
+  curr.classList.remove("active");
+  target.classList.remove("prev");
+  target.classList.add("active");
   currentScreen = prev;
 }
 
@@ -74,25 +112,29 @@ const LOGO_COLOR = `<svg width="160" height="55" viewBox="0 0 300 100" fill="non
 // ===== TAB BAR =====
 function renderTabBar(active) {
   const tabs = [
-    { id: 'home', icon: '🏠', label: 'Início' },
-    { id: 'atendimento', icon: '🎧', label: 'Atendimento' },
-    { id: 'faturas', icon: '📄', label: 'Faturas' },
-    { id: 'ajustes', icon: '⚙️', label: 'Ajustes' },
+    { id: "home", icon: "🏠", label: "Início" },
+    { id: "atendimento", icon: "🎧", label: "Atendimento" },
+    { id: "faturas", icon: "📄", label: "Faturas" },
+    { id: "ajustes", icon: "⚙️", label: "Ajustes" },
   ];
   return `<nav class="tab-bar" role="tablist">
-    ${tabs.map(t => `
-      <button class="tab-item ${t.id === active ? 'active' : ''}" role="tab" aria-label="${t.label}"
+    ${tabs
+      .map(
+        (t) => `
+      <button class="tab-item ${t.id === active ? "active" : ""}" role="tab" aria-label="${t.label}"
         onclick="navigate('${t.id}')">
         <span class="tab-icon">${t.icon}</span>
         <span>${t.label}</span>
-      </button>`).join('')}
+      </button>`,
+      )
+      .join("")}
   </nav>`;
 }
 
 // ===== HEADER =====
 function renderHeader(title, backTo) {
   return `<header class="app-header">
-    ${backTo ? `<button class="btn-back" onclick="goBack()" aria-label="Voltar">&#8592;</button>` : ''}
+    ${backTo ? `<button class="btn-back" onclick="goBack()" aria-label="Voltar">&#8592;</button>` : ""}
     <h1>${title}</h1>
   </header>`;
 }
@@ -213,12 +255,12 @@ const SCREENS = {
           <span class="chevron">›</span>
         </button>
       </div>
-      ${renderTabBar('home')}
+      ${renderTabBar("home")}
     </div>`,
 
   carteirinha: () => `
     <div id="screen-carteirinha" class="screen">
-      ${renderHeader('Carteirinha Digital', true)}
+      ${renderHeader("Carteirinha Digital", true)}
       <div class="panel" style="border-radius:20px 20px 0 0; margin-top:-12px; padding:0;">
         <div class="card-wrapper">
           <div class="carteirinha-card">
@@ -246,7 +288,7 @@ const SCREENS = {
 
   faturas: () => `
     <div id="screen-faturas" class="screen">
-      ${renderHeader('Minhas faturas', true)}
+      ${renderHeader("Minhas faturas", true)}
       <div class="panel" style="padding:0;border-radius:20px 20px 0 0;margin-top:-12px;">
         <div class="faturas-filter">
           <div class="filter-label">⚙️ Filtro</div>
@@ -263,15 +305,15 @@ const SCREENS = {
         </div>
         <div class="faturas-count">1 fatura em aberto ▾</div>
         <div class="faturas-list">
-          ${FATURAS.map(f => renderFaturaCard(f)).join('')}
+          ${FATURAS.map((f) => renderFaturaCard(f)).join("")}
         </div>
       </div>
-      ${renderTabBar('faturas')}
+      ${renderTabBar("faturas")}
     </div>`,
 
   atendimento: () => `
     <div id="screen-atendimento" class="screen">
-      ${renderHeader('Atendimento', true)}
+      ${renderHeader("Atendimento", true)}
       <div class="panel" style="border-radius:20px 20px 0 0;margin-top:-12px;padding:0;">
         <div class="accordion">
           <div class="accordion-item open" id="acc-central">
@@ -319,18 +361,18 @@ const SCREENS = {
           </div>
         </div>
       </div>
-      ${renderTabBar('atendimento')}
+      ${renderTabBar("atendimento")}
     </div>`,
 
   ajustes: () => `
     <div id="screen-ajustes" class="screen">
-      ${renderHeader('Ajustes', true)}
+      ${renderHeader("Ajustes", true)}
       <div class="panel" style="border-radius:20px 20px 0 0;margin-top:-12px;padding:0;display:flex;flex-direction:column;">
         <div class="settings-list">
           <div class="settings-item" onclick="alert('Alterar senha em breve')">
             Alterar senha <span class="chev">›</span>
           </div>
-          <div class="settings-item" onclick="alert('Alterar dados em breve')">
+          <div class="settings-item" onclick="window.open('https://wa.me/5571999999999?text=Ol%C3%A1!%20Gostaria%20de%20solicitar%20a%20altera%C3%A7%C3%A3o%20dos%20dados%20do%20meu%20contrato.','_blank')">
             Alterar dados de contato <span class="chev">›</span>
           </div>
           <div class="settings-item" onclick="alert('Alterar foto em breve')">
@@ -341,12 +383,12 @@ const SCREENS = {
           <button class="btn-logout-full" onclick="navigate('login')">&#x2192; Sair do Aplicativo</button>
         </div>
       </div>
-      ${renderTabBar('ajustes')}
+      ${renderTabBar("ajustes")}
     </div>`,
 
   assinaturas: () => `
     <div id="screen-assinaturas" class="screen">
-      ${renderHeader('Assinaturas digitais', true)}
+      ${renderHeader("Assinaturas digitais", true)}
       <div class="panel" style="border-radius:20px 20px 0 0;margin-top:-12px;padding:0;">
         <div class="assinaturas-list">
           <div class="assinatura-card">
@@ -370,16 +412,16 @@ const SCREENS = {
           </div>
         </div>
       </div>
-      ${renderTabBar('home')}
+      ${renderTabBar("home")}
     </div>`,
 
   cadastro: () => `
     <div id="screen-cadastro" class="screen">
-      ${renderHeader('Cadastro', true)}
+      ${renderHeader("Cadastro", true)}
       <div class="panel" style="border-radius:20px 20px 0 0;margin-top:-12px;">
         <p style="text-align:center;font-size:15px;font-weight:600;color:#212121;margin-bottom:8px">Endereço do titular</p>
         <div style="display:flex;gap:4px;margin-bottom:24px">
-          ${[0,1,2,3,4,5].map((i,idx) => `<div style="flex:1;height:4px;border-radius:4px;background:${idx===0?'#3a9b28':'#e0e0e0'}"></div>`).join('')}
+          ${[0, 1, 2, 3, 4, 5].map((i, idx) => `<div style="flex:1;height:4px;border-radius:4px;background:${idx === 0 ? "#3a9b28" : "#e0e0e0"}"></div>`).join("")}
         </div>
         <div style="display:flex;gap:12px;margin-bottom:14px">
           <div style="flex:1">
@@ -396,21 +438,25 @@ const SCREENS = {
             </div>
           </div>
         </div>
-        ${['CIDADE','BAIRRO','RUA','COMPLEMENTO','PONTO DE REFERÊNCIA'].map(f=>`
+        ${["CIDADE", "BAIRRO", "RUA", "COMPLEMENTO", "PONTO DE REFERÊNCIA"]
+          .map(
+            (f) => `
           <div style="margin-bottom:14px">
             <label style="font-size:10px;font-weight:700;color:#616161;letter-spacing:1px">${f}</label>
             <div class="input-wrap" style="border-radius:8px;margin-top:4px;border:1px solid #e0e0e0">
               <input type="text" style="font-size:15px"/>
             </div>
-          </div>`).join('')}
+          </div>`,
+          )
+          .join("")}
         <button class="btn-solid" style="margin-top:8px" onclick="navigate('home')">Próximo</button>
       </div>
-    </div>`
+    </div>`,
 };
 
 // ===== FATURA CARD RENDERER =====
 function renderFaturaCard(f) {
-  const isPago = f.status === 'pago';
+  const isPago = f.status === "pago";
   return `<div class="fatura-card">
     <div class="fatura-body">
       <div class="fatura-border-left">
@@ -421,16 +467,18 @@ function renderFaturaCard(f) {
           <div class="fatura-row">
             <span class="fatura-value">${f.valor}</span>
             <span class="status-badge ${f.status}">
-              ${f.status==='atual'?'ⓘ Atual':f.status==='vencido'?'⚠ Vencido':'✓ Pago'}
+              ${f.status === "atual" ? "ⓘ Atual" : f.status === "vencido" ? "⚠ Vencido" : "✓ Pago"}
             </span>
           </div>
         </div>
       </div>
     </div>
     <div class="fatura-actions">
-      ${isPago
-        ? `<button class="btn-recibo" onclick="alert('Abrindo recibo...')">🧾 Ver recibo</button>`
-        : `<button class="btn-pagar" onclick="alert('Redirecionando para pagamento...')">PAGAR</button>`}
+      ${
+        isPago
+          ? `<button class="btn-recibo" onclick="alert('Abrindo recibo...')">🧾 Ver recibo</button>`
+          : `<button class="btn-pagar" onclick="alert('Redirecionando para pagamento...')">PAGAR</button>`
+      }
     </div>
   </div>`;
 }
@@ -438,9 +486,9 @@ function renderFaturaCard(f) {
 // ===== ACCORDION TOGGLE =====
 function toggleAccordion(id) {
   const el = document.getElementById(id);
-  el.classList.toggle('open');
-  const chev = el.querySelector('.accordion-chevron');
-  chev.textContent = el.classList.contains('open') ? '▲' : '▾';
+  el.classList.toggle("open");
+  const chev = el.querySelector(".accordion-chevron");
+  chev.textContent = el.classList.contains("open") ? "▲" : "▾";
 }
 
 // ===== CAROUSEL LOGIC =====
@@ -450,37 +498,42 @@ const CAROUSEL_TOTAL = 3;
 function carouselNext() {
   if (carouselIndex < CAROUSEL_TOTAL - 1) {
     carouselIndex++;
-    const track = document.getElementById('carousel-track');
+    const track = document.getElementById("carousel-track");
     if (track) track.style.transform = `translateX(-${carouselIndex * 100}%)`;
-    const dots = document.querySelectorAll('.dot');
-    dots.forEach((d, i) => d.classList.toggle('active', i === carouselIndex));
+    const dots = document.querySelectorAll(".dot");
+    dots.forEach((d, i) => d.classList.toggle("active", i === carouselIndex));
     if (carouselIndex === CAROUSEL_TOTAL - 1) {
-      document.getElementById('carousel-btn').textContent = 'Começar';
-      document.getElementById('carousel-btn').onclick = () => navigate('login');
+      document.getElementById("carousel-btn").textContent = "Começar";
+      document.getElementById("carousel-btn").onclick = () => navigate("login");
     }
   } else {
-    navigate('login');
+    navigate("login");
   }
 }
 
 // ===== LOGIN LOGIC =====
 function doLogin() {
-  const email = document.getElementById('input-email').value.trim();
-  const senha = document.getElementById('input-senha').value.trim();
-  if (!email || !senha) { alert('Preencha e-mail e senha.'); return; }
-  navigate('home');
+  const email = document.getElementById("input-email").value.trim();
+  const senha = document.getElementById("input-senha").value.trim();
+  if (!email || !senha) {
+    alert("Preencha e-mail e senha.");
+    return;
+  }
+  navigate("home");
 }
 
 // ===== BOOT =====
 function boot() {
-  const app = document.getElementById('app');
-  app.innerHTML = Object.values(SCREENS).map(fn => fn()).join('');
+  const app = document.getElementById("app");
+  app.innerHTML = Object.values(SCREENS)
+    .map((fn) => fn())
+    .join("");
 
   // Make splash first active
-  document.getElementById('screen-splash').classList.add('active');
+  document.getElementById("screen-splash").classList.add("active");
 
   // Auto-advance splash
-  setTimeout(() => navigate('onboarding'), 2200);
+  setTimeout(() => navigate("onboarding"), 2200);
 }
 
-document.addEventListener('DOMContentLoaded', boot);
+document.addEventListener("DOMContentLoaded", boot);

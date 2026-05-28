@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import NextImage from "next/image";
-import { Loader2, CheckCircle, AlertCircle, Frown } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle, MessageCircle } from "lucide-react";
 import type { ClientePlano } from "@/types/ClientePlano";
 import { changePassword } from "@/services/auth-cliente.service";
 import {
@@ -51,6 +51,9 @@ const FOTO_MAX_BYTES = 5 * 1024 * 1024;
 const FOTO_ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp"];
 const CROP_SIZE = 240;
 const CROP_OUTPUT_SIZE = 512;
+const CENTRAL_WHATSAPP_NUMBER = "557130347323";
+const CONTRATO_UPDATE_WHATSAPP_MESSAGE =
+  "Olá! Gostaria de solicitar a alteração dos dados do meu contrato.";
 
 function formatFotoMessage(err: unknown): string {
   const e = err as {
@@ -796,16 +799,32 @@ export default function AjustesScreen({
         <DialogContent className="max-w-[92vw] rounded-2xl">
           <DialogHeader>
             <div className="flex justify-center pb-1">
-              <Frown
-                aria-hidden
-                className="h-12 w-12 text-neutral-500 animate-bounce"
-              />
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+                <MessageCircle aria-hidden className="h-6 w-6 text-green-700" />
+              </span>
             </div>
-            <DialogTitle className="text-center">Ops</DialogTitle>
+            <DialogTitle className="text-center">
+              Alteração de dados do contrato
+            </DialogTitle>
             <DialogDescription className="text-center text-base">
-              Alterar dados de contato em breve.
+              Para sua segurança, essa solicitação é feita pela nossa Central de
+              Atendimento.
             </DialogDescription>
           </DialogHeader>
+          <div className="pt-2">
+            <button
+              type="button"
+              className="cm-btn-solid w-full"
+              onClick={() =>
+                window.open(
+                  `https://wa.me/${CENTRAL_WHATSAPP_NUMBER}?text=${encodeURIComponent(CONTRATO_UPDATE_WHATSAPP_MESSAGE)}`,
+                  "_blank",
+                )
+              }
+            >
+              Ir para o WhatsApp
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -151,14 +151,10 @@ export function CadastroClienteWizard({
     else if (!RELATIONSHIP_OPTIONS.includes(parentesco as never)) {
       errors.parentesco = "Selecione um parentesco válido";
     }
-    if (!telefoneDigits) {
-      errors.telefone = "Telefone é obrigatório";
-    } else if (telefoneDigits.length < 10) {
+    if (telefoneDigits && telefoneDigits.length < 10) {
       errors.telefone = "Telefone inválido";
     }
-    if (!cpfDigits) {
-      errors.cpf = "CPF é obrigatório";
-    } else if (cpfDigits.length < 11) {
+    if (cpfDigits && cpfDigits.length < 11) {
       errors.cpf = "CPF inválido";
     }
 
