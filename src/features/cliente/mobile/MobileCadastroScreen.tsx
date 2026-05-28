@@ -76,9 +76,9 @@ function validateSingleDependente(dep: Dependente): DepErrors {
   if (!dep.dataNascimento)
     err.dataNascimento = "Data de nascimento é obrigatória";
   if (!dep.parentesco) err.parentesco = "Parentesco é obrigatório";
-  if (!dep.telefone || dep.telefone.replace(/\D/g, "").length < 10)
+  if (dep.telefone && dep.telefone.replace(/\D/g, "").length < 10)
     err.telefone = "Telefone inválido";
-  if (!dep.cpf || dep.cpf.replace(/\D/g, "").length < 11)
+  if (dep.cpf && dep.cpf.replace(/\D/g, "").length < 11)
     err.cpf = "CPF inválido";
   return err;
 }
@@ -1267,7 +1267,6 @@ function Step4Form({
                   <div className="cm-cad-dep-modal-row">
                     <Field
                       label="Telefone"
-                      required
                       error={(errors[depModalIndex] ?? {}).telefone}
                     >
                       <input
@@ -1287,7 +1286,6 @@ function Step4Form({
 
                     <Field
                       label="CPF"
-                      required
                       error={(errors[depModalIndex] ?? {}).cpf}
                     >
                       <input

@@ -34,6 +34,21 @@ const requiredDigits = (minDigits: number, message: string) =>
     }),
   );
 
+const optionalDigits = (minDigits: number, message: string) =>
+  z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return undefined;
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : undefined;
+    },
+    z
+      .string()
+      .refine((value) => value.replace(/\D/g, "").length >= minDigits, {
+        message,
+      })
+      .optional(),
+  );
+
 const optionalEmail = optionalText(1000).refine(
   (value) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
   { message: "E-mail inválido" },
@@ -298,8 +313,8 @@ const dependentesSchema = z.object({
       nome: requiredText("Nome é obrigatório", 1000),
       idade: requiredText("Idade é obrigatória", 3),
       parentesco: requiredText("Parentesco é obrigatório", 1000),
-      telefone: requiredDigits(10, "Telefone é obrigatório"),
-      cpf: requiredDigits(11, "CPF é obrigatório"),
+      telefone: optionalDigits(10, "Telefone inválido"),
+      cpf: optionalDigits(11, "CPF inválido"),
     }),
   ),
 });
