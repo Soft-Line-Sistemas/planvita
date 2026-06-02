@@ -42,7 +42,6 @@ import {
 import {
   calcularIdade,
   obterMaiorIdadeParticipantes,
-  sanitizePlanoArray,
   selecionarPlanoPorMaiorIdade,
   type ParticipanteMin,
 } from "@/utils/planos";
@@ -53,6 +52,7 @@ import {
 import type { Dependente } from "@/types/DependentesType";
 import type { Plano } from "@/types/PlanType";
 import api from "@/utils/api";
+import { fetchSuggestedPlanosWithRetry } from "@/services/planoSuggestion";
 
 /* ================================================================
    Types
@@ -2338,19 +2338,9 @@ export default function MobileCadastroScreen() {
     Plano[]
   >({
     queryKey: ["planos-mobile-cad", participantesPayload],
-    queryFn: async () => {
-      try {
-        const res = await api.post("/plano/sugerir", {
-          participantes: participantesPayload,
-          retornarTodos: true,
-        });
-        const data = sanitizePlanoArray(res.data);
-        return data.sort((a, b) => a.valorMensal - b.valorMensal);
-      } catch {
-        return [];
-      }
-    },
+    queryFn: () => fetchSuggestedPlanosWithRetry(participantesPayload),
     enabled: canSuggestPlanos,
+    retry: false,
     staleTime: 60_000,
   });
 
