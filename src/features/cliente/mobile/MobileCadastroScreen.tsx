@@ -1556,7 +1556,7 @@ function Step5Plano({
                 <p className="cm-cad-plan-name">{plano.nome}</p>
                 <p className="cm-cad-plan-subtitle">
                   {plano.idadeMaxima
-                    ? `Idade máxima: ${plano.idadeMaxima} anos`
+                    ? `A partir de ${plano.idadeMaxima} anos`
                     : "Sem limite de idade"}
                 </p>
               </div>
@@ -2142,7 +2142,7 @@ function Step8Confirmacao({
                   </p>
                   {plano.idadeMaxima != null ? (
                     <p>
-                      Idade máxima de entrada:{" "}
+                      Idade mínima de entrada:{" "}
                       <strong>{plano.idadeMaxima} anos</strong>
                     </p>
                   ) : null}

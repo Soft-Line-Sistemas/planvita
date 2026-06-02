@@ -193,10 +193,10 @@ export function obterMaiorIdadeParticipantes(
 
 /**
  * Seleciona o plano apropriado com base na maior idade entre participantes.
- * Regras:
- * 1) Retorna o plano com menor idadeMaxima que ainda cubra a maior idade dos participantes.
- * 2) Se nenhum plano com idadeMaxima definida cobrir, usa plano sem limite (idadeMaxima === null) como fallback.
- * 3) Se ainda assim não houver opção sem limite, retorna o plano com maior idadeMaxima disponível.
+ * `idadeMaxima` é usado como início de faixa:
+ * 1) Retorna o plano com a maior faixa <= maior idade do grupo.
+ * 2) Se nenhuma faixa definida atender, usa o plano sem limite como fallback.
+ * 3) Se ainda assim não houver opção sem limite, retorna a menor faixa disponível.
  */
 export function selecionarPlanoPorMaiorIdade(
   planos: Plano[],
@@ -204,36 +204,60 @@ export function selecionarPlanoPorMaiorIdade(
 ): Plano | null {
   if (!planos || planos.length === 0) return null;
 
-  // Se não temos idade, devolve plano com maior idadeMaxima
+  const planosOrdenados = [...planos].sort((a, b) => {
+    const idadeA = a.idadeMaxima ?? Number.POSITIVE_INFINITY;
+    const idadeB = b.idadeMaxima ?? Number.POSITIVE_INFINITY;
+    return idadeA - idadeB || a.valorMensal - b.valorMensal;
+  });
+
+  // Se não temos idade, devolve a menor faixa configurada
   if (idadeMaximaParticipantes === null) {
-    return planos.reduce((prev, cur) => {
-      const prevVal = prev.idadeMaxima ?? -Infinity;
-      const curVal = cur.idadeMaxima ?? -Infinity;
-      return prevVal > curVal ? prev : cur;
-    });
+    return (
+      planosOrdenados.find(
+        (plano) =>
+          typeof plano.idadeMaxima === "number" &&
+          Number.isFinite(plano.idadeMaxima),
+      ) ??
+      planosOrdenados.find((plano) => plano.idadeMaxima === null) ??
+      planosOrdenados[0]
+    );
   }
 
-  // Filtra planos que cobrem a idade e escolhe o de menor idadeMaxima (ex: 60 em vez de 80)
-  const planosQueCobrem = planos.filter(
+  const planosComFaixa = planosOrdenados.filter(
+    (p) => typeof p.idadeMaxima === "number" && Number.isFinite(p.idadeMaxima),
+  );
+  const planoSemLimite =
+    planosOrdenados.find((p) => p.idadeMaxima === null) ?? null;
+
+  if (planosComFaixa.length === 0) {
+    return planoSemLimite ?? planosOrdenados[0] ?? null;
+  }
+
+  const menorFaixa = planosComFaixa[0];
+  const maiorFaixa = planosComFaixa[planosComFaixa.length - 1];
+
+  if (idadeMaximaParticipantes < (menorFaixa.idadeMaxima as number)) {
+    return menorFaixa;
+  }
+
+  if (
+    idadeMaximaParticipantes > (maiorFaixa.idadeMaxima as number) &&
+    planoSemLimite
+  ) {
+    return planoSemLimite;
+  }
+
+  // Filtra planos cuja faixa ja foi atingida e escolhe a maior delas.
+  const planosQueCobrem = planosOrdenados.filter(
     (p) =>
       typeof p.idadeMaxima === "number" &&
-      p.idadeMaxima >= idadeMaximaParticipantes,
+      p.idadeMaxima <= idadeMaximaParticipantes,
   );
   if (planosQueCobrem.length > 0) {
     return planosQueCobrem.reduce((prev, cur) => {
-      // escolhe o menor idadeMaxima entre os que cobrem
-      return prev.idadeMaxima! <= cur.idadeMaxima! ? prev : cur;
+      return prev.idadeMaxima! >= cur.idadeMaxima! ? prev : cur;
     });
   }
 
-  // Se nenhum plano com idadeMaxima definida cobre, tenta sem limite
-  const planoSemLimite = planos.find((p) => p.idadeMaxima === null);
-  if (planoSemLimite) return planoSemLimite;
-
-  // Fallback: maior idadeMaxima disponível
-  return planos.reduce((prev, cur) => {
-    const prevVal = prev.idadeMaxima ?? -Infinity;
-    const curVal = cur.idadeMaxima ?? -Infinity;
-    return prevVal > curVal ? prev : cur;
-  });
+  return planoSemLimite ?? menorFaixa;
 }
