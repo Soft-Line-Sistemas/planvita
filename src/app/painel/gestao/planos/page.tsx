@@ -720,7 +720,7 @@ const GestaoPlanos = () => {
                     Valor Mensal
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Idade Máxima
+                    Idade Mínima
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Clientes
@@ -895,7 +895,7 @@ const GestaoPlanos = () => {
                     </div>
                     <div>
                       <label className="text-sm text-gray-600">
-                        Idade Máxima
+                        Idade mínima de entrada
                       </label>
                       {modoEdicao ? (
                         <input

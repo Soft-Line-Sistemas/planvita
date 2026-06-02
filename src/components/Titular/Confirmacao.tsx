@@ -55,7 +55,10 @@ export function Confirmacao({
   const consultoresDisponiveis = consultorSelecionadoNoLink
     ? [
         ...consultores,
-        { id: selectedConsultorId as number, nome: `Consultor #${selectedConsultorId}` },
+        {
+          id: selectedConsultorId as number,
+          nome: `Consultor #${selectedConsultorId}`,
+        },
       ]
     : consultores;
 
@@ -82,7 +85,10 @@ export function Confirmacao({
         )}
 
         <div className="space-y-4 rounded-lg border border-emerald-200 bg-emerald-50/40 p-5">
-          <Label htmlFor="consultor-select" className="text-sm font-semibold text-emerald-800">
+          <Label
+            htmlFor="consultor-select"
+            className="text-sm font-semibold text-emerald-800"
+          >
             Consultor Responsável <span className="text-red-500">*</span>
           </Label>
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
@@ -90,12 +96,17 @@ export function Confirmacao({
               value={selectedValue}
               onValueChange={(value) =>
                 onSelectConsultor(
-                  value === "campo-do-bosque" ? "campo-do-bosque" : Number(value),
+                  value === "campo-do-bosque"
+                    ? "campo-do-bosque"
+                    : Number(value),
                 )
               }
               disabled={isConsultorLocked || isLoadingConsultores}
             >
-              <SelectTrigger id="consultor-select" className="w-full sm:max-w-md bg-white border-emerald-200">
+              <SelectTrigger
+                id="consultor-select"
+                className="w-full sm:max-w-md bg-white border-emerald-200"
+              >
                 <SelectValue
                   placeholder={
                     isLoadingConsultores
@@ -137,13 +148,28 @@ export function Confirmacao({
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm space-y-2">
-              <p><span className="text-gray-500">Nome:</span> <br/><span className="font-medium text-gray-900">{titular.nome}</span></p>
+              <p>
+                <span className="text-gray-500">Nome:</span> <br />
+                <span className="font-medium text-gray-900">
+                  {titular.nome}
+                </span>
+              </p>
               <div className="grid grid-cols-2 gap-2">
                 {titular.idade !== undefined && (
-                  <p><span className="text-gray-500">Idade:</span> <br/><span className="font-medium text-gray-900">{titular.idade} anos</span></p>
+                  <p>
+                    <span className="text-gray-500">Idade:</span> <br />
+                    <span className="font-medium text-gray-900">
+                      {titular.idade} anos
+                    </span>
+                  </p>
                 )}
                 {titular.dataNascimento && (
-                  <p><span className="text-gray-500">Nascimento:</span> <br/><span className="font-medium text-gray-900">{formatDateBr(titular.dataNascimento)}</span></p>
+                  <p>
+                    <span className="text-gray-500">Nascimento:</span> <br />
+                    <span className="font-medium text-gray-900">
+                      {formatDateBr(titular.dataNascimento)}
+                    </span>
+                  </p>
                 )}
               </div>
             </CardContent>
@@ -161,11 +187,18 @@ export function Confirmacao({
               {dependentes.length > 0 ? (
                 <ul className="space-y-3">
                   {dependentes.map((dep, i) => (
-                    <li key={i} className="border-b last:border-0 pb-2 last:pb-0">
-                      <p className="font-medium text-gray-900 leading-tight">{dep.nome}</p>
+                    <li
+                      key={i}
+                      className="border-b last:border-0 pb-2 last:pb-0"
+                    >
+                      <p className="font-medium text-gray-900 leading-tight">
+                        {dep.nome}
+                      </p>
                       <p className="text-xs text-gray-500">
                         {dep.idade !== undefined ? `${dep.idade} anos` : ""}
-                        {dep.dataNascimento ? ` • ${formatDateBr(dep.dataNascimento)}` : ""}
+                        {dep.dataNascimento
+                          ? ` • ${formatDateBr(dep.dataNascimento)}`
+                          : ""}
                       </p>
                     </li>
                   ))}
@@ -187,23 +220,37 @@ export function Confirmacao({
               </CardHeader>
               <CardContent className="text-sm space-y-3">
                 <div>
-                  <p className="text-xs text-amber-600 font-bold uppercase">{planoSelecionado.nome}</p>
+                  <p className="text-xs text-amber-600 font-bold uppercase">
+                    {planoSelecionado.nome}
+                  </p>
                   <p className="text-xl font-bold text-gray-900">
                     R$ {planoSelecionado.valorMensal.toFixed(2)}
-                    <span className="text-xs font-normal text-gray-500"> /mês</span>
+                    <span className="text-xs font-normal text-gray-500">
+                      {" "}
+                      /mês
+                    </span>
                   </p>
                 </div>
-                
+
                 <div className="pt-2 border-t border-amber-100">
-                  <p className="text-[10px] text-gray-500 uppercase font-bold">Resumo</p>
-                  <p className="text-xs text-gray-700">
-                    Idade Máxima: {planoSelecionado.idadeMaxima === null ? "Livre" : `${planoSelecionado.idadeMaxima} anos`}
+                  <p className="text-[10px] text-gray-500 uppercase font-bold">
+                    Resumo
                   </p>
-                  {planoSelecionado.beneficiarios && planoSelecionado.beneficiarios.length > 0 && (
-                    <p className="text-xs text-gray-700 mt-1">
-                      Beneficiários: {planoSelecionado.beneficiarios.map(b => b.nome).join(", ")}
-                    </p>
-                  )}
+                  <p className="text-xs text-gray-700">
+                    Idade mínima de entrada:{" "}
+                    {planoSelecionado.idadeMaxima === null
+                      ? "Sem limite"
+                      : `${planoSelecionado.idadeMaxima} anos`}
+                  </p>
+                  {planoSelecionado.beneficiarios &&
+                    planoSelecionado.beneficiarios.length > 0 && (
+                      <p className="text-xs text-gray-700 mt-1">
+                        Beneficiários:{" "}
+                        {planoSelecionado.beneficiarios
+                          .map((b) => b.nome)
+                          .join(", ")}
+                      </p>
+                    )}
                 </div>
               </CardContent>
             </Card>

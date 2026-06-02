@@ -235,7 +235,7 @@ export default function ClientesPage() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 uppercase">
-                    Idade máxima
+                    Idade mínima de entrada
                   </p>
                   <p className="font-medium">
                     {planoSelecionadoInfo.idadeMaxima

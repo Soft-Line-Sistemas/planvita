@@ -3,18 +3,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
-import { AxiosError } from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Shield } from "lucide-react";
-import api from "@/utils/api";
 import { Plano } from "@/types/PlanType";
 import {
   obterMaiorIdadeParticipantes,
-  sanitizePlanoArray,
   selecionarPlanoPorMaiorIdade,
   type ParticipanteMin,
 } from "@/utils/planos";
+import { fetchSuggestedPlanosWithRetry } from "@/services/planoSuggestion";
 
 export type PlanoFormFields = {
   planoId?: number;
@@ -27,19 +25,6 @@ interface PlanoFormProps {
   participantes: ParticipanteMin[];
   modoCliente?: boolean;
 }
-
-const normalizePlanName = (value?: string | null) =>
-  (value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase();
-
-const isBosqueSocial = (name?: string | null) =>
-  normalizePlanName(name) === "bosque social";
-
-const isBosqueEssencial = (name?: string | null) =>
-  normalizePlanName(name) === "bosque essencial";
 
 export function PlanoForm({
   form,
@@ -176,35 +161,9 @@ export function PlanoForm({
     isError,
   } = useQuery({
     queryKey: ["planos", "sugerir", participantesPayload, "todos"],
-    queryFn: async () => {
-      try {
-        const resp = await api.post("/plano/sugerir", {
-          participantes: participantesPayload,
-          retornarTodos: true,
-        });
-
-        const sanitized = sanitizePlanoArray(resp.data);
-
-        sanitized.sort((a, b) => {
-          if (a.valorMensal !== b.valorMensal)
-            return a.valorMensal - b.valorMensal;
-          return a.nome.localeCompare(b.nome);
-        });
-
-        return sanitized;
-      } catch (err) {
-        const axiosError = err as AxiosError<{ message?: string }>;
-        if (
-          axiosError.response?.status === 404 &&
-          axiosError.response?.data?.message ===
-            "Nenhum plano elegível encontrado."
-        ) {
-          return [];
-        }
-        throw err;
-      }
-    },
+    queryFn: () => fetchSuggestedPlanosWithRetry(participantesPayload),
     enabled,
+    retry: false,
     staleTime: 60_000,
   });
 
@@ -220,64 +179,21 @@ export function PlanoForm({
     if (!modoCliente)
       return new Set<string>(elegiveis.map((p) => String(p.id)));
 
-    const liberados = new Set<string>();
+    const planoDaFaixa = selecionarPlanoPorMaiorIdade(
+      elegiveis,
+      maiorIdadeParticipantes,
+    );
 
-    // Base sempre disponível no fluxo público.
-    elegiveis.forEach((plano) => {
-      if (isBosqueSocial(plano.nome) || isBosqueEssencial(plano.nome)) {
-        liberados.add(String(plano.id));
-      }
-    });
-
-    const idadeAtual = maiorIdadeParticipantes;
-    if (idadeAtual === null) return liberados;
-
-    // Interpreta "idadeMaxima" como início de faixa para liberação no fluxo público.
-    const faixas = elegiveis
-      .filter(
-        (plano) =>
-          typeof plano.idadeMaxima === "number" &&
-          Number.isFinite(plano.idadeMaxima),
-      )
-      .sort((a, b) => (a.idadeMaxima as number) - (b.idadeMaxima as number));
-
-    faixas.forEach((plano, idx) => {
-      const inicio = plano.idadeMaxima as number;
-      const proximoInicio = faixas[idx + 1]?.idadeMaxima;
-      const fim =
-        typeof proximoInicio === "number" && Number.isFinite(proximoInicio)
-          ? proximoInicio - 1
-          : Number.POSITIVE_INFINITY;
-
-      if (idadeAtual >= inicio && idadeAtual <= fim) {
-        liberados.add(String(plano.id));
-      }
-    });
-
-    return liberados;
+    return planoDaFaixa
+      ? new Set<string>([String(planoDaFaixa.id)])
+      : new Set<string>();
   }, [elegiveis, modoCliente, maiorIdadeParticipantes]);
 
   const planoPadrao = useMemo<Plano | null>(() => {
     if (planoSelecionado) return planoSelecionado;
     if (elegiveis && elegiveis.length > 0) {
       if (modoCliente) {
-        const liberados = elegiveis.filter((p) =>
-          planosLiberados.has(String(p.id)),
-        );
-        if (liberados.length === 0) return null;
-
-        const foraBase = liberados.filter(
-          (p) => !isBosqueSocial(p.nome) && !isBosqueEssencial(p.nome),
-        );
-        if (foraBase.length > 0) return foraBase[0];
-
-        const social = liberados.find((p) => isBosqueSocial(p.nome));
-        if (social) return social;
-
-        const essencial = liberados.find((p) => isBosqueEssencial(p.nome));
-        if (essencial) return essencial;
-
-        return liberados[0];
+        return elegiveis.find((p) => planosLiberados.has(String(p.id))) ?? null;
       }
 
       return selecionarPlanoPorMaiorIdade(elegiveis, maiorIdadeParticipantes);
@@ -342,7 +258,7 @@ export function PlanoForm({
             </span>
           </div>
           <p className="text-xs text-gray-600 mt-1">
-            Idade Máxima: {idadeMaxToLabel(plano.idadeMaxima)}
+            Idade mínima de entrada: {idadeMaxToLabel(plano.idadeMaxima)}
           </p>
 
           {renderBeneficios(plano)}
