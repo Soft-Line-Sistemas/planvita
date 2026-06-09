@@ -47,7 +47,7 @@ function extractMessage(err: unknown): string {
     : "Não foi possível alterar a senha.";
 }
 
-const FOTO_MAX_BYTES = 5 * 1024 * 1024;
+const FOTO_MAX_BYTES = 50 * 1024 * 1024;
 const FOTO_ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp"];
 const CROP_SIZE = 240;
 const CROP_OUTPUT_SIZE = 512;
@@ -363,7 +363,7 @@ function AlterarFotoModal({
       return;
     }
     if (file.size > FOTO_MAX_BYTES) {
-      setError("Arquivo acima de 5MB. Escolha uma imagem menor.");
+      setError("Arquivo acima de 50MB. Escolha uma imagem menor.");
       return;
     }
 
