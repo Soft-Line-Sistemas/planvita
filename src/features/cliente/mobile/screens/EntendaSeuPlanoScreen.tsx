@@ -533,16 +533,12 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
                             lineHeight: "20px",
                           }}
                         >
-                          <span
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src="/cliente-mobile/Vector-38.svg"
+                            alt=""
+                            style={{ width: 11, height: 11, flexShrink: 0 }}
                             aria-hidden
-                            style={{
-                              width: 11,
-                              height: 11,
-                              borderRadius: "50%",
-                              background: "#DF8A18",
-                              display: "inline-block",
-                              flexShrink: 0,
-                            }}
                           />
                           {`Carência: ${carencia} dias`}
                         </span>
