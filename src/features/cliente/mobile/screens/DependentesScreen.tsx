@@ -167,6 +167,7 @@ export default function DependentesScreen({ cliente, onBack }: Props) {
                       <span
                         style={{
                           marginTop: 6,
+                          gap: 8,
                           width: "fit-content",
                           height: 24,
                           padding: "0 12px",
@@ -180,6 +181,13 @@ export default function DependentesScreen({ cliente, onBack }: Props) {
                           color: "#9F7A2E",
                         }}
                       >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src="/cliente-mobile/Vector-38.svg"
+                          alt=""
+                          style={{ width: 11, height: 11, flexShrink: 0 }}
+                          aria-hidden
+                        />
                         Carência: {carencia} dias
                       </span>
                     ) : dep.valorAdicionalMensal &&
