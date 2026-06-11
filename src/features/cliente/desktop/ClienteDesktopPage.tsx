@@ -128,6 +128,27 @@ const formatDate = (value: string) => {
   });
 };
 
+const formatBirthDate = (isoDate?: string | null) => {
+  if (!isoDate) return "—";
+  return formatDatePtBr(isoDate);
+};
+
+const getAgeFromBirthDate = (isoDate?: string | null) => {
+  if (!isoDate) return null;
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const now = new Date();
+  let age = now.getFullYear() - date.getFullYear();
+  const monthDiff = now.getMonth() - date.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : null;
+};
+
 const TIPOS_ASSINATURA = [
   { id: "TITULAR_ASSINATURA_1", label: "Titular - Assinatura 1" },
   { id: "TITULAR_ASSINATURA_2", label: "Titular - Assinatura 2" },
@@ -2014,26 +2035,64 @@ export default function ConsultaClientePage() {
                 <CardContent>
                   {cliente.dependentes && cliente.dependentes.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {cliente.dependentes.map((dep) => (
-                        <div
-                          key={dep.id}
-                          className="rounded-lg border border-emerald-100 bg-emerald-50/40 p-4 flex flex-col gap-1"
-                        >
-                          <span className="text-sm font-semibold text-slate-900">
-                            {dep.nome}
-                          </span>
-                          {dep.tipo && (
+                      {cliente.dependentes.map((dep) => {
+                        const parentesco = dep.parentesco ?? dep.tipo ?? "—";
+                        const idadeCalculada = getAgeFromBirthDate(
+                          dep.dataNascimento,
+                        );
+                        const idade =
+                          typeof dep.idade === "number"
+                            ? dep.idade
+                            : idadeCalculada;
+                        const carencia =
+                          typeof dep.carenciaRestante === "number"
+                            ? dep.carenciaRestante
+                            : typeof dep.carenciaDias === "number"
+                              ? dep.carenciaDias
+                              : null;
+                        const emCarencia = carencia != null && carencia > 0;
+
+                        return (
+                          <div
+                            key={dep.id}
+                            className="rounded-lg border border-emerald-100 bg-emerald-50/40 p-4 flex flex-col gap-2"
+                          >
+                            <span className="text-sm font-semibold text-slate-900">
+                              {dep.nome}
+                            </span>
                             <span className="text-xs uppercase tracking-wide text-emerald-700">
-                              {dep.tipo}
+                              {parentesco}
                             </span>
-                          )}
-                          {dep.dataNascimento && (
                             <span className="text-xs text-slate-500">
-                              Nascimento: {formatDate(dep.dataNascimento)}
+                              Idade: {idade != null ? `${idade} anos` : "—"}
                             </span>
-                          )}
-                        </div>
-                      ))}
+                            <span className="text-xs text-slate-500">
+                              Nascimento: {formatBirthDate(dep.dataNascimento)}
+                            </span>
+                            {emCarencia ? (
+                              <span className="mt-1 inline-flex w-fit items-center rounded-full border border-amber-300 bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                                Carência: {carencia} dias
+                              </span>
+                            ) : dep.valorAdicionalMensal &&
+                              dep.valorAdicionalMensal > 0 ? (
+                              <span className="mt-1 inline-flex w-fit items-center rounded-full border border-lime-300 bg-lime-100 px-3 py-1 text-xs font-semibold text-lime-800">
+                                Adicional:{" "}
+                                {dep.valorAdicionalMensal.toLocaleString(
+                                  "pt-BR",
+                                  {
+                                    style: "currency",
+                                    currency: "BRL",
+                                  },
+                                )}
+                              </span>
+                            ) : (
+                              <span className="mt-1 inline-flex w-fit items-center rounded-full border border-lime-300 bg-lime-100 px-3 py-1 text-xs font-semibold text-lime-800">
+                                Coberto
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="text-sm text-gray-500">

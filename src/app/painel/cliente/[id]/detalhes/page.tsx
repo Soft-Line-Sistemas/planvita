@@ -386,6 +386,7 @@ const DetalhesCliente = () => {
       id: cliente.plano.id,
       nome: cliente.plano.nome,
       valorMensal: Number(cliente.plano.valorMensal ?? 0),
+      carenciaDias: Number(cliente.plano.carenciaDias ?? 0),
       vigenciaMeses: Number(cliente.plano.vigenciaMeses ?? 12),
       coberturas: coberturasNormalizadas,
     },
@@ -395,6 +396,7 @@ const DetalhesCliente = () => {
         id: Number.isFinite(depIdNumber) ? depIdNumber : null,
         nome: dep.nome,
         dataNascimento: dep.dataNascimento,
+        carenciaInicioEm: dep.carenciaInicioEm,
         tipoDependente: dep.parentesco,
         valorAdicionalMensal: Number(dep.valorAdicionalMensal ?? 0),
       };

@@ -106,6 +106,7 @@ export default function DependentesScreen({ cliente, onBack }: Props) {
                     : typeof dep.carenciaDias === "number"
                       ? dep.carenciaDias
                       : null;
+                const emCarencia = carencia != null && carencia > 0;
                 return (
                   <div
                     key={dep.id}
@@ -162,7 +163,7 @@ export default function DependentesScreen({ cliente, onBack }: Props) {
                     >
                       Data Nascimento: {formatBirthDate(dep.dataNascimento)}
                     </p>
-                    {carencia != null ? (
+                    {emCarencia ? (
                       <span
                         style={{
                           marginTop: 6,
@@ -205,7 +206,26 @@ export default function DependentesScreen({ cliente, onBack }: Props) {
                           currency: "BRL",
                         })}
                       </span>
-                    ) : null}
+                    ) : (
+                      <span
+                        style={{
+                          marginTop: 6,
+                          width: "fit-content",
+                          height: 24,
+                          padding: "0 12px",
+                          borderRadius: 40,
+                          border: "1px solid #BFF08E",
+                          background: "#E3FEC8",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#658D3E",
+                        }}
+                      >
+                        Coberto
+                      </span>
+                    )}
                   </div>
                 );
               })}

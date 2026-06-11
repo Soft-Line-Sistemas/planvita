@@ -162,7 +162,7 @@ export default function HomeScreen({
               <img src="/cliente-mobile/Vector-7.svg" alt="" />
             </span>
             <span className="cm-menu-label">
-              Contrato
+              Benefícios do
               <br />
               seu plano
             </span>
@@ -211,7 +211,11 @@ export default function HomeScreen({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/cliente-mobile/Vector-5.svg" alt="" />
             </span>
-            <span className="cm-menu-label">Assinaturas</span>
+            <span className="cm-menu-label">
+              Contrato e
+              <br />
+              Assinatura
+            </span>
           </button>
         </div>
 

@@ -8,6 +8,7 @@ export interface PlanoDetalhado {
     fim: string;
   };
   valorMensal: number;
+  carenciaDias?: number;
   valorAdicionalMensal?: number;
   valorTotalMensal?: number;
   cobertura: string[];
@@ -18,6 +19,7 @@ export interface DependentePlano {
   id: number;
   nome: string;
   dataNascimento?: string | null;
+  carenciaInicioEm?: string | null;
   tipo?: string | null;
   parentesco?: string | null;
   idade?: number | null;
