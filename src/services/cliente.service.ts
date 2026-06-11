@@ -12,6 +12,7 @@ type DependenteApi = {
   nome: string;
   cpf?: string | null;
   dataNascimento?: string | null;
+  carenciaInicioEm?: string | null;
   tipoDependente?: string | null;
   parentescoNormalizado?: string | null;
   foraGradeFamiliar?: boolean | null;
@@ -40,6 +41,7 @@ type PlanoApi = {
   id: number;
   nome: string;
   valorMensal: number;
+  carenciaDias?: number | null;
   vigenciaMeses?: number | null;
   coberturas?: PlanoCoberturaApi[];
 };
@@ -104,6 +106,28 @@ const calcularIdade = (value?: string | null): number => {
   if (!value) return 0;
   const idade = calculateAgeFromBirthDate(value);
   return idade ?? 0;
+};
+
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+const calculateRemainingCarencia = (
+  carenciaDias: number,
+  referenceDate?: string | null,
+): number => {
+  if (!Number.isFinite(carenciaDias) || carenciaDias <= 0) return 0;
+  if (!referenceDate) return carenciaDias;
+
+  const startDate = new Date(referenceDate);
+  if (Number.isNaN(startDate.getTime())) return carenciaDias;
+  startDate.setHours(0, 0, 0, 0);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const diffMs = today.getTime() - startDate.getTime();
+  const elapsedDays = diffMs <= 0 ? 0 : Math.floor(diffMs / MS_PER_DAY);
+
+  return Math.max(0, carenciaDias - elapsedDays);
 };
 
 const normalizarStatusPagamento = (value?: string | null): StatusPagamento => {
@@ -174,6 +198,7 @@ export const mapClienteFromApi = (payload: TitularApi): Cliente => {
   const dataContratacao =
     toISODate(payload.dataContratacao) ||
     new Date().toISOString().split("T")[0];
+  const carenciaDiasPlano = Number(payload.plano?.carenciaDias ?? 0);
   const diaVencimento = dataContratacao
     ? Number(dataContratacao.split("-")[2])
     : 1;
@@ -205,7 +230,10 @@ export const mapClienteFromApi = (payload: TitularApi): Cliente => {
     statusPlano: payload.statusPlano ?? "ATIVO",
     dataContratacao,
     dataCarencia: dataContratacao,
-    carenciaRestante: 0,
+    carenciaRestante: calculateRemainingCarencia(
+      carenciaDiasPlano,
+      dataContratacao,
+    ),
     diaVencimento: Number.isNaN(diaVencimento) ? 1 : diaVencimento,
     plano: {
       id: payload.plano ? String(payload.plano.id) : "",
@@ -213,7 +241,7 @@ export const mapClienteFromApi = (payload: TitularApi): Cliente => {
       valorMensal: Number(payload.plano?.valorMensal ?? 0),
       idadeMaxima: null,
       coberturaMaxima: 0,
-      carenciaDias: 0,
+      carenciaDias: carenciaDiasPlano,
       vigenciaMeses: Number(payload.plano?.vigenciaMeses ?? 0),
       ativo: false,
       totalClientes: 0,
@@ -260,13 +288,18 @@ export const mapClienteFromApi = (payload: TitularApi): Cliente => {
       telefone: "",
       cpf: dep.cpf ?? "",
       dataNascimento: toISODate(dep.dataNascimento),
+      carenciaInicioEm: dep.carenciaInicioEm ?? dataContratacao,
       idade: calcularIdade(dep.dataNascimento),
       parentesco: dep.tipoDependente ?? "Outro",
       parentescoNormalizado: dep.parentescoNormalizado ?? undefined,
       foraGradeFamiliar: Boolean(dep.foraGradeFamiliar ?? false),
       excluirCobrancaAdicional: Boolean(dep.excluirCobrancaAdicional ?? false),
       valorAdicionalMensal: Number(dep.valorAdicionalMensal ?? 0),
-      carenciaRestante: 0,
+      carenciaDias: carenciaDiasPlano,
+      carenciaRestante: calculateRemainingCarencia(
+        carenciaDiasPlano,
+        dep.carenciaInicioEm ?? dataContratacao,
+      ),
     })),
     pagamentos: mapPagamentos(payload).map((pagamento) => ({
       id: pagamento.id,

@@ -456,6 +456,7 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
                       : typeof dep.carenciaDias === "number"
                         ? dep.carenciaDias
                         : null;
+                  const emCarencia = carencia != null && carencia > 0;
 
                   return (
                     <div
@@ -513,7 +514,7 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
                       >
                         Data Nascimento: {formatBirthDate(dep.dataNascimento)}
                       </p>
-                      {carencia != null ? (
+                      {emCarencia ? (
                         <span
                           style={{
                             marginTop: 8,

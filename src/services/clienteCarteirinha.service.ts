@@ -24,6 +24,7 @@ type PlanoResponse = {
   codigo?: string | null;
   descricao?: string | null;
   valorMensal?: number | null;
+  carenciaDias?: number | null;
   vigenciaMeses?: number | null;
   coberturas?: Array<{ descricao?: string | null; tipo?: string | null }>;
 };
@@ -47,9 +48,38 @@ type TitularResponse = {
     id?: number | null;
     nome?: string | null;
     dataNascimento?: string | null;
+    carenciaInicioEm?: string | null;
     tipoDependente?: string | null;
     valorAdicionalMensal?: number | null;
   }> | null;
+};
+
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+const startOfDay = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const calculateRemainingCarencia = (
+  carenciaDias: number,
+  referenceDate?: string | null,
+) => {
+  if (!Number.isFinite(carenciaDias) || carenciaDias <= 0) return 0;
+  if (!referenceDate) return carenciaDias;
+
+  const startDate = startOfDay(referenceDate);
+  if (!startDate) return carenciaDias;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const diffMs = today.getTime() - startDate.getTime();
+  const elapsedDays = diffMs <= 0 ? 0 : Math.floor(diffMs / MS_PER_DAY);
+
+  return Math.max(0, carenciaDias - elapsedDays);
 };
 
 export const mapTitularToCarteirinha = (
@@ -62,13 +92,26 @@ export const mapTitularToCarteirinha = (
     ) ?? [];
 
   const dependentes =
-    titular?.dependentes?.map((dep) => ({
-      id: dep?.id ?? 0,
-      nome: dep?.nome ?? "Dependente",
-      dataNascimento: dep?.dataNascimento ?? null,
-      tipo: dep?.tipoDependente ?? null,
-      valorAdicionalMensal: Number(dep?.valorAdicionalMensal ?? 0),
-    })) ?? [];
+    titular?.dependentes?.map((dep) => {
+      const carenciaDias = Number(plano?.carenciaDias ?? 0);
+      const carenciaInicioEm =
+        dep?.carenciaInicioEm ?? titular?.dataContratacao ?? null;
+      const carenciaRestante = calculateRemainingCarencia(
+        carenciaDias,
+        carenciaInicioEm,
+      );
+
+      return {
+        id: dep?.id ?? 0,
+        nome: dep?.nome ?? "Dependente",
+        dataNascimento: dep?.dataNascimento ?? null,
+        carenciaInicioEm,
+        tipo: dep?.tipoDependente ?? null,
+        carenciaDias,
+        carenciaRestante,
+        valorAdicionalMensal: Number(dep?.valorAdicionalMensal ?? 0),
+      };
+    }) ?? [];
 
   const valorMensalBase = Number(plano?.valorMensal ?? 0);
   const valorAdicionalMensal = dependentes.reduce(
@@ -119,6 +162,7 @@ export const mapTitularToCarteirinha = (
         fim: vigenciaFim,
       },
       valorMensal: valorMensalBase,
+      carenciaDias: Number(plano?.carenciaDias ?? 0),
       valorAdicionalMensal,
       valorTotalMensal,
       cobertura: cobertura.length

@@ -3,6 +3,7 @@ export interface Dependente {
   nome: string;
   idade: number | null;
   dataNascimento?: string | null;
+  carenciaInicioEm?: string | null;
   parentesco: string;
   parentescoNormalizado?: string;
   telefone: string;
@@ -11,4 +12,5 @@ export interface Dependente {
   excluirCobrancaAdicional?: boolean;
   valorAdicionalMensal?: number;
   carenciaRestante?: number;
+  carenciaDias?: number;
 }
