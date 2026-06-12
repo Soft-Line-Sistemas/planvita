@@ -9,6 +9,7 @@ import { Shield } from "lucide-react";
 import { Plano } from "@/types/PlanType";
 import {
   obterMaiorIdadeParticipantes,
+  selecionarPlanosCompativeis,
   selecionarPlanoPorMaiorIdade,
   type ParticipanteMin,
 } from "@/utils/planos";
@@ -24,6 +25,7 @@ interface PlanoFormProps {
   planoSelecionado: Plano | null;
   participantes: ParticipanteMin[];
   modoCliente?: boolean;
+  ignorarComposicaoNaSugestao?: boolean;
 }
 
 export function PlanoForm({
@@ -31,6 +33,7 @@ export function PlanoForm({
   planoSelecionado,
   participantes,
   modoCliente = false,
+  ignorarComposicaoNaSugestao = false,
 }: PlanoFormProps) {
   // ----- Helpers -----
   const formatCurrency = (n: number) =>
@@ -42,7 +45,7 @@ export function PlanoForm({
   const idadeMaxToLabel = (idadeMaxima: number | null | undefined) => {
     if (idadeMaxima === null || idadeMaxima === undefined) return "Sem limite";
     if (idadeMaxima >= 999) return "Sem limite";
-    return `${idadeMaxima} anos`;
+    return `Até ${idadeMaxima} anos`;
   };
 
   const SectionTitle = ({ children }: { children: React.ReactNode }) => (
@@ -161,7 +164,10 @@ export function PlanoForm({
     isError,
   } = useQuery({
     queryKey: ["planos", "sugerir", participantesPayload, "todos"],
-    queryFn: () => fetchSuggestedPlanosWithRetry(participantesPayload),
+    queryFn: () =>
+      fetchSuggestedPlanosWithRetry(participantesPayload, {
+        ignorarComposicao: ignorarComposicaoNaSugestao,
+      }),
     enabled,
     retry: false,
     staleTime: 60_000,
@@ -174,37 +180,35 @@ export function PlanoForm({
     [participantes],
   );
 
-  const planosLiberados = useMemo(() => {
-    if (!elegiveis || elegiveis.length === 0) return new Set<string>();
-    if (!modoCliente)
-      return new Set<string>(elegiveis.map((p) => String(p.id)));
+  const planosCompativeis = useMemo(() => {
+    if (!elegiveis || elegiveis.length === 0) return [];
+    if (!modoCliente) return elegiveis;
+    return selecionarPlanosCompativeis(elegiveis, participantes);
+  }, [elegiveis, modoCliente, participantes]);
 
-    const planoDaFaixa = selecionarPlanoPorMaiorIdade(
-      elegiveis,
-      maiorIdadeParticipantes,
-    );
-
-    return planoDaFaixa
-      ? new Set<string>([String(planoDaFaixa.id)])
-      : new Set<string>();
-  }, [elegiveis, modoCliente, maiorIdadeParticipantes]);
+  const planosLiberados = useMemo(
+    () => new Set<string>(planosCompativeis.map((p) => String(p.id))),
+    [planosCompativeis],
+  );
 
   const planoPadrao = useMemo<Plano | null>(() => {
     if (planoSelecionado) return planoSelecionado;
-    if (elegiveis && elegiveis.length > 0) {
+    if (planosCompativeis.length > 0) {
       if (modoCliente) {
-        return elegiveis.find((p) => planosLiberados.has(String(p.id))) ?? null;
+        return planosCompativeis[0] ?? null;
       }
 
-      return selecionarPlanoPorMaiorIdade(elegiveis, maiorIdadeParticipantes);
+      return selecionarPlanoPorMaiorIdade(
+        planosCompativeis,
+        maiorIdadeParticipantes,
+      );
     }
     return null;
   }, [
     planoSelecionado,
-    elegiveis,
+    planosCompativeis,
     maiorIdadeParticipantes,
     modoCliente,
-    planosLiberados,
   ]);
 
   useEffect(() => {
@@ -222,7 +226,7 @@ export function PlanoForm({
   const onSelectPlano = (idStr: string) => {
     setSelectedId(idStr);
     const planoEncontrado =
-      elegiveis?.find((p) => String(p.id) === idStr) || null;
+      planosCompativeis.find((p) => String(p.id) === idStr) || null;
     form.setValue("planoId", Number(idStr), { shouldDirty: true });
     form.setValue("plano", planoEncontrado, { shouldDirty: true });
   };
@@ -258,7 +262,7 @@ export function PlanoForm({
             </span>
           </div>
           <p className="text-xs text-gray-600 mt-1">
-            Idade mínima de entrada: {idadeMaxToLabel(plano.idadeMaxima)}
+            Faixa etária: {idadeMaxToLabel(plano.idadeMaxima)}
           </p>
 
           {renderBeneficios(plano)}
@@ -295,11 +299,11 @@ export function PlanoForm({
           </p>
         )}
 
-        {elegiveis && elegiveis.length > 0 ? (
+        {planosCompativeis.length > 0 ? (
           <div className="space-y-3">
             <Label>Planos disponíveis</Label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {elegiveis.map((pl) => (
+              {planosCompativeis.map((pl) => (
                 <PlanoOption key={String(pl.id)} plano={pl} />
               ))}
             </div>

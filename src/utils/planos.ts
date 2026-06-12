@@ -233,31 +233,132 @@ export function selecionarPlanoPorMaiorIdade(
     return planoSemLimite ?? planosOrdenados[0] ?? null;
   }
 
-  const menorFaixa = planosComFaixa[0];
-  const maiorFaixa = planosComFaixa[planosComFaixa.length - 1];
-
-  if (idadeMaximaParticipantes < (menorFaixa.idadeMaxima as number)) {
-    return menorFaixa;
-  }
-
-  if (
-    idadeMaximaParticipantes > (maiorFaixa.idadeMaxima as number) &&
-    planoSemLimite
-  ) {
-    return planoSemLimite;
-  }
-
-  // Filtra planos cuja faixa ja foi atingida e escolhe a maior delas.
-  const planosQueCobrem = planosOrdenados.filter(
-    (p) =>
-      typeof p.idadeMaxima === "number" &&
-      p.idadeMaxima <= idadeMaximaParticipantes,
+  const faixaCompativel = planosComFaixa.find(
+    (plano) => idadeMaximaParticipantes <= (plano.idadeMaxima as number),
   );
-  if (planosQueCobrem.length > 0) {
-    return planosQueCobrem.reduce((prev, cur) => {
-      return prev.idadeMaxima! >= cur.idadeMaxima! ? prev : cur;
-    });
+
+  return faixaCompativel ?? planoSemLimite ?? null;
+}
+
+function normalizeText(value?: string | null) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeRelationship(value?: string | null) {
+  const normalized = normalizeText(value);
+  if (
+    [
+      "conjuge",
+      "esposa",
+      "esposo",
+      "marido",
+      "companheira",
+      "companheiro",
+      "parceira",
+      "parceiro",
+    ].includes(normalized)
+  ) {
+    return "conjuge";
+  }
+  if (
+    ["filho", "filha", "enteado", "enteada", "crianca", "menor"].includes(
+      normalized,
+    )
+  ) {
+    return "filho";
+  }
+  if (["neto", "neta", "bisneto", "bisneta"].includes(normalized)) {
+    return "neto";
+  }
+  if (normalized === "titular") {
+    return "titular";
+  }
+  return normalized;
+}
+
+function isPlanoSocial(nome?: string | null) {
+  return normalizeText(nome).includes("social");
+}
+
+function isPlanoEssencial(nome?: string | null) {
+  return normalizeText(nome).includes("essencial");
+}
+
+function isElegivelSocialEssencial(participantes: ParticipanteMin[]) {
+  if (!participantes.length) return false;
+  const permitidos = new Set(["titular", "conjuge", "filho", "neto"]);
+
+  return participantes.every((participante) => {
+    const parentesco = normalizeRelationship(participante.parentesco);
+    const idade =
+      typeof participante.idade === "number"
+        ? participante.idade
+        : calcularIdade(participante.dataNascimento ?? null);
+
+    return (
+      permitidos.has(parentesco) &&
+      typeof idade === "number" &&
+      Number.isFinite(idade) &&
+      idade <= 55
+    );
+  });
+}
+
+export function selecionarPlanosCompativeis(
+  planos: Plano[],
+  participantes: ParticipanteMin[],
+): Plano[] {
+  if (!planos.length) return [];
+
+  const maiorIdadeParticipantes = obterMaiorIdadeParticipantes(participantes);
+  if (maiorIdadeParticipantes === null) return planos;
+
+  const permitirSocialEssencial = isElegivelSocialEssencial(participantes);
+
+  const planosOrdenados = [...planos].sort((a, b) => {
+    const idadeA = a.idadeMaxima ?? Number.POSITIVE_INFINITY;
+    const idadeB = b.idadeMaxima ?? Number.POSITIVE_INFINITY;
+    return (
+      idadeA - idadeB ||
+      a.valorMensal - b.valorMensal ||
+      a.nome.localeCompare(b.nome)
+    );
+  });
+
+  const planosComFaixa = planosOrdenados.filter(
+    (plano) =>
+      typeof plano.idadeMaxima === "number" &&
+      Number.isFinite(plano.idadeMaxima),
+  );
+  const faixaCompativel = planosComFaixa.find(
+    (plano) => maiorIdadeParticipantes <= (plano.idadeMaxima as number),
+  );
+
+  let compativeis =
+    faixaCompativel != null
+      ? planosOrdenados.filter(
+          (plano) => plano.idadeMaxima === faixaCompativel.idadeMaxima,
+        )
+      : planosOrdenados.filter((plano) => plano.idadeMaxima == null);
+
+  if (permitirSocialEssencial) {
+    const socialEssencial = planosOrdenados.filter(
+      (plano) => isPlanoSocial(plano.nome) || isPlanoEssencial(plano.nome),
+    );
+    if (socialEssencial.length > 0) {
+      compativeis = socialEssencial;
+    }
   }
 
-  return planoSemLimite ?? menorFaixa;
+  if (!permitirSocialEssencial) {
+    compativeis = compativeis.filter((plano) => !isPlanoSocial(plano.nome));
+  }
+
+  return compativeis;
 }

@@ -20,6 +20,7 @@ type Step3Values = z.infer<typeof responsavelFinanceiroSchema>;
 type PlanoFormValues = {
   planoId?: number;
   plano?: Plano | null;
+  billingType?: "PIX" | "BOLETO" | "CREDIT_CARD";
 };
 
 export type CreateTitularInput = {
@@ -29,6 +30,7 @@ export type CreateTitularInput = {
   step5?: PlanoFormValues;
   consultorId?: number;
   forceTenantBosque?: boolean;
+  servicosAdicionais?: string[];
   dependentes: Dependente[];
   usarMesmosDados: boolean;
 } & Record<string, unknown>;

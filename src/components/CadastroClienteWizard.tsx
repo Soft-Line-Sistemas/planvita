@@ -469,6 +469,17 @@ export function CadastroClienteWizard({
                   dataNascimento: titularData?.dataNascimento ?? null,
                   parentesco: "Titular",
                 },
+                ...(!usarMesmosDados
+                  ? [
+                      {
+                        nome: responsavelForm.getValues("nomeCompleto") ?? "",
+                        dataNascimento:
+                          responsavelForm.getValues("dataNascimento") ?? null,
+                        parentesco:
+                          responsavelForm.getValues("parentesco") ?? "Outro",
+                      } satisfies ParticipanteMin,
+                    ]
+                  : []),
                 ...dependentes.map<ParticipanteMin>((d) => ({
                   nome: d.nome,
                   dataNascimento: d.dataNascimento ?? null,
@@ -486,6 +497,7 @@ export function CadastroClienteWizard({
                   planoSelecionado={null}
                   participantes={participantesList}
                   modoCliente={isPublic}
+                  ignorarComposicaoNaSugestao
                 />
               );
             }
