@@ -10,6 +10,10 @@ type ParticipantePayload = {
   parentesco?: string | null;
 };
 
+type FetchSuggestedPlanosOptions = {
+  ignorarComposicao?: boolean;
+};
+
 const NO_PLAN_MESSAGE = "Nenhum plano elegível encontrado.";
 const DEFAULT_ATTEMPTS = 3;
 const DEFAULT_DELAY_MS = 250;
@@ -29,6 +33,7 @@ const sortPlanos = (planos: Plano[]) =>
 
 export async function fetchSuggestedPlanosWithRetry(
   participantes: ParticipantePayload[],
+  options: FetchSuggestedPlanosOptions = {},
   attempts = DEFAULT_ATTEMPTS,
 ): Promise<Plano[]> {
   let lastError: unknown;
@@ -38,6 +43,7 @@ export async function fetchSuggestedPlanosWithRetry(
       const resp = await api.post("/plano/sugerir", {
         participantes,
         retornarTodos: true,
+        ignorarComposicao: options.ignorarComposicao === true,
       });
 
       const sanitized = sortPlanos(sanitizePlanoArray(resp.data));

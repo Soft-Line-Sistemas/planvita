@@ -2,7 +2,7 @@
 
 import "@/app/styles/cliente-mobile.css";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useForm, type Resolver, type UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,6 +42,7 @@ import {
 import {
   calcularIdade,
   obterMaiorIdadeParticipantes,
+  selecionarPlanosCompativeis,
   selecionarPlanoPorMaiorIdade,
   type ParticipanteMin,
 } from "@/utils/planos";
@@ -96,7 +97,12 @@ const DIRECT_PARENTESCOS_GRADE_FAMILIAR = new Set<string>([
   "Sogro(a)",
   "Neto(a)",
 ]);
-const FALLBACK_VALOR_ADICIONAL_DEPENDENTE_FORA_GRADE = 14.9;
+const VALORES_ADICIONAL_POR_IDADE = [
+  { ate: 60, valor: 9.9 },
+  { ate: 70, valor: 19.9 },
+  { ate: 80, valor: 29.9 },
+  { ate: Number.POSITIVE_INFINITY, valor: 49 },
+] as const;
 
 function formatAdicionalMensal(valor: number): string {
   const n = Number(valor);
@@ -125,12 +131,28 @@ function getAdicionalPillText(
       ? valorRealDependente
       : valorRegra > 0
         ? valorRegra
-        : FALLBACK_VALOR_ADICIONAL_DEPENDENTE_FORA_GRADE;
+        : getValorAdicionalPorIdade(dep);
 
   const valorFmt = formatAdicionalMensal(valor);
   if (valorFmt === "R$ —") return "Adicional";
 
   return `Adicional: ${valorFmt}`;
+}
+
+function getValorAdicionalPorIdade(dep: Dependente): number {
+  const idade =
+    typeof dep.idade === "number" && Number.isFinite(dep.idade)
+      ? dep.idade
+      : calcularIdade(dep.dataNascimento ?? null);
+
+  for (const faixa of VALORES_ADICIONAL_POR_IDADE) {
+    if (idade === null || idade <= faixa.ate) {
+      return faixa.valor;
+    }
+  }
+
+  return VALORES_ADICIONAL_POR_IDADE[VALORES_ADICIONAL_POR_IDADE.length - 1]
+    .valor;
 }
 
 interface ConsultorOption {
@@ -980,7 +1002,7 @@ function Step4Form({
 
   const getDepAdicionalValor = (dep: Dependente): number => {
     const parentesco = dep.parentesco?.trim();
-    if (!parentesco) return FALLBACK_VALOR_ADICIONAL_DEPENDENTE_FORA_GRADE;
+    if (!parentesco) return getValorAdicionalPorIdade(dep);
     const isDirectInGrade = DIRECT_PARENTESCOS_GRADE_FAMILIAR.has(parentesco);
     const foraGradeFamiliar = dep.foraGradeFamiliar ?? !isDirectInGrade;
     if (!foraGradeFamiliar || dep.excluirCobrancaAdicional) return 0;
@@ -988,7 +1010,7 @@ function Step4Form({
     const valorRegra = Number(valorAdicionalDependenteForaGrade ?? 0);
     if (valorRealDependente > 0) return valorRealDependente;
     if (valorRegra > 0) return valorRegra;
-    return FALLBACK_VALOR_ADICIONAL_DEPENDENTE_FORA_GRADE;
+    return getValorAdicionalPorIdade(dep);
   };
 
   useEffect(() => {
@@ -1405,7 +1427,10 @@ function Step4Form({
                     </p>
                     <div className="cm-cad-dep-info-pill">
                       <span className="cm-cad-required">*</span>
-                      <span>R$ 9,90 por pessoa (até 60 anos)</span>
+                      <span>
+                        R$ 9,90 ate 60 anos | R$ 19,90 ate 70 | R$ 29,90 ate 80
+                        | R$ 49,00 acima de 80
+                      </span>
                     </div>
                   </section>
                   <section className="cm-cad-dep-info-box">
@@ -1413,7 +1438,10 @@ function Step4Form({
                     <p>Pessoas sem grau de parentesco com o titular.</p>
                     <div className="cm-cad-dep-info-pill">
                       <span className="cm-cad-required">*</span>
-                      <span>R$ 14,90 por pessoa (até 70 anos)</span>
+                      <span>
+                        R$ 9,90 ate 60 anos | R$ 19,90 ate 70 | R$ 29,90 ate 80
+                        | R$ 49,00 sem limite
+                      </span>
                     </div>
                   </section>
                 </div>
@@ -1527,7 +1555,7 @@ function Step5Plano({
       />
 
       <div className="cm-cad-plan-highlight">
-        <span>Plano selecionado para seu perfil</span>
+        <span>Planos compatíveis com seu perfil</span>
       </div>
 
       {planos.map((plano) => {
@@ -1556,7 +1584,7 @@ function Step5Plano({
                 <p className="cm-cad-plan-name">{plano.nome}</p>
                 <p className="cm-cad-plan-subtitle">
                   {plano.idadeMaxima
-                    ? `A partir de ${plano.idadeMaxima} anos`
+                    ? `Ate ${plano.idadeMaxima} anos`
                     : "Sem limite de idade"}
                 </p>
               </div>
@@ -1630,6 +1658,7 @@ function Step6Servicos({
       iconSrc: "/cliente-mobile/Vector-16.svg",
       iconW: 31,
       iconH: 30,
+      locked: true,
     },
     {
       id: "telemedicina",
@@ -1665,13 +1694,17 @@ function Step6Servicos({
             type="button"
             className={`cm-cad-service-card${checked ? " selected" : ""}${opt.disabled ? " disabled" : ""}`}
             onClick={() => {
-              if (!opt.disabled) onToggle(opt.id);
+              if (!opt.disabled && !opt.locked) onToggle(opt.id);
             }}
-            disabled={opt.disabled}
+            disabled={opt.disabled || opt.locked}
           >
             <div className="cm-cad-service-card-top">
-              <div className={`cm-cad-plan-radio${checked ? " selected" : ""}`}>
-                {checked && <div className="cm-cad-plan-radio-dot" />}
+              <div
+                className={`cm-cad-plan-radio${checked || opt.locked ? " selected" : ""}`}
+              >
+                {(checked || opt.locked) && (
+                  <div className="cm-cad-plan-radio-dot" />
+                )}
               </div>
               <div className="cm-cad-service-main">
                 <p className="cm-cad-service-title">{opt.title}</p>
@@ -1687,7 +1720,9 @@ function Step6Servicos({
                 />
               </div>
             </div>
-            <span className="cm-cad-service-badge">{opt.badge}</span>
+            <span className="cm-cad-service-badge">
+              {opt.locked ? "Incluso" : opt.badge}
+            </span>
           </button>
         );
       })}
@@ -1858,7 +1893,7 @@ function Step8Confirmacao({
         ? valorRealDependente
         : valorRegra > 0
           ? valorRegra
-          : FALLBACK_VALOR_ADICIONAL_DEPENDENTE_FORA_GRADE;
+          : getValorAdicionalPorIdade(dep);
     return acc + valor;
   }, 0);
 
@@ -2142,8 +2177,7 @@ function Step8Confirmacao({
                   </p>
                   {plano.idadeMaxima != null ? (
                     <p>
-                      Idade mínima de entrada:{" "}
-                      <strong>{plano.idadeMaxima} anos</strong>
+                      Faixa etária: <strong>{plano.idadeMaxima} anos</strong>
                     </p>
                   ) : null}
                   {Array.isArray(plano.coberturas) &&
@@ -2207,7 +2241,9 @@ export default function MobileCadastroScreen() {
   /* Plano */
   const [selectedPlano, setSelectedPlano] = useState<Plano | null>(null);
   const [planoError, setPlanoError] = useState<string | null>(null);
-  const [servicosAdicionais, setServicosAdicionais] = useState<string[]>([]);
+  const [servicosAdicionais, setServicosAdicionais] = useState<string[]>([
+    "clube-beneficios",
+  ]);
   const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamento | "">(
     "",
   );
@@ -2310,6 +2346,7 @@ export default function MobileCadastroScreen() {
     return confirmado && isDependenteComplete(dep);
   });
 
+  const responsavelDataForPlanos = step3Form.watch();
   const participantesPayload = (() => {
     const list: ParticipanteMin[] = [
       {
@@ -2319,6 +2356,19 @@ export default function MobileCadastroScreen() {
           : null,
         parentesco: "Titular",
       },
+      ...(!usarMesmosDados &&
+      responsavelDataForPlanos.dataNascimento &&
+      responsavelDataForPlanos.parentesco
+        ? [
+            {
+              dataNascimento: responsavelDataForPlanos.dataNascimento ?? null,
+              idade: responsavelDataForPlanos.dataNascimento
+                ? calcularIdade(responsavelDataForPlanos.dataNascimento)
+                : null,
+              parentesco: responsavelDataForPlanos.parentesco ?? "Outro",
+            } satisfies ParticipanteMin,
+          ]
+        : []),
       ...dependentesElegiveisParaPlano.map((d) => ({
         dataNascimento: d.dataNascimento ?? null,
         idade: d.dataNascimento ? calcularIdade(d.dataNascimento) : null,
@@ -2338,27 +2388,38 @@ export default function MobileCadastroScreen() {
     Plano[]
   >({
     queryKey: ["planos-mobile-cad", participantesPayload],
-    queryFn: () => fetchSuggestedPlanosWithRetry(participantesPayload),
+    queryFn: () =>
+      fetchSuggestedPlanosWithRetry(participantesPayload, {
+        ignorarComposicao: true,
+      }),
     enabled: canSuggestPlanos,
     retry: false,
     staleTime: 60_000,
   });
 
+  const planosCompativeis = useMemo(
+    () => selecionarPlanosCompativeis(planosData, participantesPayload),
+    [planosData, participantesPayload],
+  );
+
   useEffect(() => {
-    if (!Array.isArray(planosData) || planosData.length === 0) {
+    if (!Array.isArray(planosCompativeis) || planosCompativeis.length === 0) {
       setSelectedPlano(null);
       return;
     }
 
     setSelectedPlano((prev) => {
-      if (prev && planosData.some((p) => String(p.id) === String(prev.id))) {
+      if (
+        prev &&
+        planosCompativeis.some((p) => String(p.id) === String(prev.id))
+      ) {
         return prev;
       }
 
       const maiorIdade = obterMaiorIdadeParticipantes(participantesPayload);
-      return selecionarPlanoPorMaiorIdade(planosData, maiorIdade);
+      return selecionarPlanoPorMaiorIdade(planosCompativeis, maiorIdade);
     });
-  }, [planosData, participantesPayload]);
+  }, [planosCompativeis, participantesPayload]);
 
   /* Fetch regras */
   useEffect(() => {
@@ -2581,7 +2642,12 @@ export default function MobileCadastroScreen() {
         step5: {
           planoId: selectedPlano ? Number(selectedPlano.id) : undefined,
           plano: selectedPlano,
+          billingType:
+            metodoPagamento === "CARTAO"
+              ? "CREDIT_CARD"
+              : metodoPagamento || undefined,
         },
+        servicosAdicionais,
         dependentes,
         usarMesmosDados,
         consultorId:
@@ -2654,7 +2720,7 @@ export default function MobileCadastroScreen() {
       case 6:
         return (
           <Step5Plano
-            planos={planosData}
+            planos={planosCompativeis}
             isLoading={isLoadingPlanos}
             selected={selectedPlano}
             onSelect={(p) => {
@@ -2662,7 +2728,7 @@ export default function MobileCadastroScreen() {
               setPlanoError(null);
             }}
             error={planoError}
-            selectionLocked
+            selectionLocked={false}
           />
         );
       case 7:

@@ -66,6 +66,12 @@ const STATUS_BADGE: Record<
   { bg: string; border: string; color: string; label: string }
 > = {
   ativo: { bg: "#DDFFDD", border: "#A4E0A4", color: "#266738", label: "Ativo" },
+  pendente_assinatura: {
+    bg: "#FFF7E0",
+    border: "#F5D77A",
+    color: "#8A6A00",
+    label: "Pendente de assinatura",
+  },
   suspenso: {
     bg: "#FFF3CD",
     border: "#FFD700",
