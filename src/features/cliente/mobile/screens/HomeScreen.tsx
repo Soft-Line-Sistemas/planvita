@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { History, Users } from "lucide-react";
 import type { ClientePlano } from "@/types/ClientePlano";
 import type { ContaFinanceira } from "@/services/financeiro/contasCliente.service";
 import type { TabId, ScreenId } from "../ClienteMobilePage";
@@ -18,6 +19,14 @@ type Props = {
   onOpenFotoAjustes: () => void;
   onLogout: () => void;
   hasParcerias: boolean;
+};
+
+type HomeShortcut = {
+  id: string;
+  iconSrc?: string;
+  iconLucide?: "dependentes" | "historico";
+  label: string;
+  action: () => void;
 };
 
 function formatValidade(isoDate: string) {
@@ -51,6 +60,48 @@ export default function HomeScreen({
   const validade = cliente.plano.vigencia?.fim
     ? formatValidade(cliente.plano.vigencia.fim)
     : "—";
+  const shortcuts: HomeShortcut[] = [
+    {
+      id: "plano",
+      iconSrc: "/cliente-mobile/Vector-7.svg",
+      label: "Benefícios do plano",
+      action: () => goTo("entenda-seu-plano"),
+    },
+    {
+      id: "faturas",
+      iconSrc: "/cliente-mobile/Vector-2.svg",
+      label: "Suas faturas",
+      action: () => changeTab("faturas"),
+    },
+    {
+      id: "dependentes",
+      iconLucide: "dependentes",
+      label: "Dependentes",
+      action: () => goTo("dependentes"),
+    },
+    {
+      id: "historico",
+      iconLucide: "historico",
+      label: "Histórico do Plano",
+      action: () => goTo("historico-plano"),
+    },
+    ...(hasParcerias
+      ? [
+          {
+            id: "parcerias",
+            iconSrc: "/cliente-mobile/Vector-1.svg",
+            label: "Parcerias e vantagens",
+            action: () => goTo("parcerias" as ScreenId),
+          },
+        ]
+      : []),
+    {
+      id: "assinaturas",
+      iconSrc: "/cliente-mobile/Vector-5.svg",
+      label: "Contrato e Assinatura",
+      action: () => goTo("assinaturas"),
+    },
+  ];
 
   return (
     <div id="screen-home" className="cm-home-root">
@@ -152,71 +203,36 @@ export default function HomeScreen({
         <p className="cm-section-title">Selecione a opção desejada</p>
 
         <div className="cm-menu-grid">
-          <button
-            type="button"
-            className="cm-menu-item"
-            onClick={() => goTo("entenda-seu-plano")}
-          >
-            <span className="cm-menu-icon">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/cliente-mobile/Vector-7.svg" alt="" />
-            </span>
-            <span className="cm-menu-label">
-              Benefícios do
-              <br />
-              seu plano
-            </span>
-          </button>
-
-          <button
-            type="button"
-            className="cm-menu-item"
-            onClick={() => changeTab("faturas")}
-          >
-            <span className="cm-menu-icon">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/cliente-mobile/Vector-2.svg" alt="" />
-            </span>
-            <span className="cm-menu-label">
-              Acesse
-              <br />
-              suas faturas
-            </span>
-          </button>
-
-          {hasParcerias ? (
+          {shortcuts.map((shortcut) => (
             <button
+              key={shortcut.id}
               type="button"
               className="cm-menu-item"
-              onClick={() => goTo("parcerias")}
+              onClick={shortcut.action}
             >
               <span className="cm-menu-icon">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/cliente-mobile/Vector-1.svg" alt="" />
+                {shortcut.iconLucide === "dependentes" ? (
+                  <Users
+                    size={32}
+                    strokeWidth={2}
+                    color="#4CAF37"
+                    aria-hidden
+                  />
+                ) : shortcut.iconLucide === "historico" ? (
+                  <History
+                    size={32}
+                    strokeWidth={2}
+                    color="#4CAF37"
+                    aria-hidden
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={shortcut.iconSrc} alt="" />
+                )}
               </span>
-              <span className="cm-menu-label">
-                Parcerias e
-                <br />
-                vantagens
-              </span>
+              <span className="cm-menu-label">{shortcut.label}</span>
             </button>
-          ) : null}
-
-          <button
-            type="button"
-            className="cm-menu-item"
-            onClick={() => goTo("assinaturas")}
-          >
-            <span className="cm-menu-icon">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/cliente-mobile/Vector-5.svg" alt="" />
-            </span>
-            <span className="cm-menu-label">
-              Contrato e
-              <br />
-              Assinatura
-            </span>
-          </button>
+          ))}
         </div>
 
         <button
@@ -239,19 +255,6 @@ export default function HomeScreen({
             aria-hidden="true"
           />
         </button>
-
-        {(cliente.dependentes?.length ?? 0) > 0 && (
-          <button
-            type="button"
-            onClick={() => goTo("dependentes")}
-            className="cm-home-dependentes-link"
-          >
-            {cliente.dependentes!.length}{" "}
-            {cliente.dependentes!.length === 1 ? "dependente" : "dependentes"}{" "}
-            vinculado
-            {cliente.dependentes!.length !== 1 ? "s" : ""} ao plano →
-          </button>
-        )}
       </div>
     </div>
   );

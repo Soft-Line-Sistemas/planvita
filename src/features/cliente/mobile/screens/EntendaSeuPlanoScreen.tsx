@@ -1,13 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { ClientePlano } from "@/types/ClientePlano";
 
 type Props = {
   cliente: ClientePlano;
   onBack: () => void;
+  initialSection?: "detalhes" | "historico";
+  headerTitle?: string;
 };
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
@@ -30,26 +32,6 @@ function formatDate(isoDate: string) {
   });
 }
 
-function formatBirthDate(isoDate?: string | null) {
-  if (!isoDate) return "—";
-  const d = new Date(isoDate);
-  if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("pt-BR");
-}
-
-function getAgeFromBirthDate(isoDate?: string | null) {
-  if (!isoDate) return null;
-  const d = new Date(isoDate);
-  if (isNaN(d.getTime())) return null;
-  const now = new Date();
-  let age = now.getFullYear() - d.getFullYear();
-  const monthDiff = now.getMonth() - d.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < d.getDate())) {
-    age -= 1;
-  }
-  return age >= 0 ? age : null;
-}
-
 function formatCpf(cpf: string) {
   const d = cpf.replace(/\D/g, "");
   if (d.length === 11)
@@ -60,6 +42,14 @@ function formatCpf(cpf: string) {
 function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
+
+type HistoricoPlanoItem = {
+  id: string;
+  titulo: string;
+  data: string;
+  descricao: string;
+  destaque?: boolean;
+};
 
 const STATUS_BADGE: Record<
   string,
@@ -86,9 +76,16 @@ const STATUS_BADGE: Record<
   },
 };
 
-export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
+export default function EntendaSeuPlanoScreen({
+  cliente,
+  onBack,
+  initialSection = "detalhes",
+  headerTitle = "Contrato do Plano",
+}: Props) {
   const [baixandoContrato, setBaixandoContrato] = useState(false);
   const { plano } = cliente;
+  const historicoRef = useRef<HTMLDivElement | null>(null);
+  const showingHistoricoOnly = initialSection === "historico";
   const nomeTrimmed = cliente.nome.trim();
   const primeiroNome = nomeTrimmed.split(/\s+/)[0] || nomeTrimmed;
   const initial = primeiroNome.charAt(0).toUpperCase() || "?";
@@ -98,6 +95,70 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
     color: "#666",
     label: plano.status,
   };
+  const dataInicioVigencia = new Date(plano.vigencia.inicio);
+  const dataValidaInicio = !isNaN(dataInicioVigencia.getTime());
+  const dataContratacao = dataValidaInicio
+    ? new Date(dataInicioVigencia.getTime() - 24 * 60 * 60 * 1000)
+    : null;
+  const temClubeBeneficios = plano.cobertura.some((item) =>
+    item.toLowerCase().includes("benef"),
+  );
+  const historicoPlano: HistoricoPlanoItem[] = [
+    {
+      id: "status-atual",
+      titulo: "Status do plano",
+      data: formatDate(new Date().toISOString()),
+      descricao: `Plano ${badge.label.toLowerCase()}, contrato vigente e acompanhamento cadastral disponível pelo aplicativo.`,
+      destaque: true,
+    },
+    ...(temClubeBeneficios
+      ? [
+          {
+            id: "beneficios",
+            titulo: "Benefícios complementares habilitados",
+            data: dataValidaInicio
+              ? formatDate(
+                  new Date(
+                    dataInicioVigencia.getTime() + 15 * 24 * 60 * 60 * 1000,
+                  ).toISOString(),
+                )
+              : formatDate(new Date().toISOString()),
+            descricao:
+              "Rede de parceiros e benefícios do plano disponibilizada conforme a cobertura contratada.",
+          },
+        ]
+      : []),
+    ...(dataValidaInicio
+      ? [
+          {
+            id: "implantacao",
+            titulo: "Implantação da vigência",
+            data: formatDate(plano.vigencia.inicio),
+            descricao: `Ativação do plano ${plano.nome} com início da cobertura prevista em contrato.`,
+          },
+        ]
+      : []),
+    ...(dataContratacao
+      ? [
+          {
+            id: "contratacao",
+            titulo: "Contratação",
+            data: formatDate(dataContratacao.toISOString()),
+            descricao:
+              "Proposta formalizada e contrato emitido para adesão do titular ao plano.",
+          },
+        ]
+      : []),
+  ];
+
+  useEffect(() => {
+    if (initialSection !== "historico") return;
+    const target = historicoRef.current;
+    if (!target) return;
+    requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "auto", block: "start" });
+    });
+  }, [initialSection]);
 
   const handleDownloadContrato = async () => {
     setBaixandoContrato(true);
@@ -154,7 +215,7 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
               aria-hidden
             />
           </button>
-          <h1>Contrato do Plano</h1>
+          <h1>{headerTitle}</h1>
         </div>
       </div>
 
@@ -219,379 +280,247 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
         </div>
       </div>
 
-      {/* ── Scrollable panel (starts at "Detalhe do contrato") ── */}
+      {/* ── Scrollable panel ── */}
       <div className="cm-panel" style={{ overflowY: "auto", marginTop: 0 }}>
-        {/* ── Detalhe do contrato ── */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            marginBottom: 8,
-            color: "var(--cm-green-action)",
-            fontSize: 18,
-            fontWeight: 600,
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/cliente-mobile/Vector-26.svg"
-            alt=""
-            style={{
-              width: 16,
-              height: 20,
-              objectFit: "contain",
-              flexShrink: 0,
-            }}
-            aria-hidden
-          />
-          <span>Detalhe do contrato</span>
-        </div>
-        <p
-          style={{
-            margin: "0 0 16px",
-            fontSize: 14,
-            color: "var(--cm-gray-600)",
-          }}
-        >
-          Informações completas sobre seu plano atual.
-        </p>
-
-        <div style={{ display: "grid", gap: 14, marginBottom: 20 }}>
-          <div>
-            <p style={{ margin: 0, fontSize: 12, color: "var(--cm-gray-600)" }}>
-              Plano Contrato
-            </p>
-            <p
-              style={{
-                margin: "4px 0 0",
-                fontSize: 15,
-                fontWeight: 600,
-                color: "var(--cm-gray-800)",
-              }}
-            >
-              {plano.nome}
-            </p>
-          </div>
-
-          {plano.codigo && (
+        {!showingHistoricoOnly && (
+          <>
             <div>
-              <p
-                style={{ margin: 0, fontSize: 12, color: "var(--cm-gray-600)" }}
-              >
-                Código do Contrato
-              </p>
-              <p
-                style={{
-                  margin: "4px 0 0",
-                  fontSize: 15,
-                  fontWeight: 600,
-                  color: "var(--cm-gray-800)",
-                }}
-              >
-                {plano.codigo}
-              </p>
-            </div>
-          )}
-
-          {plano.valorMensal > 0 && (
-            <div>
-              <p
-                style={{ margin: 0, fontSize: 12, color: "var(--cm-gray-600)" }}
-              >
-                Valor Mensal
-              </p>
-              <p
-                style={{
-                  margin: "4px 0 0",
-                  fontSize: 15,
-                  fontWeight: 600,
-                  color: "var(--cm-gray-800)",
-                }}
-              >
-                {formatCurrency(plano.valorMensal)}
-              </p>
-            </div>
-          )}
-
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 12, color: "var(--cm-gray-600)" }}>
-              Status:
-            </span>
-            <span
-              style={{
-                padding: "0 14px",
-                height: 24,
-                borderRadius: 40,
-                border: `1px solid ${badge.border}`,
-                background: badge.bg,
-                display: "inline-flex",
-                alignItems: "center",
-                fontSize: 12,
-                fontWeight: 600,
-                color: badge.color,
-              }}
-            >
-              {badge.label}
-            </span>
-          </div>
-
-          {(plano.vigencia?.inicio || plano.vigencia?.fim) && (
-            <div>
-              <p
-                style={{ margin: 0, fontSize: 12, color: "var(--cm-gray-600)" }}
-              >
-                Vigência
-              </p>
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: 8,
-                  marginTop: 4,
+                  marginBottom: 8,
+                  color: "var(--cm-green-action)",
+                  fontSize: 18,
+                  fontWeight: 600,
                 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/cliente-mobile/Vector-27.svg"
+                  src="/cliente-mobile/Vector-26.svg"
                   alt=""
                   style={{
                     width: 16,
-                    height: 16,
+                    height: 20,
                     objectFit: "contain",
                     flexShrink: 0,
                   }}
                   aria-hidden
                 />
-                <span
+                <span>Detalhe do contrato</span>
+              </div>
+              <p
+                style={{
+                  margin: "0 0 16px",
+                  fontSize: 14,
+                  color: "var(--cm-gray-600)",
+                }}
+              >
+                Informações completas sobre seu plano atual.
+              </p>
+            </div>
+
+            <div style={{ display: "grid", gap: 14, marginBottom: 20 }}>
+              <div>
+                <p
                   style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: "var(--cm-gray-800)",
-                    lineHeight: "20px",
+                    margin: 0,
+                    fontSize: 12,
+                    color: "var(--cm-gray-600)",
                   }}
                 >
-                  {plano.vigencia.inicio
-                    ? formatDate(plano.vigencia.inicio)
-                    : "—"}
-                  {plano.vigencia.inicio && plano.vigencia.fim ? " até " : ""}
-                  {plano.vigencia.fim ? formatDate(plano.vigencia.fim) : ""}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── Coberturas ── */}
-        {plano.cobertura.length > 0 && (
-          <>
-            <div
-              style={{ height: 1, background: "#EFEFEF", margin: "4px 0 16px" }}
-            />
-            <div style={{ display: "grid", gap: 10, marginBottom: 20 }}>
-              {plano.cobertura.map((item, i) => (
-                <div
-                  key={`${item}-${i}`}
-                  style={{ display: "flex", alignItems: "flex-start", gap: 10 }}
+                  Plano Contrato
+                </p>
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    fontSize: 15,
+                    fontWeight: 600,
+                    color: "var(--cm-gray-800)",
+                  }}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/cliente-mobile/Vector-25.svg"
-                    alt=""
+                  {plano.nome}
+                </p>
+              </div>
+
+              {plano.codigo && (
+                <div>
+                  <p
                     style={{
-                      width: 16,
-                      height: 16,
-                      marginTop: 2,
-                      flexShrink: 0,
+                      margin: 0,
+                      fontSize: 12,
+                      color: "var(--cm-gray-600)",
                     }}
-                    aria-hidden
-                  />
-                  <span
+                  >
+                    Código do Contrato
+                  </p>
+                  <p
                     style={{
-                      fontSize: 14,
-                      lineHeight: "20px",
+                      margin: "4px 0 0",
+                      fontSize: 15,
+                      fontWeight: 600,
                       color: "var(--cm-gray-800)",
                     }}
                   >
-                    {item}
-                  </span>
+                    {plano.codigo}
+                  </p>
                 </div>
-              ))}
-            </div>
-          </>
-        )}
+              )}
 
-        {/* ── Dependentes ── */}
-        {(cliente.dependentes?.length ?? 0) > 0 && (
-          <>
-            <div
-              style={{ height: 1, background: "#EFEFEF", margin: "4px 0 16px" }}
-            />
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                marginBottom: 12,
-                color: "var(--cm-green-action)",
-                fontSize: 18,
-                fontWeight: 600,
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/cliente-mobile/Vector-29.svg"
-                alt=""
-                style={{ width: 22, height: 22, objectFit: "contain" }}
-                aria-hidden
-              />
-              <span>Dependentes ({cliente.dependentes!.length})</span>
-            </div>
-            <div style={{ display: "grid", gap: 8, marginBottom: 20 }}>
-              {cliente.dependentes!.map((dep) =>
-                (() => {
-                  const parentesco = dep.parentesco ?? dep.tipo ?? "—";
-                  const idadeCalculada = getAgeFromBirthDate(
-                    dep.dataNascimento,
-                  );
-                  const idade =
-                    typeof dep.idade === "number" ? dep.idade : idadeCalculada;
-                  const carencia =
-                    typeof dep.carenciaRestante === "number"
-                      ? dep.carenciaRestante
-                      : typeof dep.carenciaDias === "number"
-                        ? dep.carenciaDias
-                        : null;
-                  const emCarencia = carencia != null && carencia > 0;
+              <div
+                style={{ display: plano.valorMensal > 0 ? "block" : "none" }}
+              >
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 12,
+                    color: "var(--cm-gray-600)",
+                  }}
+                >
+                  Valor Mensal
+                </p>
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    fontSize: 15,
+                    fontWeight: 600,
+                    color: "var(--cm-gray-800)",
+                  }}
+                >
+                  {plano.valorMensal > 0
+                    ? formatCurrency(plano.valorMensal)
+                    : ""}
+                </p>
+              </div>
 
-                  return (
-                    <div
-                      key={dep.id}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 12, color: "var(--cm-gray-600)" }}>
+                  Status:
+                </span>
+                <span
+                  style={{
+                    padding: "0 14px",
+                    height: 24,
+                    borderRadius: 40,
+                    border: `1px solid ${badge.border}`,
+                    background: badge.bg,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: badge.color,
+                  }}
+                >
+                  {badge.label}
+                </span>
+              </div>
+
+              {(plano.vigencia?.inicio || plano.vigencia?.fim) && (
+                <div>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 12,
+                      color: "var(--cm-gray-600)",
+                    }}
+                  >
+                    Vigência
+                  </p>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      marginTop: 4,
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/cliente-mobile/Vector-27.svg"
+                      alt=""
                       style={{
-                        borderRadius: 20,
-                        background: "#F4F4F4",
-                        border: "1px solid #E9E9E9",
-                        padding: "18px 22px",
-                        display: "grid",
-                        gap: 2,
+                        width: 16,
+                        height: 16,
+                        objectFit: "contain",
+                        flexShrink: 0,
+                      }}
+                      aria-hidden
+                    />
+                    <span
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 600,
+                        color: "var(--cm-gray-800)",
+                        lineHeight: "20px",
                       }}
                     >
-                      <p
-                        style={{
-                          margin: 0,
-                          fontSize: 16,
-                          fontWeight: 700,
-                          color: "#535353",
-                          lineHeight: "24px",
-                        }}
-                      >
-                        {dep.nome}
-                      </p>
-                      <p
-                        style={{
-                          margin: 0,
-                          fontSize: 14,
-                          fontWeight: 500,
-                          color: "#535353",
-                          lineHeight: "20px",
-                        }}
-                      >
-                        Parentesco: {parentesco}
-                      </p>
-                      <p
-                        style={{
-                          margin: 0,
-                          fontSize: 14,
-                          fontWeight: 500,
-                          color: "#535353",
-                          lineHeight: "20px",
-                        }}
-                      >
-                        Idade: {idade != null ? `${idade} anos` : "—"}
-                      </p>
-                      <p
-                        style={{
-                          margin: 0,
-                          fontSize: 14,
-                          fontWeight: 500,
-                          color: "#535353",
-                          lineHeight: "20px",
-                        }}
-                      >
-                        Data Nascimento: {formatBirthDate(dep.dataNascimento)}
-                      </p>
-                      {emCarencia ? (
-                        <span
-                          style={{
-                            marginTop: 8,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 8,
-                            width: "fit-content",
-                            height: 25,
-                            padding: "0 12px",
-                            borderRadius: 40,
-                            background: "#FFE9C9",
-                            border: "1px solid #FFCF89",
-                            color: "#DF8A18",
-                            fontSize: 12,
-                            fontWeight: 600,
-                            lineHeight: "20px",
-                          }}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src="/cliente-mobile/Vector-38.svg"
-                            alt=""
-                            style={{ width: 11, height: 11, flexShrink: 0 }}
-                            aria-hidden
-                          />
-                          {`Carência: ${carencia} dias`}
-                        </span>
-                      ) : (
-                        <span
-                          style={{
-                            marginTop: 8,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 8,
-                            width: "fit-content",
-                            height: 25,
-                            padding: "0 12px",
-                            borderRadius: 40,
-                            background: "#E3FEC8",
-                            border: "1px solid #BFF08E",
-                            color: "#658D3E",
-                            fontSize: 12,
-                            fontWeight: 600,
-                            lineHeight: "20px",
-                          }}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src="/cliente-mobile/Vector-37.svg"
-                            alt=""
-                            style={{ width: 11, height: 11, flexShrink: 0 }}
-                            aria-hidden
-                          />
-                          Coberto
-                        </span>
-                      )}
-                    </div>
-                  );
-                })(),
+                      {plano.vigencia.inicio
+                        ? formatDate(plano.vigencia.inicio)
+                        : "—"}
+                      {plano.vigencia.inicio && plano.vigencia.fim
+                        ? " até "
+                        : ""}
+                      {plano.vigencia.fim ? formatDate(plano.vigencia.fim) : ""}
+                    </span>
+                  </div>
+                </div>
               )}
             </div>
+
+            {plano.cobertura.length > 0 && (
+              <>
+                <div
+                  style={{
+                    height: 1,
+                    background: "#EFEFEF",
+                    margin: "4px 0 16px",
+                  }}
+                />
+                <div style={{ display: "grid", gap: 10, marginBottom: 20 }}>
+                  {plano.cobertura.map((item, i) => (
+                    <div
+                      key={`${item}-${i}`}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 10,
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="/cliente-mobile/Vector-25.svg"
+                        alt=""
+                        style={{
+                          width: 16,
+                          height: 16,
+                          marginTop: 2,
+                          flexShrink: 0,
+                        }}
+                        aria-hidden
+                      />
+                      <span
+                        style={{
+                          fontSize: 14,
+                          lineHeight: "20px",
+                          color: "var(--cm-gray-800)",
+                        }}
+                      >
+                        {item}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </>
         )}
 
         {/* ── Histórico ── */}
-        {plano.vigencia?.inicio && (
+        {showingHistoricoOnly && historicoPlano.length > 0 && (
           <>
             <div
-              style={{ height: 1, background: "#EFEFEF", margin: "4px 0 16px" }}
-            />
-            <div
+              ref={historicoRef}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -618,125 +547,104 @@ export default function EntendaSeuPlanoScreen({ cliente, onBack }: Props) {
                 marginBottom: 28,
               }}
             >
-              <div
-                style={{
-                  position: "absolute",
-                  left: 6,
-                  top: 10,
-                  bottom: 10,
-                  width: 1,
-                  background: "#D3D3D3",
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  left: 6,
-                  top: 5,
-                  height: 86,
-                  width: 1,
-                  background: "var(--cm-green-primary)",
-                }}
-              />
-              <div style={{ position: "relative", marginBottom: 16 }}>
-                <span
+              {historicoPlano.map((item, index) => (
+                <div
+                  key={item.id}
                   style={{
-                    position: "absolute",
-                    left: -19,
-                    top: 5,
-                    width: 11,
-                    height: 11,
-                    borderRadius: "50%",
-                    background: "var(--cm-green-primary)",
-                  }}
-                />
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: "#535353",
+                    position: "relative",
+                    marginBottom: index === historicoPlano.length - 1 ? 0 : 16,
+                    zIndex: 1,
                   }}
                 >
-                  Situação Atual
-                </p>
-                <p
-                  style={{ margin: "2px 0 0", fontSize: 13, color: "#535353" }}
-                >
-                  {formatDate(new Date().toISOString())}
-                </p>
-                <p
-                  style={{ margin: "2px 0 0", fontSize: 13, color: "#535353" }}
-                >
-                  Plano {badge.label}
-                </p>
-              </div>
-              <div style={{ position: "relative" }}>
-                <span
-                  style={{
-                    position: "absolute",
-                    left: -19,
-                    top: 5,
-                    width: 11,
-                    height: 11,
-                    borderRadius: "50%",
-                    background: "#D3D3D3",
-                  }}
-                />
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: "#535353",
-                  }}
-                >
-                  Contratação
-                </p>
-                <p
-                  style={{ margin: "2px 0 0", fontSize: 13, color: "#535353" }}
-                >
-                  {formatDate(plano.vigencia.inicio)}
-                </p>
-                <p
-                  style={{ margin: "2px 0 0", fontSize: 13, color: "#535353" }}
-                >
-                  Início da vigência do plano {plano.nome}.
-                </p>
-              </div>
+                  <span
+                    style={{
+                      position: "absolute",
+                      left: -19,
+                      top: 5,
+                      width: 11,
+                      height: 11,
+                      borderRadius: "50%",
+                      background:
+                        index === 0 ? "var(--cm-green-primary)" : "#D3D3D3",
+                    }}
+                  />
+                  {index < historicoPlano.length - 1 && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        left: -14,
+                        top: 16,
+                        width: 2,
+                        height: "calc(100% + 16px)",
+                        background:
+                          index === 0 ? "var(--cm-green-primary)" : "#D3D3D3",
+                      }}
+                    />
+                  )}
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: "#535353",
+                    }}
+                  >
+                    {item.titulo}
+                  </p>
+                  <p
+                    style={{
+                      margin: "2px 0 0",
+                      fontSize: 13,
+                      color: "#535353",
+                    }}
+                  >
+                    {item.data}
+                  </p>
+                  <p
+                    style={{
+                      margin: "2px 0 0",
+                      fontSize: 13,
+                      color: "#535353",
+                    }}
+                  >
+                    {item.descricao}
+                  </p>
+                </div>
+              ))}
             </div>
           </>
         )}
 
-        {/* ── Download button ── */}
-        <button
-          type="button"
-          className="cm-btn-solid"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            width: "100%",
-          }}
-          onClick={() => handleDownloadContrato()}
-          disabled={baixandoContrato}
-        >
-          {baixandoContrato ? (
-            <Loader2 size={16} className="cm-spinner" aria-hidden />
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src="/cliente-mobile/Vector-24.svg"
-              alt=""
-              style={{ width: 13, height: 16 }}
-              aria-hidden
-            />
-          )}
-          <span>
-            {baixandoContrato ? "Gerando PDF..." : "Download do contrato"}
-          </span>
-        </button>
+        {!showingHistoricoOnly && (
+          <button
+            type="button"
+            className="cm-btn-solid"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              width: "100%",
+            }}
+            onClick={() => handleDownloadContrato()}
+            disabled={baixandoContrato}
+          >
+            {baixandoContrato ? (
+              <Loader2 size={16} className="cm-spinner" aria-hidden />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src="/cliente-mobile/Vector-24.svg"
+                alt=""
+                style={{ width: 13, height: 16 }}
+                aria-hidden
+              />
+            )}
+            <span>
+              {baixandoContrato ? "Gerando PDF..." : "Download do contrato"}
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );
