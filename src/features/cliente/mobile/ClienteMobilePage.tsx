@@ -44,6 +44,7 @@ export type ScreenId =
   | "carteirinha"
   | "assinaturas"
   | "entenda-seu-plano"
+  | "historico-plano"
   | "dependentes"
   | "parcerias";
 
@@ -66,6 +67,7 @@ const SCREENS_WITH_TABBAR: ScreenId[] = [
   "assinaturas",
   "carteirinha",
   "entenda-seu-plano",
+  "historico-plano",
   "dependentes",
   "parcerias",
 ];
@@ -1020,6 +1022,7 @@ export default function ClienteMobilePage() {
   const tabBarActive: TabId =
     screen === "assinaturas" ||
     screen === "entenda-seu-plano" ||
+    screen === "historico-plano" ||
     screen === "dependentes" ||
     screen === "parcerias" ||
     screen === "carteirinha"
@@ -1098,6 +1101,15 @@ export default function ClienteMobilePage() {
 
         {screen === "entenda-seu-plano" && clienteExibicao && (
           <EntendaSeuPlanoScreen cliente={clienteExibicao} onBack={goBack} />
+        )}
+
+        {screen === "historico-plano" && clienteExibicao && (
+          <EntendaSeuPlanoScreen
+            cliente={clienteExibicao}
+            onBack={goBack}
+            initialSection="historico"
+            headerTitle="Histórico do Plano"
+          />
         )}
 
         {screen === "dependentes" && clienteExibicao && (
