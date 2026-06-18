@@ -39,4 +39,6 @@ export interface ClientePlano {
   telefone?: string;
   plano: PlanoDetalhado;
   dependentes?: DependentePlano[];
+  pagamentoConfirmadoEm?: string | null;
+  assinaturasPendentes?: boolean;
 }

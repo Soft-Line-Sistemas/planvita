@@ -11,7 +11,8 @@ export type AuthView =
   | "login"
   | "first-access"
   | "forgot"
-  | "cadastro-redirect";
+  | "cadastro-redirect"
+  | "payment-pending";
 
 export type FirstAccessStep = "request" | "verify" | "set-password";
 export type ForgotStep = "request" | "verify" | "set-password";
@@ -64,6 +65,17 @@ export interface MobileLoginProps {
   onCompleteForgot: () => void;
 
   cadastroMessage: string;
+
+  ppNome: string | null;
+  ppEmailMasked: string | null;
+  ppTelefoneMasked: string | null;
+  ppPaymentUrl: string | null;
+  ppVencimento: string | null;
+  ppValor: number | null;
+  ppLoading: boolean;
+  ppError: string | null;
+  ppSucesso: boolean;
+  onReenviarPagamento: () => void;
 }
 
 /* ===================================================================
@@ -851,6 +863,165 @@ function CadastroRedirectView({
 }
 
 /* ===================================================================
+   Payment Pending view
+   =================================================================== */
+
+function PaymentPendingView({
+  ppNome,
+  ppEmailMasked,
+  ppTelefoneMasked,
+  ppPaymentUrl,
+  ppVencimento,
+  ppValor,
+  ppLoading,
+  ppError,
+  ppSucesso,
+  onReenviarPagamento,
+  setAuthView,
+}: Pick<
+  MobileLoginProps,
+  | "ppNome"
+  | "ppEmailMasked"
+  | "ppTelefoneMasked"
+  | "ppPaymentUrl"
+  | "ppVencimento"
+  | "ppValor"
+  | "ppLoading"
+  | "ppError"
+  | "ppSucesso"
+  | "onReenviarPagamento"
+  | "setAuthView"
+>) {
+  const formatCurrency = (v: number) =>
+    v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString("pt-BR");
+  };
+
+  return (
+    <>
+      <BackButton onClick={() => setAuthView("login")} />
+
+      <div className="cm-login-content" style={{ gap: 16 }}>
+        <div
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: "50%",
+            background: "rgba(255,255,255,0.18)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 4px",
+          }}
+        >
+          <AlertCircle color="#fff" size={32} />
+        </div>
+
+        <h1 className="cm-login-flow-title">Pagamento pendente</h1>
+
+        {ppNome && (
+          <p className="cm-login-flow-sub">
+            Olá, <strong>{ppNome}</strong>! Encontramos seu cadastro, mas o
+            pagamento de adesão ainda não foi confirmado.
+          </p>
+        )}
+
+        <div
+          style={{
+            background: "rgba(255,255,255,0.12)",
+            borderRadius: 12,
+            padding: "12px 16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+            width: "100%",
+          }}
+        >
+          {ppEmailMasked && (
+            <p style={{ color: "#fff", fontSize: 14, margin: 0 }}>
+              📧 {ppEmailMasked}
+            </p>
+          )}
+          {ppTelefoneMasked && (
+            <p style={{ color: "#fff", fontSize: 14, margin: 0 }}>
+              📱 {ppTelefoneMasked}
+            </p>
+          )}
+          {ppValor !== null && (
+            <p style={{ color: "#fff", fontSize: 14, margin: 0 }}>
+              💰 {formatCurrency(ppValor)}
+            </p>
+          )}
+          {ppVencimento && (
+            <p style={{ color: "#fff", fontSize: 14, margin: 0 }}>
+              📅 Vencimento: {formatDate(ppVencimento)}
+            </p>
+          )}
+        </div>
+
+        {ppPaymentUrl && !ppSucesso && (
+          <a
+            href={ppPaymentUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="cm-login-btn-primary"
+            style={{ textDecoration: "none", textAlign: "center" }}
+          >
+            Pagar agora (link ativo)
+          </a>
+        )}
+
+        {ppSucesso ? (
+          <SuccessBox message="Novo link de pagamento enviado! Verifique seu e-mail ou WhatsApp." />
+        ) : (
+          <>
+            <p
+              style={{
+                color: "rgba(255,255,255,0.7)",
+                fontSize: 13,
+                textAlign: "center",
+                margin: 0,
+              }}
+            >
+              Não recebeu o link? Reenvie um novo:
+            </p>
+            <button
+              type="button"
+              className="cm-login-btn-primary"
+              disabled={ppLoading}
+              onClick={onReenviarPagamento}
+            >
+              {ppLoading ? (
+                <>
+                  <Loader2 size={18} className="cm-spinner" />
+                  Enviando...
+                </>
+              ) : (
+                "Reenviar link de pagamento"
+              )}
+            </button>
+          </>
+        )}
+
+        {ppError && <ErrBox message={ppError} />}
+
+        <button
+          type="button"
+          className="cm-login-btn-secondary"
+          onClick={() => setAuthView("login")}
+        >
+          Voltar ao login
+        </button>
+      </div>
+    </>
+  );
+}
+
+/* ===================================================================
    MobileLoginScreen (root)
    =================================================================== */
 
@@ -879,6 +1050,21 @@ export default function MobileLoginScreen(props: MobileLoginProps) {
         {authView === "cadastro-redirect" && (
           <CadastroRedirectView
             cadastroMessage={props.cadastroMessage}
+            setAuthView={setAuthView}
+          />
+        )}
+        {authView === "payment-pending" && (
+          <PaymentPendingView
+            ppNome={props.ppNome}
+            ppEmailMasked={props.ppEmailMasked}
+            ppTelefoneMasked={props.ppTelefoneMasked}
+            ppPaymentUrl={props.ppPaymentUrl}
+            ppVencimento={props.ppVencimento}
+            ppValor={props.ppValor}
+            ppLoading={props.ppLoading}
+            ppError={props.ppError}
+            ppSucesso={props.ppSucesso}
+            onReenviarPagamento={props.onReenviarPagamento}
             setAuthView={setAuthView}
           />
         )}

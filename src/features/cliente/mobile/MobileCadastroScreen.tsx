@@ -234,24 +234,13 @@ function formatDateBR(iso: string | null | undefined): string {
   return `${d.padStart(2, "0")}/${m.padStart(2, "0")}/${y}`;
 }
 
-/** Cabeçalho de etapa alinhado ao new-ui (texto verde + ícone exportado do Figma). */
 function CadastroSectionHead({
-  iconSrc,
-  iconWidth,
-  iconHeight,
-  title,
   description,
   centered,
 }: {
-  iconSrc: string;
-  iconWidth?: number;
-  iconHeight?: number;
-  title: string;
   description?: string;
   centered?: boolean;
 }) {
-  const w = iconWidth ?? 22;
-  const h = iconHeight ?? 22;
   return (
     <>
       {description ? (
@@ -2203,6 +2192,124 @@ function Step8Confirmacao({
 }
 
 /* ================================================================
+   WhatsApp Redirect Modal
+   ================================================================ */
+
+function buildWhatsAppUrl(
+  numero: string,
+  nome: string,
+  cpf: string,
+  dataNascimento: string,
+  tipo: string,
+): string {
+  // Usa a mesma lógica de getWhatsAppFromPhone: remove o "9" após DDD em números de 11 dígitos
+  const digits = numero.replace(/\D/g, "");
+  let numWa = digits;
+  if (digits.length === 11 && digits[2] === "9") {
+    numWa = `${digits.slice(0, 2)}${digits.slice(3)}`;
+  }
+  const numCompleto = `55${numWa}`;
+  const ddn = dataNascimento
+    ? dataNascimento.split("-").reverse().join("/")
+    : "";
+  const msg = `Olá! Gostaria de continuar meu cadastro de ${tipo}.\n\nNome: ${nome}\nCPF: ${cpf}\nData de nascimento: ${ddn}`;
+  return `https://wa.me/${numCompleto}?text=${encodeURIComponent(msg)}`;
+}
+
+function WhatsAppRedirectModal({
+  nome,
+  cpf,
+  dataNascimento,
+  tipo,
+  numero,
+  onClose,
+}: {
+  nome: string;
+  cpf: string;
+  dataNascimento: string;
+  tipo: "Titular" | "Corresponsável";
+  numero: string;
+  onClose: () => void;
+}) {
+  const url = buildWhatsAppUrl(numero, nome, cpf, dataNascimento, tipo);
+  return createPortal(
+    <div
+      className="cm-cad-wa-redirect-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="wa-redirect-title"
+    >
+      <div className="cm-cad-wa-redirect-card">
+        <button
+          type="button"
+          className="cm-cad-dep-modal-close"
+          onClick={onClose}
+          aria-label="Fechar"
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path
+              d="M1 1L17 17M17 1L1 17"
+              stroke="#595959"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+
+        <div className="cm-cad-wa-redirect-icon" aria-hidden>
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <circle cx="24" cy="24" r="24" fill="#25D366" fillOpacity="0.12" />
+            <path
+              d="M24 10C16.268 10 10 16.268 10 24c0 2.487.651 4.82 1.787 6.845L10 38l7.38-1.77A13.945 13.945 0 0024 38c7.732 0 14-6.268 14-14S31.732 10 24 10z"
+              fill="#25D366"
+            />
+            <path
+              d="M20.5 17.5c-.4-1-.8-1-.9-1h-.9c-.3 0-.8.1-1.2.6-.4.5-1.6 1.6-1.6 3.8 0 2.3 1.7 4.5 1.9 4.8.2.3 3.3 5.2 8.1 7.1 4 1.6 4.8 1.3 5.7 1.2.9-.1 2.8-1.1 3.2-2.2.4-1.1.4-2-.1-2.2-.2-.1-1.6-.7-3-1.4-1.4-.7-1.5-.6-2 .1-.5.7-.9 1.2-1.3 1.2-.2 0-.5-.1-.9-.3-.8-.5-2.4-1.6-3.5-3.5-.2-.3-.1-.5.1-.7.2-.2.5-.6.8-1 .3-.4.2-.7.1-1L20.5 17.5z"
+              fill="white"
+            />
+          </svg>
+        </div>
+
+        <h2 id="wa-redirect-title" className="cm-cad-wa-redirect-title">
+          Atendimento personalizado
+        </h2>
+
+        <p className="cm-cad-wa-redirect-body">
+          Para a faixa de idade informada, o cadastro de <strong>{tipo}</strong>{" "}
+          é realizado via atendimento humano.
+          <br />
+          Seus dados já serão enviados para agilizar o processo.
+        </p>
+
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="cm-cad-wa-redirect-btn"
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path
+              d="M10 1C5.029 1 1 5.029 1 10c0 1.66.435 3.218 1.197 4.566L1 19l4.572-1.185A9 9 0 1010 1z"
+              fill="white"
+            />
+          </svg>
+          Continuar pelo WhatsApp
+        </a>
+
+        <button
+          type="button"
+          className="cm-cad-wa-redirect-secondary"
+          onClick={onClose}
+        >
+          Voltar ao cadastro
+        </button>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/* ================================================================
    MobileCadastroScreen (root)
    ================================================================ */
 
@@ -2237,6 +2344,18 @@ export default function MobileCadastroScreen() {
     valorAdicionalDependenteForaGrade,
     setValorAdicionalDependenteForaGrade,
   ] = useState<number | null>(null);
+
+  /* Redirecionamento WhatsApp por idade */
+  const [waRedirectAtivo, setWaRedirectAtivo] = useState(false);
+  const [waRedirectNumero, setWaRedirectNumero] = useState<string | null>(null);
+  const [waRedirectIdadeMin, setWaRedirectIdadeMin] = useState(18);
+  const [waRedirectIdadeMax, setWaRedirectIdadeMax] = useState(65);
+  const [waRedirectModal, setWaRedirectModal] = useState<{
+    nome: string;
+    cpf: string;
+    dataNascimento: string;
+    tipo: "Titular" | "Corresponsável";
+  } | null>(null);
 
   /* Plano */
   const [selectedPlano, setSelectedPlano] = useState<Plano | null>(null);
@@ -2437,6 +2556,16 @@ export default function MobileCadastroScreen() {
         } else {
           setValorAdicionalDependenteForaGrade(null);
         }
+
+        // Regras de redirecionamento WhatsApp por idade
+        if (regra?.redirecionamentoWhatsappAtivo) {
+          setWaRedirectAtivo(true);
+          setWaRedirectNumero(regra.redirecionamentoWhatsappNumero ?? null);
+          const idadeMin = Number(regra.redirecionamentoWhatsappIdadeMin);
+          const idadeMax = Number(regra.redirecionamentoWhatsappIdadeMax);
+          if (Number.isFinite(idadeMin)) setWaRedirectIdadeMin(idadeMin);
+          if (Number.isFinite(idadeMax)) setWaRedirectIdadeMax(idadeMax);
+        }
       })
       .catch(() => {});
   }, []);
@@ -2524,6 +2653,23 @@ export default function MobileCadastroScreen() {
       .catch(() => {});
   }, [cep3, step3Form, usarMesmosDados]);
 
+  /* WhatsApp redirect: check if age is outside allowed range */
+  const checkIdadeRedirect = (
+    dataNascimento: string,
+    nome: string,
+    cpf: string,
+    tipo: "Titular" | "Corresponsável",
+  ): boolean => {
+    if (!waRedirectAtivo || !waRedirectNumero) return false;
+    const idade = calcularIdade(dataNascimento);
+    if (idade === null) return false;
+    if (idade < waRedirectIdadeMin || idade > waRedirectIdadeMax) {
+      setWaRedirectModal({ nome, cpf, dataNascimento, tipo });
+      return true;
+    }
+    return false;
+  };
+
   /* Dependentes validation */
   const validateDependentes = (deps: Dependente[]) => {
     const errors = deps.map((dep) => validateSingleDependente(dep));
@@ -2536,13 +2682,29 @@ export default function MobileCadastroScreen() {
   /* Validate current step */
   const validateCurrent = async (): Promise<boolean> => {
     switch (currentStep) {
-      case 1:
-        return await step1Form.trigger(undefined, { shouldFocus: true });
+      case 1: {
+        const ok = await step1Form.trigger(undefined, { shouldFocus: true });
+        if (!ok) return false;
+        if (!isDev) {
+          const vals = step1Form.getValues();
+          if (
+            checkIdadeRedirect(
+              vals.dataNascimento,
+              vals.nomeCompleto,
+              vals.cpf,
+              "Titular",
+            )
+          )
+            return false;
+        }
+        return true;
+      }
       case 2:
         return await step2Form.trigger(undefined, { shouldFocus: true });
-      case 3:
+      case 3: {
         step3Form.setValue("usarMesmosDados", usarMesmosDados);
-        return await step3Form.trigger(
+        if (usarMesmosDados) return true;
+        const ok = await step3Form.trigger(
           [
             "nomeCompleto",
             "cpf",
@@ -2559,6 +2721,22 @@ export default function MobileCadastroScreen() {
           ],
           { shouldFocus: true },
         );
+        if (!ok) return false;
+        if (!isDev) {
+          const vals = step3Form.getValues();
+          if (
+            vals.dataNascimento &&
+            checkIdadeRedirect(
+              vals.dataNascimento,
+              vals.nomeCompleto ?? "",
+              vals.cpf ?? "",
+              "Corresponsável",
+            )
+          )
+            return false;
+        }
+        return true;
+      }
       case 4:
         return await step3Form.trigger(
           [
@@ -2915,6 +3093,18 @@ export default function MobileCadastroScreen() {
           )}
         </div>
       </div>
+
+      {/* WhatsApp redirect modal */}
+      {waRedirectModal && waRedirectNumero && (
+        <WhatsAppRedirectModal
+          nome={waRedirectModal.nome}
+          cpf={waRedirectModal.cpf}
+          dataNascimento={waRedirectModal.dataNascimento}
+          tipo={waRedirectModal.tipo}
+          numero={waRedirectNumero}
+          onClose={() => setWaRedirectModal(null)}
+        />
+      )}
     </div>
   );
 }
