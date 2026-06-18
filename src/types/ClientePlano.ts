@@ -16,7 +16,7 @@ export interface PlanoDetalhado {
 }
 
 export interface DependentePlano {
-  id: number;
+  id: number | string;
   nome: string;
   dataNascimento?: string | null;
   carenciaInicioEm?: string | null;

@@ -7,6 +7,9 @@ import {
   criarTemplate,
   atualizarTemplate,
   removerTemplate,
+  disconnectWhatsapp,
+  updateWhatsappConfig,
+  sendWhatsappTest,
 } from "@/services/financeiro/notificacoes-recorrentes.service";
 import {
   NotificationChannel,
@@ -110,6 +113,39 @@ export const useRemoverTemplate = () => {
     onSuccess: () =>
       queryClient.invalidateQueries({
         queryKey: ["financeiro", "notificacoes", "templates"],
+      }),
+  });
+};
+
+export const useAtualizarWhatsappConfig = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateWhatsappConfig,
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: ["financeiro", "notificacoes", "whatsapp"],
+      }),
+  });
+};
+
+export const useDesconectarWhatsapp = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: disconnectWhatsapp,
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: ["financeiro", "notificacoes", "whatsapp"],
+      }),
+  });
+};
+
+export const useEnviarTesteWhatsapp = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: sendWhatsappTest,
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: ["financeiro", "notificacoes", "whatsapp"],
       }),
   });
 };

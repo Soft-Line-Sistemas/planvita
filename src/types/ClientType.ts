@@ -40,6 +40,8 @@ export interface ResponsavelFinanceiro {
   nome: string;
   email: string;
   telefone: string;
+  cpf?: string;
+  dataNascimento?: string;
   relacionamento: string;
   situacaoConjugal?: string;
   profissao?: string;

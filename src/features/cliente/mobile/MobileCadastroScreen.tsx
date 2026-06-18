@@ -918,6 +918,7 @@ function Step4Form({
   onDepRemoved,
   onInvalidateDepConfirm,
   valorAdicionalDependenteForaGrade,
+  vagasJaConsumidas,
 }: {
   dependentes: Dependente[];
   errors: DepErrors[];
@@ -932,8 +933,9 @@ function Step4Form({
   onDepRemoved: (idx: number) => void;
   onInvalidateDepConfirm: (idx: number) => void;
   valorAdicionalDependenteForaGrade?: number | null;
+  vagasJaConsumidas: number;
 }) {
-  const canAdd = dependentes.length < limiteBeneficiarios;
+  const canAdd = dependentes.length + vagasJaConsumidas < limiteBeneficiarios;
   const [depModalIndex, setDepModalIndex] = useState<number | null>(null);
   const [depModalAdded, setDepModalAdded] = useState(false);
   const [depInfoModalOpen, setDepInfoModalOpen] = useState(false);
@@ -2905,6 +2907,7 @@ export default function MobileCadastroScreen() {
             valorAdicionalDependenteForaGrade={
               valorAdicionalDependenteForaGrade
             }
+            vagasJaConsumidas={usarMesmosDados ? 0 : 1}
           />
         );
       case 6:

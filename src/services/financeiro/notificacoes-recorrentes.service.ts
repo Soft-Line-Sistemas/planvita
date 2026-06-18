@@ -8,6 +8,11 @@ import {
   NotificationLogEntry,
   NotificationTemplate,
   NotificationFlow,
+  WhatsappOverview,
+  WhatsappConnectionStatus,
+  WhatsappAutomationConfig,
+  WhatsappTestSendResult,
+  WhatsappQueuePreview,
 } from "@/types/Notification";
 
 export const fetchPainelNotificacoesRecorrentes = async (
@@ -125,6 +130,69 @@ export const uploadAnexoTemplate = async (params: {
   const { data } = await api.post<{ url: string }>(
     "/notificacoes/templates/upload",
     params,
+  );
+  return data;
+};
+
+export const fetchWhatsappOverview = async (): Promise<WhatsappOverview> => {
+  const { data } = await api.get<WhatsappOverview>("/notificacoes/whatsapp");
+  return data;
+};
+
+export const fetchWhatsappQueue = async (
+  tipo: NotificationFlow,
+): Promise<WhatsappQueuePreview> => {
+  const { data } = await api.get<WhatsappQueuePreview>(
+    "/notificacoes/whatsapp/queue",
+    { params: { tipo } },
+  );
+  return data;
+};
+
+export const fetchWhatsappQr = async (
+  refresh = false,
+): Promise<WhatsappConnectionStatus> => {
+  const { data } = await api.get<WhatsappConnectionStatus>(
+    "/notificacoes/whatsapp/qr",
+    {
+      params: { refresh: refresh ? 1 : 0 },
+    },
+  );
+  return data;
+};
+
+export const disconnectWhatsapp = async (): Promise<{ success: boolean }> => {
+  const { data } = await api.post<{ success: boolean }>(
+    "/notificacoes/whatsapp/disconnect",
+  );
+  return data;
+};
+
+export const updateWhatsappConfig = async (payload: {
+  enabled?: boolean;
+  useFallbackProvider?: boolean;
+  defaultCountryCode?: string;
+  timezone?: string;
+  quietHoursStart?: string | null;
+  quietHoursEnd?: string | null;
+  sendOnWeekends?: boolean;
+  minIntervalMinutes?: number;
+  rules?: Array<{ id: number; enabled?: boolean; title?: string }>;
+}): Promise<WhatsappAutomationConfig> => {
+  const { data } = await api.put<WhatsappAutomationConfig>(
+    "/notificacoes/whatsapp/config",
+    payload,
+  );
+  return data;
+};
+
+export const sendWhatsappTest = async (payload: {
+  to: string;
+  message: string;
+}): Promise<WhatsappTestSendResult> => {
+  const { data } = await api.post<WhatsappTestSendResult>(
+    "/notificacoes/whatsapp/test",
+    payload,
   );
   return data;
 };

@@ -8,7 +8,7 @@ import {
 import { calculateAgeFromBirthDate, toISODateSafe } from "@/utils/date";
 
 type DependenteApi = {
-  id: number;
+  id: number | string;
   nome: string;
   cpf?: string | null;
   dataNascimento?: string | null;
@@ -74,6 +74,8 @@ type TitularApi = {
     nome: string;
     email: string;
     telefone?: string | null;
+    cpf?: string | null;
+    dataNascimento?: string | null;
     relacionamento: string;
     situacaoConjugal?: string | null;
     profissao?: string | null;
@@ -267,6 +269,10 @@ export const mapClienteFromApi = (payload: TitularApi): Cliente => {
             nome: payload.corresponsaveis[0].nome ?? "",
             email: payload.corresponsaveis[0].email ?? "",
             telefone: payload.corresponsaveis[0].telefone ?? "",
+            cpf: payload.corresponsaveis[0].cpf ?? "",
+            dataNascimento: toISODate(
+              payload.corresponsaveis[0].dataNascimento,
+            ),
             relacionamento: payload.corresponsaveis[0].relacionamento ?? "",
             situacaoConjugal: payload.corresponsaveis[0].situacaoConjugal ?? "",
             profissao: payload.corresponsaveis[0].profissao ?? "",

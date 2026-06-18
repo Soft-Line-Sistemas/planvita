@@ -101,3 +101,117 @@ export interface NotificationTemplate {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface WhatsappAutomationRule {
+  id: number;
+  key: string;
+  title: string;
+  flow: NotificationFlow;
+  enabled: boolean;
+  priority: number;
+  triggerType: string;
+  offsetDays: number;
+  recurrenceDays?: number | null;
+  sendTime: string;
+  template?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WhatsappAutomationConfig {
+  id: number;
+  tenantId: string;
+  enabled: boolean;
+  useFallbackProvider: boolean;
+  defaultCountryCode: string;
+  timezone: string;
+  quietHoursStart?: string | null;
+  quietHoursEnd?: string | null;
+  sendOnWeekends: boolean;
+  minIntervalMinutes: number;
+  sessionPath?: string | null;
+  clientId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  rules: WhatsappAutomationRule[];
+}
+
+export interface WhatsappConnectionStatus {
+  ready: boolean;
+  authenticated?: boolean;
+  qrAvailable: boolean;
+  qr?: string | null;
+  generatedAt?: number | null;
+  state: string;
+  message?: string;
+}
+
+export interface WhatsappDispatchEntry {
+  id: number;
+  tenantId: string;
+  ruleId?: number | null;
+  titularId?: number | null;
+  contaReceberId?: number | null;
+  recipient?: string | null;
+  flow?: string | null;
+  status: string;
+  attemptedAt?: string | null;
+  sentAt?: string | null;
+  errorMessage?: string | null;
+  payloadPreview?: string | null;
+  providerRef?: string | null;
+  provider: string;
+  triggerMode: "AUTOMATIC" | "MANUAL" | "FALLBACK";
+  fallbackUsed: boolean;
+  createdAt: string;
+  rule?: WhatsappAutomationRule | null;
+}
+
+export interface WhatsappOverview {
+  config: WhatsappAutomationConfig;
+  connection: WhatsappConnectionStatus;
+  summary: {
+    sentToday: number;
+    failedToday: number;
+    fallbackToday: number;
+    activeRules: number;
+    minIntervalMinutes: number;
+  };
+  recent: WhatsappDispatchEntry[];
+}
+
+export interface WhatsappQueueItem {
+  queuePosition: number | null;
+  titularId: number;
+  nome: string;
+  recipient: string | null;
+  flow: NotificationFlow;
+  ruleTitle: string;
+  status: "QUEUED" | "SKIPPED";
+  expectedAt?: string | null;
+  delayedByMinutes: number;
+  blockedReason?: string;
+  totalPendente: number;
+  quantidadeCobrancas: number;
+}
+
+export interface WhatsappQueuePreview {
+  summary: {
+    flow: NotificationFlow;
+    triggerMode: "AUTOMATIC" | "MANUAL_PREVIEW";
+    queued: number;
+    skipped: number;
+    baseTime: string;
+    minIntervalMinutes: number;
+  };
+  items: WhatsappQueueItem[];
+}
+
+export interface WhatsappTestSendResult {
+  success: boolean;
+  provider?: string;
+  fallbackUsed?: boolean;
+  referenceId?: string;
+  triggerMode?: "AUTOMATIC" | "MANUAL" | "FALLBACK";
+  error?: string;
+}
