@@ -235,12 +235,24 @@ function formatDateBR(iso: string | null | undefined): string {
 }
 
 function CadastroSectionHead({
+  iconSrc,
+  iconWidth,
+  iconHeight,
+  title,
   description,
   centered,
 }: {
+  iconSrc: string;
+  iconWidth?: number;
+  iconHeight?: number;
+  title: string;
   description?: string;
   centered?: boolean;
 }) {
+  void iconSrc;
+  void iconWidth;
+  void iconHeight;
+  void title;
   return (
     <>
       {description ? (
