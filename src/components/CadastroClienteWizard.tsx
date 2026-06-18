@@ -309,7 +309,11 @@ export function CadastroClienteWizard({
 
   const handleAddDependente = () => {
     const limiteAtual = limiteBeneficiarios ?? MAX_DEPENDENTES_POR_TITULAR;
-    if (limiteAtual > 0 && dependentes.length >= limiteAtual) {
+    const vagasConsumidasCorresponsavel = usarMesmosDados ? 0 : 1;
+    if (
+      limiteAtual > 0 &&
+      dependentes.length + vagasConsumidasCorresponsavel >= limiteAtual
+    ) {
       return;
     }
     setDependentes((prev) => [
@@ -346,7 +350,8 @@ export function CadastroClienteWizard({
   };
 
   const podeAdicionarDependente =
-    dependentes.length < (limiteBeneficiarios ?? MAX_DEPENDENTES_POR_TITULAR);
+    dependentes.length + (usarMesmosDados ? 0 : 1) <
+    (limiteBeneficiarios ?? MAX_DEPENDENTES_POR_TITULAR);
   const canContinueStep4 =
     currentStep !== 4 || validateDependentes(dependentes).isValid;
 

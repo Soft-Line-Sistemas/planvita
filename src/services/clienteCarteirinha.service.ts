@@ -47,7 +47,7 @@ type TitularResponse = {
   } | null;
   plano?: PlanoResponse | null;
   dependentes?: Array<{
-    id?: number | null;
+    id?: number | string | null;
     nome?: string | null;
     dataNascimento?: string | null;
     carenciaInicioEm?: string | null;
