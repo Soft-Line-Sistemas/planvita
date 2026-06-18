@@ -38,6 +38,8 @@ type TitularResponse = {
   telefone?: string | null;
   statusPlano?: string | null;
   dataContratacao?: string | null;
+  pagamentoConfirmadoEm?: string | null;
+  assinaturas?: Array<{ tipo?: string | null }> | null;
   fotoPerfil?: {
     id?: number | null;
     arquivoUrl?: string | null;
@@ -143,6 +145,19 @@ export const mapTitularToCarteirinha = (
     ? `${getApiUrl()}/${API_VERSION}/titular/me/foto/arquivo${fotoPerfilQuery}`
     : null;
 
+  const ASSINATURAS_OBRIGATORIAS = [
+    "TITULAR_ASSINATURA_1",
+    "TITULAR_ASSINATURA_2",
+    "CORRESPONSAVEL_ASSINATURA_1",
+    "CORRESPONSAVEL_ASSINATURA_2",
+  ];
+  const tiposAssinados = new Set(
+    (titular?.assinaturas ?? []).map((a) => a?.tipo ?? ""),
+  );
+  const assinaturasPendentes = ASSINATURAS_OBRIGATORIAS.some(
+    (tipo) => !tiposAssinados.has(tipo),
+  );
+
   return {
     titularId: titular?.id ?? null,
     tenantSlug: titular?.tenantSlug ?? null,
@@ -152,6 +167,8 @@ export const mapTitularToCarteirinha = (
     numeroCarteirinha,
     email: titular?.email ?? undefined,
     telefone: titular?.telefone ?? undefined,
+    pagamentoConfirmadoEm: titular?.pagamentoConfirmadoEm ?? null,
+    assinaturasPendentes,
     plano: {
       id: plano?.id ? String(plano.id) : "plano-indefinido",
       nome: plano?.nome ?? "Plano não informado",

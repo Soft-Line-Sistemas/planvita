@@ -33,6 +33,7 @@ import AtendimentoScreen from "./screens/AtendimentoScreen";
 import EntendaSeuPlanoScreen from "./screens/EntendaSeuPlanoScreen";
 import DependentesScreen from "./screens/DependentesScreen";
 import ParceriasScreen from "./screens/ParceriasScreen";
+import ContratoBlockerOverlay from "./screens/ContratoBlockerOverlay";
 
 /* ===================================================================
    Types
@@ -228,6 +229,17 @@ export default function ClienteMobilePage() {
     "Não encontramos CPF ou e-mail cadastrado. Finalize seu cadastro para continuar.",
   );
 
+  /* --- Payment pending --- */
+  const [ppNome, setPpNome] = useState<string | null>(null);
+  const [ppEmailMasked, setPpEmailMasked] = useState<string | null>(null);
+  const [ppTelefoneMasked, setPpTelefoneMasked] = useState<string | null>(null);
+  const [ppPaymentUrl, setPpPaymentUrl] = useState<string | null>(null);
+  const [ppVencimento, setPpVencimento] = useState<string | null>(null);
+  const [ppValor, setPpValor] = useState<number | null>(null);
+  const [ppLoading, setPpLoading] = useState(false);
+  const [ppError, setPpError] = useState<string | null>(null);
+  const [ppSucesso, setPpSucesso] = useState(false);
+
   /* --- Navigation --- */
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [screen, setScreen] = useState<ScreenId>("home");
@@ -417,6 +429,17 @@ export default function ClienteMobilePage() {
     setScreen("home");
   }, []);
 
+  /* ===== Refresh cliente silently (sem redirecionar) ===== */
+  const refreshCliente = useCallback(async () => {
+    try {
+      const { data } = await api.get("/titular/me");
+      const mapped = mapTitularToCarteirinha(data);
+      setCliente(mapped);
+    } catch {
+      /* ignora falha silenciosa */
+    }
+  }, []);
+
   const tentarDescobrirCadastrosPorCpf = useCallback(
     async (cpf: string): Promise<TenantCadastro[]> => {
       const consultas = await Promise.allSettled(
@@ -496,6 +519,39 @@ export default function ClienteMobilePage() {
         setAuthView("first-access");
         return;
       }
+      if (status === 402 && code === "PAYMENT_REQUIRED") {
+        setPpNome(null);
+        setPpEmailMasked(null);
+        setPpTelefoneMasked(null);
+        setPpPaymentUrl(null);
+        setPpVencimento(null);
+        setPpValor(null);
+        setPpError(null);
+        setPpSucesso(false);
+        setAuthView("payment-pending");
+        try {
+          const res = await api.post("/auth/pagamento/reenviar", {
+            login: loginValue.trim(),
+          });
+          const d = res.data as {
+            nome?: string;
+            emailMasked?: string;
+            telefoneMasked?: string;
+            paymentUrl?: string;
+            vencimento?: string;
+            valor?: number;
+          };
+          setPpNome(d.nome ?? null);
+          setPpEmailMasked(d.emailMasked ?? null);
+          setPpTelefoneMasked(d.telefoneMasked ?? null);
+          setPpPaymentUrl(d.paymentUrl ?? null);
+          setPpVencimento(d.vencimento ?? null);
+          setPpValor(d.valor ?? null);
+        } catch {
+          // non-fatal — view already shown with "reenviar" option
+        }
+        return;
+      }
       setAuthError("Não foi possível entrar. Verifique seu login e senha.");
     } finally {
       setAuthLoading(false);
@@ -529,6 +585,39 @@ export default function ClienteMobilePage() {
             "Seu cadastro ainda não possui senha. Valide seu acesso e crie uma senha.",
           );
           setAuthView("first-access");
+          return;
+        }
+        if (status === 402 && code === "PAYMENT_REQUIRED") {
+          setPpNome(null);
+          setPpEmailMasked(null);
+          setPpTelefoneMasked(null);
+          setPpPaymentUrl(null);
+          setPpVencimento(null);
+          setPpValor(null);
+          setPpError(null);
+          setPpSucesso(false);
+          setAuthView("payment-pending");
+          try {
+            const res = await api.post("/auth/pagamento/reenviar", {
+              login: loginValue.trim(),
+            });
+            const d = res.data as {
+              nome?: string;
+              emailMasked?: string;
+              telefoneMasked?: string;
+              paymentUrl?: string;
+              vencimento?: string;
+              valor?: number;
+            };
+            setPpNome(d.nome ?? null);
+            setPpEmailMasked(d.emailMasked ?? null);
+            setPpTelefoneMasked(d.telefoneMasked ?? null);
+            setPpPaymentUrl(d.paymentUrl ?? null);
+            setPpVencimento(d.vencimento ?? null);
+            setPpValor(d.valor ?? null);
+          } catch {
+            // non-fatal
+          }
           return;
         }
         setAuthError("Não foi possível entrar. Verifique seu login e senha.");
@@ -768,6 +857,40 @@ export default function ClienteMobilePage() {
   };
 
   /* ===================================================================
+     Payment pending — reenviar link
+     ================================================================ */
+  const onReenviarPagamento = useCallback(async () => {
+    setPpError(null);
+    setPpSucesso(false);
+    setPpLoading(true);
+    try {
+      const res = await api.post("/auth/pagamento/reenviar", {
+        login: loginValue.trim(),
+      });
+      const d = res.data as {
+        nome?: string;
+        emailMasked?: string;
+        telefoneMasked?: string;
+        paymentUrl?: string;
+        vencimento?: string;
+        valor?: number;
+      };
+      setPpNome(d.nome ?? null);
+      setPpEmailMasked(d.emailMasked ?? null);
+      setPpTelefoneMasked(d.telefoneMasked ?? null);
+      setPpPaymentUrl(d.paymentUrl ?? null);
+      setPpVencimento(d.vencimento ?? null);
+      setPpValor(d.valor ?? null);
+      setPpSucesso(true);
+    } catch (err) {
+      const msg = extractServerMessage(err);
+      setPpError(msg ?? "Não foi possível reenviar o link. Tente novamente.");
+    } finally {
+      setPpLoading(false);
+    }
+  }, [loginValue]);
+
+  /* ===================================================================
      Logout
      ================================================================ */
   const handleLogout = useCallback(() => {
@@ -853,6 +976,16 @@ export default function ClienteMobilePage() {
   const suspensoPorRegra = maxDiasAtraso >= diasSuspensao;
   const posSuspensaoAtingido = maxDiasAtraso >= diasPosSuspensao;
 
+  /* Bloqueio por contrato pendente: ativa após 24h do pagamento confirmado */
+  const contratosBloqueado = useMemo(() => {
+    if (!cliente?.assinaturasPendentes) return false;
+    const confirmadoEm = cliente?.pagamentoConfirmadoEm;
+    if (!confirmadoEm) return false;
+    const diffMs = Date.now() - new Date(confirmadoEm).getTime();
+    const diffHoras = diffMs / (1000 * 60 * 60);
+    return diffHoras >= 24;
+  }, [cliente]);
+
   const clienteExibicao = useMemo<ClientePlano | null>(() => {
     if (!cliente) return null;
     if (cliente.plano.status === "suspenso" || !suspensoPorRegra)
@@ -877,6 +1010,18 @@ export default function ClienteMobilePage() {
       setActiveTab("home");
     }
   }, [hasParcerias, screen]);
+
+  const handleContratoTabClick = useCallback(
+    (tab: TabId) => {
+      if (contratosBloqueado && tab !== "home") return;
+      changeTab(tab);
+    },
+    [contratosBloqueado, changeTab],
+  );
+
+  const handleGoToAssinaturas = useCallback(() => {
+    goTo("assinaturas");
+  }, [goTo]);
 
   /* ===================================================================
      Render – Onboarding splash / carousel (first visit, unauthenticated)
@@ -975,6 +1120,17 @@ export default function ClienteMobilePage() {
           onCompleteForgot={onCompleteForgot}
           /* cadastro redirect */
           cadastroMessage={cadastroMessage}
+          /* payment pending */
+          ppNome={ppNome}
+          ppEmailMasked={ppEmailMasked}
+          ppTelefoneMasked={ppTelefoneMasked}
+          ppPaymentUrl={ppPaymentUrl}
+          ppVencimento={ppVencimento}
+          ppValor={ppValor}
+          ppLoading={ppLoading}
+          ppError={ppError}
+          ppSucesso={ppSucesso}
+          onReenviarPagamento={onReenviarPagamento}
         />
 
         {modalCadastroAberto && (
@@ -1033,8 +1189,20 @@ export default function ClienteMobilePage() {
 
   return (
     <div className="cm-app">
+      {/* Overlay de bloqueio por contrato pendente */}
+      {contratosBloqueado && screen !== "assinaturas" && (
+        <ContratoBlockerOverlay
+          nomeCliente={cliente.nome}
+          emailCliente={cliente.email}
+          telefoneCliente={cliente.telefone}
+          onAssinar={handleGoToAssinaturas}
+        />
+      )}
+
       {/* Current screen */}
-      <div className="cm-content">
+      <div
+        className={`cm-content${contratosBloqueado && screen !== "assinaturas" ? " cm-content--bloqueado" : ""}`}
+      >
         {screen === "home" && clienteExibicao && (
           <HomeScreen
             cliente={clienteExibicao}
@@ -1079,6 +1247,7 @@ export default function ClienteMobilePage() {
                   : null
             }
             onBack={goBack}
+            onAllSigned={refreshCliente}
           />
         )}
 
@@ -1126,27 +1295,40 @@ export default function ClienteMobilePage() {
 
       {/* Bottom tab bar — in document flow */}
       {showTabBar && (
-        <nav className="cm-tab-bar" aria-label="Navegação principal">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              className={`cm-tab-btn${tabBarActive === tab.id ? " active" : ""}`}
-              onClick={() => changeTab(tab.id)}
-              aria-current={tabBarActive === tab.id ? "page" : undefined}
-            >
-              <span className="cm-tab-icon">
-                <Image
-                  src={tab.icon}
-                  alt=""
-                  width={24}
-                  height={24}
-                  aria-hidden
-                />
-              </span>
-              <span>{tab.label}</span>
-            </button>
-          ))}
+        <nav
+          className={`cm-tab-bar${contratosBloqueado ? " cm-tab-bar--bloqueado" : ""}`}
+          aria-label="Navegação principal"
+        >
+          {TABS.map((tab) => {
+            const tabBloqueada = contratosBloqueado && tab.id !== "home";
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                className={`cm-tab-btn${tabBarActive === tab.id ? " active" : ""}${tabBloqueada ? " cm-tab-btn--disabled" : ""}`}
+                onClick={() => handleContratoTabClick(tab.id)}
+                disabled={tabBloqueada}
+                aria-current={tabBarActive === tab.id ? "page" : undefined}
+                aria-disabled={tabBloqueada}
+                title={
+                  tabBloqueada
+                    ? "Assine o contrato para acessar esta área"
+                    : undefined
+                }
+              >
+                <span className="cm-tab-icon">
+                  <Image
+                    src={tab.icon}
+                    alt=""
+                    width={24}
+                    height={24}
+                    aria-hidden
+                  />
+                </span>
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </nav>
       )}
     </div>

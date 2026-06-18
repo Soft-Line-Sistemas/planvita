@@ -3922,3 +3922,308 @@
   filter: brightness(0.9);
   transform: scale(0.99);
 }
+
+/* ================================================================
+   WhatsApp Redirect Modal
+   ================================================================ */
+
+.cm-cad-wa-redirect-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 1000;
+  padding: 0;
+  animation: cm-fade-in 0.18s ease;
+}
+
+@media (min-height: 600px) {
+  .cm-cad-wa-redirect-overlay {
+    align-items: center;
+  }
+}
+
+.cm-cad-wa-redirect-card {
+  position: relative;
+  background: #fff;
+  border-radius: 24px 24px 0 0;
+  padding: 36px 24px 32px;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  animation: cm-slide-up 0.22s ease;
+}
+
+@media (min-height: 600px) {
+  .cm-cad-wa-redirect-card {
+    border-radius: 24px;
+    max-width: 380px;
+    margin: 16px;
+  }
+}
+
+@keyframes cm-slide-up {
+  from { transform: translateY(40px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.cm-cad-wa-redirect-icon {
+  margin-bottom: 16px;
+}
+
+.cm-cad-wa-redirect-title {
+  margin: 0 0 12px;
+  color: #1a1a1a;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  text-align: center;
+}
+
+.cm-cad-wa-redirect-body {
+  margin: 0 0 24px;
+  color: #555;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.cm-cad-wa-redirect-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 50px;
+  background: #25D366;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--cm-font);
+  border-radius: 25px;
+  text-decoration: none;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);
+  -webkit-tap-highlight-color: transparent;
+  transition: filter 0.15s, transform 0.1s;
+}
+
+.cm-cad-wa-redirect-btn:active {
+  filter: brightness(0.9);
+  transform: scale(0.98);
+}
+
+.cm-cad-wa-redirect-secondary {
+  width: 100%;
+  height: 44px;
+  background: transparent;
+  border: 1px solid #d9d9d9;
+  border-radius: 22px;
+  color: #666;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--cm-font);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cm-cad-wa-redirect-secondary:active {
+  background: #f5f5f5;
+}
+
+/* ===================================================================
+   Contrato Blocker Overlay
+   =================================================================== */
+
+.cb-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 0 0 env(safe-area-inset-bottom, 0);
+  animation: cb-fade-in 0.22s ease;
+}
+
+@keyframes cb-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.cb-card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--cm-white);
+  border-radius: 24px 24px 0 0;
+  padding: 28px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: cb-slide-up 0.28s cubic-bezier(0.34, 1.18, 0.64, 1);
+}
+
+@keyframes cb-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.cb-icon-wrap {
+  margin-bottom: 4px;
+}
+
+.cb-icon {
+  width: 56px;
+  height: 56px;
+}
+
+.cb-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--cm-gray-800);
+  text-align: center;
+  margin: 0;
+  font-family: var(--cm-font);
+}
+
+.cb-message {
+  font-size: 14px;
+  color: var(--cm-gray-600);
+  text-align: center;
+  line-height: 1.55;
+  margin: 0;
+  font-family: var(--cm-font);
+}
+
+.cb-message strong {
+  color: var(--cm-gray-800);
+}
+
+.cb-btn-primary {
+  width: 100%;
+  padding: 15px 20px;
+  background: var(--cm-green-primary);
+  color: var(--cm-white);
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: var(--cm-font);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+  box-shadow: var(--cm-shadow-btn);
+}
+
+.cb-btn-primary:active {
+  background: var(--cm-green-dark);
+}
+
+.cb-divider {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--cm-gray-400);
+  font-size: 12px;
+  font-family: var(--cm-font);
+}
+
+.cb-divider::before,
+.cb-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--cm-gray-200);
+}
+
+.cb-reenvio-row {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.cb-btn-channel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 10px;
+  border: 1.5px solid var(--cm-gray-200);
+  border-radius: 12px;
+  background: var(--cm-white);
+  color: var(--cm-gray-800);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--cm-font);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.cb-btn-channel:active {
+  background: var(--cm-gray-100);
+  border-color: var(--cm-gray-400);
+}
+
+.cb-btn-channel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cb-channel-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.cb-feedback {
+  font-size: 13px;
+  text-align: center;
+  margin: 0;
+  font-family: var(--cm-font);
+}
+
+.cb-feedback--loading {
+  color: var(--cm-gray-400);
+}
+
+.cb-feedback--success {
+  color: var(--cm-green-primary);
+  font-weight: 600;
+}
+
+.cb-feedback--error {
+  color: var(--cm-red);
+}
+
+/* ===================================================================
+   Tab bar — estado bloqueado por contrato pendente
+   =================================================================== */
+
+.cm-tab-bar--bloqueado {
+  position: relative;
+}
+
+.cm-tab-btn--disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  filter: grayscale(1);
+  pointer-events: none;
+}
+
+/* O conteúdo fica levemente desfocado quando o overlay está ativo */
+.cm-content--bloqueado {
+  pointer-events: none;
+  user-select: none;
+  filter: blur(2px) brightness(0.92);
+  transition: filter 0.2s ease;
+}

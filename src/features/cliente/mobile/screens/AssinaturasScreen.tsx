@@ -296,9 +296,14 @@ function SignatureCard({
 type Props = {
   titularId: number | null | undefined;
   onBack: () => void;
+  onAllSigned?: () => void;
 };
 
-export default function AssinaturasScreen({ titularId, onBack }: Props) {
+export default function AssinaturasScreen({
+  titularId,
+  onBack,
+  onAllSigned,
+}: Props) {
   const [salvandoTipo, setSalvandoTipo] = useState<string | null>(null);
   const [msgErro, setMsgErro] = useState<string | null>(null);
   const [baixandoContrato, setBaixandoContrato] = useState(false);
@@ -337,7 +342,20 @@ export default function AssinaturasScreen({ titularId, onBack }: Props) {
       setSalvandoTipo(tipo);
       try {
         await salvarAssinatura({ tipo, assinaturaBase64 });
-        await refetch();
+        const updated = await refetch();
+        const assinaturasAtualizadas = updated.data ?? [];
+        const mapaAtualizado = assinaturasAtualizadas.reduce<
+          Record<string, AssinaturaDigital>
+        >((acc, item) => {
+          acc[canonicalAssinaturaTipo(item.tipo)] = item;
+          return acc;
+        }, {});
+        const todasCompletas = TIPOS_ASSINATURA.every((t) =>
+          Boolean(mapaAtualizado[t.id]),
+        );
+        if (todasCompletas && onAllSigned) {
+          onAllSigned();
+        }
       } catch (err) {
         setMsgErro(
           err instanceof Error
@@ -348,7 +366,7 @@ export default function AssinaturasScreen({ titularId, onBack }: Props) {
         setSalvandoTipo(null);
       }
     },
-    [refetch],
+    [refetch, onAllSigned],
   );
 
   const handleDownloadContrato = useCallback(async () => {
