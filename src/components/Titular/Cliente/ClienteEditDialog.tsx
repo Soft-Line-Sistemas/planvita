@@ -272,6 +272,14 @@ export function ClienteEditDialog({
         relacionamento: values.responsavelRelacionamento.trim(),
         situacaoConjugal: values.responsavelSituacaoConjugal.trim(),
         profissao: values.responsavelProfissao.trim(),
+        cep: values.responsavelCep.trim(),
+        uf: normalizeUfCode(values.responsavelUf.trim()),
+        cidade: values.responsavelCidade.trim(),
+        bairro: values.responsavelBairro.trim(),
+        logradouro: values.responsavelLogradouro.trim(),
+        numero: values.responsavelNumero.trim(),
+        complemento: values.responsavelComplemento.trim(),
+        pontoReferencia: values.responsavelPontoReferencia.trim(),
       };
 
       const responsavelId = values.responsavelId.trim();
