@@ -97,6 +97,7 @@ const DIRECT_PARENTESCOS_GRADE_FAMILIAR = new Set<string>([
   "Sogro(a)",
   "Neto(a)",
 ]);
+const RESPONSAVEL_FINANCEIRO_CONTA_NO_PLANO = new Set<string>(["Cônjuge"]);
 const VALORES_ADICIONAL_POR_IDADE = [
   { ate: 60, valor: 9.9 },
   { ate: 70, valor: 19.9 },
@@ -2480,6 +2481,12 @@ export default function MobileCadastroScreen() {
   });
 
   const responsavelDataForPlanos = step3Form.watch();
+  const parentescoResponsavelParaPlano = String(
+    responsavelDataForPlanos.parentesco ?? "",
+  ).trim();
+  const incluirResponsavelNaComposicaoPlano =
+    !usarMesmosDados &&
+    RESPONSAVEL_FINANCEIRO_CONTA_NO_PLANO.has(parentescoResponsavelParaPlano);
   const participantesPayload = (() => {
     const list: ParticipanteMin[] = [
       {
@@ -2489,16 +2496,15 @@ export default function MobileCadastroScreen() {
           : null,
         parentesco: "Titular",
       },
-      ...(!usarMesmosDados &&
-      responsavelDataForPlanos.dataNascimento &&
-      responsavelDataForPlanos.parentesco
+      ...(incluirResponsavelNaComposicaoPlano &&
+      responsavelDataForPlanos.dataNascimento
         ? [
             {
               dataNascimento: responsavelDataForPlanos.dataNascimento ?? null,
               idade: responsavelDataForPlanos.dataNascimento
                 ? calcularIdade(responsavelDataForPlanos.dataNascimento)
                 : null,
-              parentesco: responsavelDataForPlanos.parentesco ?? "Outro",
+              parentesco: parentescoResponsavelParaPlano || "Outro",
             } satisfies ParticipanteMin,
           ]
         : []),
