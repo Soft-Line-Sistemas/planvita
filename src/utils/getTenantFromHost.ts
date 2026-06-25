@@ -3,18 +3,19 @@ export default function getTenantFromHost(): string | null {
 
   const host = window.location.hostname.toLowerCase();
 
-  // localhost com subdomínio (ex: lider.localhost)
+  // localhost com subdomínio (ex: lider.localhost) — ignora app.localhost
   if (host.endsWith(".localhost")) {
     const parts = host.split(".");
-    return parts[0] || null;
+    const sub = parts[0] || null;
+    return sub === "app" ? null : sub;
   }
 
-  // domínio principal de produção (ex: lider.planvita.com.br)
+  // domínio principal de produção (ex: lider.planvita.com.br) — ignora app.planvita.com.br
   if (host.endsWith(".planvita.com.br")) {
     const parts = host.split(".");
     if (parts.length > 3) {
       const subdomain = parts.slice(0, -3).join(".");
-      return subdomain === "www" ? null : subdomain;
+      return subdomain === "www" || subdomain === "app" ? null : subdomain;
     }
   }
 

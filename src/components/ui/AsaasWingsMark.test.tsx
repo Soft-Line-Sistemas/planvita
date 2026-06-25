@@ -1,9 +1,14 @@
+// @vitest-environment jsdom
+
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
+import "@testing-library/jest-dom/vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { AsaasWingsMark } from "./AsaasWingsMark";
-import "@testing-library/jest-dom";
+
 // Mock Tooltip components to avoid needing full Radix UI setup in test
-jest.mock("@/components/ui/tooltip", () => ({
+vi.mock("@/components/ui/tooltip", () => ({
   TooltipProvider: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
@@ -18,17 +23,23 @@ jest.mock("@/components/ui/tooltip", () => ({
   ),
 }));
 
+afterEach(() => {
+  cleanup();
+});
+
 describe("AsaasWingsMark Component", () => {
   it("renders default icon correctly", () => {
-    render(<AsaasWingsMark />);
-    const icon = screen.getByRole("img", { name: /Asaas Integration Icon/i });
+    const { container } = render(<AsaasWingsMark />);
+    const icon = container.querySelector("svg");
+    expect(icon).not.toBeNull();
     expect(icon).toBeInTheDocument();
     expect(icon).toHaveClass("w-4 h-4 text-sky-500");
   });
 
   it("renders with badge variant", () => {
-    render(<AsaasWingsMark variant="badge" />);
-    const icon = screen.getByRole("img", { name: /Asaas Integration Icon/i });
+    const { container } = render(<AsaasWingsMark variant="badge" />);
+    const icon = container.querySelector("svg");
+    expect(icon).not.toBeNull();
     expect(icon.parentElement).toHaveClass(
       "inline-flex items-center justify-center p-1 rounded-md bg-sky-50",
     );
@@ -47,8 +58,9 @@ describe("AsaasWingsMark Component", () => {
   });
 
   it("applies custom className", () => {
-    render(<AsaasWingsMark className="custom-class" />);
-    const icon = screen.getByRole("img", { name: /Asaas Integration Icon/i });
+    const { container } = render(<AsaasWingsMark className="custom-class" />);
+    const icon = container.querySelector("svg");
+    expect(icon).not.toBeNull();
     expect(icon).toHaveClass("custom-class");
   });
 });

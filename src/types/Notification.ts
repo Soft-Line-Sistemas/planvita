@@ -1,5 +1,9 @@
 export type NotificationChannel = "whatsapp" | "email";
 export type NotificationFlow =
+  | "lembrete-3-dias-antes"
+  | "cobranca-no-vencimento"
+  | "atraso-1-dia"
+  | "atraso-7-dias"
   | "pendencia-periodica"
   | "aviso-vencimento"
   | "aviso-pendencia"
