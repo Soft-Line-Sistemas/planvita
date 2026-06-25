@@ -50,6 +50,7 @@ interface CadastroClienteWizardProps {
   variant?: CadastroClienteWizardVariant;
 }
 const MAX_DEPENDENTES_POR_TITULAR = 8;
+const RESPONSAVEL_FINANCEIRO_CONTA_NO_PLANO = new Set<string>(["Cônjuge"]);
 
 type Step1Values = z.infer<typeof dadosPessoaisSchema>;
 type Step2Values = z.infer<typeof enderecoSchema>;
@@ -467,6 +468,14 @@ export function CadastroClienteWizard({
             case 5: {
               const titularData =
                 formData.step1 ?? dadosPessoaisForm.getValues();
+              const parentescoResponsavel = String(
+                responsavelForm.getValues("parentesco") ?? "",
+              ).trim();
+              const incluirResponsavelNaComposicaoPlano =
+                !usarMesmosDados &&
+                RESPONSAVEL_FINANCEIRO_CONTA_NO_PLANO.has(
+                  parentescoResponsavel,
+                );
 
               const participantesList: ParticipanteMin[] = [
                 {
@@ -474,14 +483,13 @@ export function CadastroClienteWizard({
                   dataNascimento: titularData?.dataNascimento ?? null,
                   parentesco: "Titular",
                 },
-                ...(!usarMesmosDados
+                ...(incluirResponsavelNaComposicaoPlano
                   ? [
                       {
                         nome: responsavelForm.getValues("nomeCompleto") ?? "",
                         dataNascimento:
                           responsavelForm.getValues("dataNascimento") ?? null,
-                        parentesco:
-                          responsavelForm.getValues("parentesco") ?? "Outro",
+                        parentesco: parentescoResponsavel || "Outro",
                       } satisfies ParticipanteMin,
                     ]
                   : []),
