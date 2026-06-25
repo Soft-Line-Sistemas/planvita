@@ -81,6 +81,25 @@ const fluxoOptions: Record<
   NotificationFlow,
   { titulo: string; descricao: string }
 > = {
+  "lembrete-3-dias-antes": {
+    titulo: "Lembrete 3 dias antes",
+    descricao:
+      "Envia um lembrete único exatamente 3 dias antes do vencimento da cobrança.",
+  },
+  "cobranca-no-vencimento": {
+    titulo: "Cobrança no vencimento",
+    descricao: "Envia uma cobrança única no dia exato do vencimento.",
+  },
+  "atraso-1-dia": {
+    titulo: "Atraso 1 dia",
+    descricao:
+      "Envia um aviso único quando a cobrança completa 1 dia de atraso.",
+  },
+  "atraso-7-dias": {
+    titulo: "Atraso 7 dias",
+    descricao:
+      "Envia um aviso único quando a cobrança completa 7 dias de atraso.",
+  },
   "pendencia-periodica": {
     titulo: "Repetição de pendência",
     descricao:
@@ -121,9 +140,16 @@ const flowLabelFlexible = (flow?: string | null) =>
     ? fluxoOptions[flow as NotificationFlow].titulo
     : flow || "Sem fluxo";
 
+const painelFlowOrder: NotificationFlow[] = [
+  "lembrete-3-dias-antes",
+  "cobranca-no-vencimento",
+  "atraso-1-dia",
+  "atraso-7-dias",
+];
+
 export default function NotificacoesRecorrentesPage() {
   const [tipoAviso, setTipoAviso] = useState<NotificationFlow>(
-    "pendencia-periodica",
+    "lembrete-3-dias-antes",
   );
   const { data, isLoading, isError, refetch } =
     usePainelNotificacoesRecorrentes(tipoAviso);
@@ -172,7 +198,63 @@ export default function NotificacoesRecorrentesPage() {
       let html = "";
       let text = "";
 
-      if (flow === "pendencia-periodica") {
+      if (flow === "lembrete-3-dias-antes") {
+        assunto = "Lembrete 3 dias antes do vencimento";
+        const mensagemCobranca = [
+          "Olá, {{nomeCliente}}",
+          "Passando para lembrar que sua cobrança de {{valor}} vence em {{vencimento}}.",
+          "Descrição: {{descricao}}.",
+          "Pague ou consulte em: {{linkCobranca}}",
+        ].join("\n");
+        if (canal === "email") {
+          html = mensagemCobranca.replace(/\n/g, "<br />");
+          text = mensagemCobranca;
+        } else {
+          text = mensagemCobranca;
+        }
+      } else if (flow === "cobranca-no-vencimento") {
+        assunto = "Cobrança no vencimento";
+        const mensagemCobranca = [
+          "Olá, {{nomeCliente}}",
+          "Sua cobrança de {{valor}} vence hoje ({{vencimento}}).",
+          "Descrição: {{descricao}}.",
+          "Pague ou consulte em: {{linkCobranca}}",
+        ].join("\n");
+        if (canal === "email") {
+          html = mensagemCobranca.replace(/\n/g, "<br />");
+          text = mensagemCobranca;
+        } else {
+          text = mensagemCobranca;
+        }
+      } else if (flow === "atraso-1-dia") {
+        assunto = "Cobrança com 1 dia de atraso";
+        const mensagemCobranca = [
+          "Olá, {{nomeCliente}}",
+          "Identificamos que sua cobrança de {{valor}} está com 1 dia de atraso desde {{vencimento}}.",
+          "Descrição: {{descricao}}.",
+          "Regularize em: {{linkCobranca}}",
+        ].join("\n");
+        if (canal === "email") {
+          html = mensagemCobranca.replace(/\n/g, "<br />");
+          text = mensagemCobranca;
+        } else {
+          text = mensagemCobranca;
+        }
+      } else if (flow === "atraso-7-dias") {
+        assunto = "Cobrança com 7 dias de atraso";
+        const mensagemCobranca = [
+          "Olá, {{nomeCliente}}",
+          "Sua cobrança de {{valor}} está com 7 dias de atraso desde {{vencimento}}.",
+          "Descrição: {{descricao}}.",
+          "Regularize em: {{linkCobranca}}",
+        ].join("\n");
+        if (canal === "email") {
+          html = mensagemCobranca.replace(/\n/g, "<br />");
+          text = mensagemCobranca;
+        } else {
+          text = mensagemCobranca;
+        }
+      } else if (flow === "pendencia-periodica") {
         assunto = "Lembrete de pendência financeira";
         const mensagemCobranca = [
           "Olá, {{nomeCliente}}",
@@ -568,12 +650,14 @@ export default function NotificacoesRecorrentesPage() {
                 <SelectValue placeholder="Escolha o fluxo" />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(fluxoOptions).map(([value, option]) => (
+                {painelFlowOrder.map((value) => (
                   <SelectItem key={value} value={value} className="py-2">
                     <div className="flex flex-col text-left">
-                      <span className="font-semibold">{option.titulo}</span>
+                      <span className="font-semibold">
+                        {fluxoOptions[value].titulo}
+                      </span>
                       <span className="text-xs text-gray-500">
-                        {option.descricao}
+                        {fluxoOptions[value].descricao}
                       </span>
                     </div>
                   </SelectItem>

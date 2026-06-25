@@ -1,6 +1,5 @@
-import { proxy } from "./src/proxy";
+import { proxy } from "./proxy";
 
-// Next precisa enxergar um objeto estático aqui (sem reexport).
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

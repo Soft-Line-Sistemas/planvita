@@ -16,7 +16,7 @@ import {
 } from "@/types/Notification";
 
 export const fetchPainelNotificacoesRecorrentes = async (
-  tipo: NotificationFlow = "pendencia-periodica",
+  tipo: NotificationFlow = "lembrete-3-dias-antes",
 ): Promise<NotificationPanel> => {
   const { data } = await api.get<NotificationPanel>(
     "/notificacoes/recorrentes/painel",
@@ -26,7 +26,7 @@ export const fetchPainelNotificacoesRecorrentes = async (
 };
 
 export const dispararNotificacoesRecorrentes = async (
-  tipo: NotificationFlow = "pendencia-periodica",
+  tipo: NotificationFlow = "lembrete-3-dias-antes",
 ): Promise<NotificationFireResult> => {
   const { data } = await api.post<NotificationFireResult>(
     "/notificacoes/recorrentes/disparar",
@@ -49,7 +49,7 @@ export const atualizarAgendamentoNotificacao = async (
 export const toggleBloqueioNotificacao = async (
   titularId: number,
   bloqueado: boolean,
-  tipo: NotificationFlow = "pendencia-periodica",
+  tipo: NotificationFlow = "lembrete-3-dias-antes",
 ): Promise<NotificationRecipient> => {
   const { data } = await api.patch<NotificationRecipient>(
     `/notificacoes/recorrentes/clientes/${titularId}/bloqueio`,
@@ -62,7 +62,7 @@ export const toggleBloqueioNotificacao = async (
 export const atualizarMetodoNotificacao = async (
   titularId: number,
   metodo: NotificationChannel,
-  tipo: NotificationFlow = "pendencia-periodica",
+  tipo: NotificationFlow = "lembrete-3-dias-antes",
 ): Promise<NotificationRecipient> => {
   const { data } = await api.patch<NotificationRecipient>(
     `/notificacoes/recorrentes/clientes/${titularId}/metodo`,

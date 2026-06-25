@@ -21,7 +21,7 @@ export const useDispararNotificacoesRecorrentes = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (tipo?: NotificationFlow) =>
-      dispararNotificacoesRecorrentes(tipo ?? "pendencia-periodica"),
+      dispararNotificacoesRecorrentes(tipo ?? "lembrete-3-dias-antes"),
     onSuccess: () =>
       queryClient.invalidateQueries({
         queryKey: ["financeiro", "notificacoes", "recorrentes"],
