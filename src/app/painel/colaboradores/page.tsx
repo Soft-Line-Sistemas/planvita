@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import getTenantFromHost from "@/utils/getTenantFromHost";
 
 type Role = {
   id: number;
@@ -51,12 +52,14 @@ type User = {
   email: string;
   roleId?: number | null;
   consultorId?: number | null;
+  consultorWhatsapp?: string | null;
   valorComissaoIndicacao?: number | null;
   comissaoPendente?: number;
 };
 
 export default function AcessoPage() {
   const { user, hasPermission, loading: authLoading } = useAuth();
+  const currentTenant = user?.tenant || getTenantFromHost();
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,6 +68,7 @@ export default function AcessoPage() {
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserRole, setNewUserRole] = useState<number | null>(null);
   const [newUserCommission, setNewUserCommission] = useState("0");
+  const [newUserWhatsapp, setNewUserWhatsapp] = useState("");
   const [creating, setCreating] = useState(false);
   const [passwordModalUser, setPasswordModalUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState("");
@@ -76,6 +80,9 @@ export default function AcessoPage() {
   const [commissionDrafts, setCommissionDrafts] = useState<
     Record<number, string>
   >({});
+  const [whatsappDrafts, setWhatsappDrafts] = useState<Record<number, string>>(
+    {},
+  );
   const [savingCommissionId, setSavingCommissionId] = useState<number | null>(
     null,
   );
@@ -102,6 +109,14 @@ export default function AcessoPage() {
             ]),
           ),
         );
+        setWhatsappDrafts(
+          Object.fromEntries(
+            loadedUsers.map((loadedUser) => [
+              loadedUser.id,
+              loadedUser.consultorWhatsapp ?? "",
+            ]),
+          ),
+        );
         setRoles(rolesRes.data);
       } catch (err) {
         console.error(err);
@@ -124,6 +139,7 @@ export default function AcessoPage() {
     try {
       await api.put(`/users/${userId}/role`, {
         roleId: newRoleId,
+        whatsapp: isConsultorRole ? (whatsappDrafts[userId] ?? "") : undefined,
         valorComissaoIndicacao,
       });
       setUsers((prev) =>
@@ -132,6 +148,9 @@ export default function AcessoPage() {
             ? {
                 ...u,
                 roleId: newRoleId,
+                consultorWhatsapp: isConsultorRole
+                  ? (whatsappDrafts[userId] ?? null)
+                  : null,
                 valorComissaoIndicacao: isConsultorRole
                   ? Number(commissionDrafts[userId] ?? 0)
                   : u.valorComissaoIndicacao,
@@ -175,13 +194,18 @@ export default function AcessoPage() {
     try {
       await api.put(`/users/${targetUser.id}/role`, {
         roleId: targetUser.roleId,
+        whatsapp: whatsappDrafts[targetUser.id] ?? "",
         valorComissaoIndicacao: parsedValue,
       });
 
       setUsers((prev) =>
         prev.map((u) =>
           u.id === targetUser.id
-            ? { ...u, valorComissaoIndicacao: parsedValue }
+            ? {
+                ...u,
+                consultorWhatsapp: whatsappDrafts[targetUser.id] ?? "",
+                valorComissaoIndicacao: parsedValue,
+              }
             : u,
         ),
       );
@@ -214,6 +238,7 @@ export default function AcessoPage() {
         nome: newUserName,
         email: newUserEmail,
         roleId: newUserRole,
+        whatsapp: isConsultorRole ? newUserWhatsapp : undefined,
         valorComissaoIndicacao: isConsultorRole
           ? Number(newUserCommission || 0)
           : undefined,
@@ -222,7 +247,10 @@ export default function AcessoPage() {
       // 🔗 gera o link pessoal automaticamente
       const consultorId = res.data.consultorId;
       const linkCadastro = consultorId
-        ? `${window.location.origin}/cliente/cadastro?consultorId=${consultorId}`
+        ? `${window.location.origin}/cliente/cadastro?${new URLSearchParams({
+            consultorId: String(consultorId),
+            ...(currentTenant ? { consultorTenant: currentTenant } : {}),
+          }).toString()}`
         : undefined;
       const novoUser = { ...res.data, linkCadastro };
 
@@ -231,6 +259,7 @@ export default function AcessoPage() {
       setNewUserEmail("");
       setNewUserRole(null);
       setNewUserCommission("0");
+      setNewUserWhatsapp("");
       alert("Colaborador criado com sucesso!");
     } catch (err) {
       console.error(err);
@@ -406,14 +435,21 @@ export default function AcessoPage() {
               </SelectContent>
             </Select>
             {roleSelecionadaEhConsultor && (
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="Comissão por referência (R$)"
-                value={newUserCommission}
-                onChange={(e) => setNewUserCommission(e.target.value)}
-              />
+              <>
+                <Input
+                  placeholder="WhatsApp do consultor"
+                  value={newUserWhatsapp}
+                  onChange={(e) => setNewUserWhatsapp(e.target.value)}
+                />
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Comissão por referência (R$)"
+                  value={newUserCommission}
+                  onChange={(e) => setNewUserCommission(e.target.value)}
+                />
+              </>
             )}
             <Button
               onClick={handleCreateUser}
@@ -534,6 +570,21 @@ export default function AcessoPage() {
                           {isConsultorRow && (
                             <>
                               <Input
+                                className="w-40"
+                                value={whatsappDrafts[user.id] ?? ""}
+                                onChange={(e) =>
+                                  setWhatsappDrafts((prev) => ({
+                                    ...prev,
+                                    [user.id]: e.target.value,
+                                  }))
+                                }
+                                placeholder="WhatsApp"
+                                disabled={
+                                  !canAssignRole ||
+                                  savingCommissionId === user.id
+                                }
+                              />
+                              <Input
                                 type="number"
                                 step="0.01"
                                 min="0"
@@ -591,7 +642,14 @@ export default function AcessoPage() {
                             const link =
                               user.linkCadastro ||
                               (user.consultorId
-                                ? `${window.location.origin}/cliente/cadastro?consultorId=${user.consultorId}`
+                                ? `${window.location.origin}/cliente/cadastro?${new URLSearchParams(
+                                    {
+                                      consultorId: String(user.consultorId),
+                                      ...(currentTenant
+                                        ? { consultorTenant: currentTenant }
+                                        : {}),
+                                    },
+                                  ).toString()}`
                                 : "");
                             if (!link) {
                               toast.error(

@@ -62,6 +62,16 @@ import { fetchSuggestedPlanosWithRetry } from "@/services/planoSuggestion";
 type Step1Values = z.infer<typeof dadosPessoaisSchema>;
 type Step2Values = z.infer<typeof enderecoSchema>;
 type Step3Values = z.infer<typeof responsavelFinanceiroSchema>;
+type CreditCardValues = {
+  holderName: string;
+  holderCpf: string;
+  number: string;
+  expiryMonth: string;
+  expiryYear: string;
+  ccv: string;
+};
+
+type CreditCardErrors = Partial<Record<keyof CreditCardValues, string>>;
 
 interface DepErrors {
   nome?: string;
@@ -86,6 +96,52 @@ function validateSingleDependente(dep: Dependente): DepErrors {
 
 function isDependenteComplete(dep: Dependente): boolean {
   return Object.keys(validateSingleDependente(dep)).length === 0;
+}
+
+function formatCardNumber(value: string): string {
+  return value
+    .replace(/\D/g, "")
+    .slice(0, 19)
+    .replace(/(.{4})/g, "$1 ")
+    .trim();
+}
+
+function formatCardExpiryMonth(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 2);
+}
+
+function formatCardExpiryYear(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 4);
+}
+
+function formatCardCcv(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 4);
+}
+
+function validateCreditCard(card: CreditCardValues): CreditCardErrors {
+  const errors: CreditCardErrors = {};
+  if (!card.holderName.trim() || card.holderName.trim().length < 3) {
+    errors.holderName = "Informe o nome impresso no cartão.";
+  }
+  if (card.holderCpf.replace(/\D/g, "").length !== 11) {
+    errors.holderCpf = "CPF do portador inválido.";
+  }
+  const cardDigits = card.number.replace(/\D/g, "");
+  if (cardDigits.length < 13 || cardDigits.length > 19) {
+    errors.number = "Número do cartão inválido.";
+  }
+  const month = Number(card.expiryMonth.replace(/\D/g, ""));
+  if (!month || month < 1 || month > 12) {
+    errors.expiryMonth = "Mês inválido.";
+  }
+  const yearDigits = card.expiryYear.replace(/\D/g, "");
+  if (yearDigits.length !== 2 && yearDigits.length !== 4) {
+    errors.expiryYear = "Ano inválido.";
+  }
+  if (card.ccv.replace(/\D/g, "").length < 3) {
+    errors.ccv = "CVV inválido.";
+  }
+  return errors;
 }
 
 const DIRECT_PARENTESCOS_GRADE_FAMILIAR = new Set<string>([
@@ -159,6 +215,9 @@ function getValorAdicionalPorIdade(dep: Dependente): number {
 interface ConsultorOption {
   id: number;
   nome: string;
+  tenantId: string;
+  tenantLabel: string;
+  selectionKey: string;
 }
 
 type MetodoPagamento = "PIX" | "BOLETO" | "CARTAO";
@@ -175,7 +234,6 @@ const SERVICO_ADICIONAL_LABELS: Record<string, string> = {
   pet: "Pet",
 };
 
-const BOSQUE_DEFAULT = "campo-do-bosque" as const;
 const MAX_DEP = 8;
 const ENABLE_PARCERIAS_CADASTRO = false;
 
@@ -802,31 +860,82 @@ function Step3Form({
 function Step4AddressForm({
   form,
   ufValue,
+  usarMesmoEndereco,
+  onToggleUsarMesmoEndereco,
 }: {
   form: UseFormReturn<Step3Values>;
   ufValue: string;
+  usarMesmoEndereco: boolean;
+  onToggleUsarMesmoEndereco: (checked: boolean) => void;
 }) {
   const e = form.formState.errors;
+  const disabled = usarMesmoEndereco;
 
   return (
     <>
+      <label className="cm-cad-same-address-checkbox">
+        <div
+          className={`cm-cad-checkbox-box${usarMesmoEndereco ? " checked" : ""}`}
+          onClick={() => onToggleUsarMesmoEndereco(!usarMesmoEndereco)}
+          role="checkbox"
+          aria-checked={usarMesmoEndereco}
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === " " || e.key === "Enter")
+              onToggleUsarMesmoEndereco(!usarMesmoEndereco);
+          }}
+        >
+          {usarMesmoEndereco && (
+            <svg
+              viewBox="0 0 12 10"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="cm-cad-checkbox-check"
+            >
+              <path
+                d="M1 5L4.5 8.5L11 1.5"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
+        </div>
+        <span className="cm-cad-checkbox-label">
+          Usar o mesmo endereço do titular
+        </span>
+      </label>
+
       <div className="cm-cad-row-2">
-        <Field label="CEP" required error={e.cep?.message?.toString()}>
+        <Field
+          label="CEP"
+          required
+          error={!disabled ? e.cep?.message?.toString() : undefined}
+        >
           <input
-            className={`cm-cad-input${e.cep ? " error" : ""}`}
+            className={`cm-cad-input${!disabled && e.cep ? " error" : ""}${disabled ? " disabled" : ""}`}
             maxLength={9}
             placeholder="00000-000"
             inputMode="numeric"
             value={form.watch("cep") || ""}
-            onChange={(ev) => form.setValue("cep", formatCEP(ev.target.value))}
+            onChange={(ev) =>
+              !disabled && form.setValue("cep", formatCEP(ev.target.value))
+            }
+            readOnly={disabled}
           />
         </Field>
 
-        <Field label="UF" required error={e.uf?.message?.toString()}>
+        <Field
+          label="UF"
+          required
+          error={!disabled ? e.uf?.message?.toString() : undefined}
+        >
           <select
-            className={`cm-cad-select${e.uf ? " error" : ""}`}
+            className={`cm-cad-select${!disabled && e.uf ? " error" : ""}${disabled ? " disabled" : ""}`}
             value={ufValue}
-            onChange={(ev) => form.setValue("uf", ev.target.value)}
+            onChange={(ev) => !disabled && form.setValue("uf", ev.target.value)}
+            disabled={disabled}
           >
             <option value="">UF</option>
             {BRAZIL_STATES.map((s) => (
@@ -838,39 +947,59 @@ function Step4AddressForm({
         </Field>
       </div>
 
-      <Field label="Cidade" required error={e.cidade?.message?.toString()}>
+      <Field
+        label="Cidade"
+        required
+        error={!disabled ? e.cidade?.message?.toString() : undefined}
+      >
         <input
-          className={`cm-cad-input${e.cidade ? " error" : ""}`}
+          className={`cm-cad-input${!disabled && e.cidade ? " error" : ""}${disabled ? " disabled" : ""}`}
           maxLength={191}
           placeholder="Cidade"
+          readOnly={disabled}
           {...form.register("cidade")}
         />
       </Field>
 
-      <Field label="Bairro" required error={e.bairro?.message?.toString()}>
+      <Field
+        label="Bairro"
+        required
+        error={!disabled ? e.bairro?.message?.toString() : undefined}
+      >
         <input
-          className={`cm-cad-input${e.bairro ? " error" : ""}`}
+          className={`cm-cad-input${!disabled && e.bairro ? " error" : ""}${disabled ? " disabled" : ""}`}
           maxLength={191}
           placeholder="Bairro"
+          readOnly={disabled}
           {...form.register("bairro")}
         />
       </Field>
 
       <div className="cm-cad-row-street">
-        <Field label="Rua" required error={e.logradouro?.message?.toString()}>
+        <Field
+          label="Rua"
+          required
+          error={!disabled ? e.logradouro?.message?.toString() : undefined}
+        >
           <input
-            className={`cm-cad-input${e.logradouro ? " error" : ""}`}
+            className={`cm-cad-input${!disabled && e.logradouro ? " error" : ""}${disabled ? " disabled" : ""}`}
             maxLength={191}
             placeholder="Logradouro"
+            readOnly={disabled}
             {...form.register("logradouro")}
           />
         </Field>
 
-        <Field label="Número" required error={e.numero?.message?.toString()}>
+        <Field
+          label="Número"
+          required
+          error={!disabled ? e.numero?.message?.toString() : undefined}
+        >
           <input
-            className={`cm-cad-input${e.numero ? " error" : ""}`}
+            className={`cm-cad-input${!disabled && e.numero ? " error" : ""}${disabled ? " disabled" : ""}`}
             maxLength={50}
             placeholder="Nº"
+            readOnly={disabled}
             {...form.register("numero")}
           />
         </Field>
@@ -878,9 +1007,10 @@ function Step4AddressForm({
 
       <Field label="Complemento">
         <input
-          className="cm-cad-input"
+          className={`cm-cad-input${disabled ? " disabled" : ""}`}
           maxLength={191}
           placeholder="Opcional"
+          readOnly={disabled}
           {...form.register("complemento")}
         />
       </Field>
@@ -888,12 +1018,13 @@ function Step4AddressForm({
       <Field
         label="Ponto de referência"
         required
-        error={e.pontoReferencia?.message?.toString()}
+        error={!disabled ? e.pontoReferencia?.message?.toString() : undefined}
       >
         <input
-          className={`cm-cad-input${e.pontoReferencia ? " error" : ""}`}
+          className={`cm-cad-input${!disabled && e.pontoReferencia ? " error" : ""}${disabled ? " disabled" : ""}`}
           maxLength={255}
           placeholder="Próximo a…"
+          readOnly={disabled}
           {...form.register("pontoReferencia")}
         />
       </Field>
@@ -1762,9 +1893,18 @@ function CadastroParceriasInternalPreview() {
 function Step7Pagamento({
   metodo,
   onMetodoChange,
+  creditCard,
+  creditCardErrors,
+  onCreditCardChange,
 }: {
   metodo: MetodoPagamento | "";
   onMetodoChange: (value: MetodoPagamento) => void;
+  creditCard: CreditCardValues;
+  creditCardErrors: CreditCardErrors;
+  onCreditCardChange: <K extends keyof CreditCardValues>(
+    field: K,
+    value: CreditCardValues[K],
+  ) => void;
 }) {
   const opcoes: Array<{
     id: MetodoPagamento;
@@ -1832,6 +1972,132 @@ function Step7Pagamento({
         Esse método será usado na criação inicial da recorrência.
       </p>
 
+      {metodo === "CARTAO" && (
+        <div className="cm-cad-card-form">
+          <div className="cm-cad-card-info">
+            <strong>Cartão para recorrência</strong>
+            <span>
+              Os dados são enviados por conexão segura e não ficam salvos em
+              texto puro no sistema.
+            </span>
+          </div>
+
+          <Field
+            label="Nome impresso no cartão"
+            required
+            error={creditCardErrors.holderName}
+          >
+            <input
+              className={`cm-cad-input${creditCardErrors.holderName ? " error" : ""}`}
+              value={creditCard.holderName}
+              onChange={(event) =>
+                onCreditCardChange("holderName", event.target.value)
+              }
+              autoComplete="cc-name"
+              placeholder="Como está no cartão"
+            />
+          </Field>
+
+          <Field
+            label="CPF do portador"
+            required
+            error={creditCardErrors.holderCpf}
+          >
+            <input
+              className={`cm-cad-input${creditCardErrors.holderCpf ? " error" : ""}`}
+              value={creditCard.holderCpf}
+              onChange={(event) =>
+                onCreditCardChange("holderCpf", formatCPF(event.target.value))
+              }
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="000.000.000-00"
+            />
+          </Field>
+
+          <Field
+            label="Número do cartão"
+            required
+            error={creditCardErrors.number}
+          >
+            <input
+              className={`cm-cad-input${creditCardErrors.number ? " error" : ""}`}
+              value={creditCard.number}
+              onChange={(event) =>
+                onCreditCardChange(
+                  "number",
+                  formatCardNumber(event.target.value),
+                )
+              }
+              inputMode="numeric"
+              autoComplete="cc-number"
+              placeholder="0000 0000 0000 0000"
+            />
+          </Field>
+
+          <div className="cm-cad-grid-two">
+            <Field
+              label="Mês"
+              required
+              half
+              error={creditCardErrors.expiryMonth}
+            >
+              <input
+                className={`cm-cad-input${creditCardErrors.expiryMonth ? " error" : ""}`}
+                value={creditCard.expiryMonth}
+                onChange={(event) =>
+                  onCreditCardChange(
+                    "expiryMonth",
+                    formatCardExpiryMonth(event.target.value),
+                  )
+                }
+                inputMode="numeric"
+                autoComplete="cc-exp-month"
+                placeholder="MM"
+              />
+            </Field>
+
+            <Field
+              label="Ano"
+              required
+              half
+              error={creditCardErrors.expiryYear}
+            >
+              <input
+                className={`cm-cad-input${creditCardErrors.expiryYear ? " error" : ""}`}
+                value={creditCard.expiryYear}
+                onChange={(event) =>
+                  onCreditCardChange(
+                    "expiryYear",
+                    formatCardExpiryYear(event.target.value),
+                  )
+                }
+                inputMode="numeric"
+                autoComplete="cc-exp-year"
+                placeholder="AAAA"
+              />
+            </Field>
+          </div>
+
+          <Field
+            label="Código de segurança"
+            required
+            error={creditCardErrors.ccv}
+          >
+            <input
+              className={`cm-cad-input${creditCardErrors.ccv ? " error" : ""}`}
+              value={creditCard.ccv}
+              onChange={(event) =>
+                onCreditCardChange("ccv", formatCardCcv(event.target.value))
+              }
+              inputMode="numeric"
+              autoComplete="cc-csc"
+              placeholder="CVV"
+            />
+          </Field>
+        </div>
+      )}
+
       {!metodo && (
         <p className="cm-cad-error">
           Selecione uma forma de pagamento para continuar.
@@ -1853,7 +2119,7 @@ function Step8Confirmacao({
   metodoPagamento,
   servicosAdicionais,
   consultores,
-  selectedConsultorId,
+  selectedConsultorKey,
   onSelectConsultor,
   isConsultorLocked,
   isLoadingConsultores,
@@ -1866,8 +2132,8 @@ function Step8Confirmacao({
   metodoPagamento: MetodoPagamento | "";
   servicosAdicionais: string[];
   consultores: ConsultorOption[];
-  selectedConsultorId?: number | typeof BOSQUE_DEFAULT;
-  onSelectConsultor: (id: number | typeof BOSQUE_DEFAULT) => void;
+  selectedConsultorKey?: string;
+  onSelectConsultor: (id: string) => void;
   isConsultorLocked: boolean;
   isLoadingConsultores: boolean;
   consultorError: string | null;
@@ -1924,27 +2190,17 @@ function Step8Confirmacao({
           <p className="cm-cad-conf-muted">Carregando…</p>
         ) : isConsultorLocked ? (
           <p className="cm-cad-conf-consultor-locked">
-            {consultores.find((c) => c.id === selectedConsultorId)?.nome ??
-              `Consultor #${selectedConsultorId}`}
+            {consultores.find((c) => c.selectionKey === selectedConsultorKey)
+              ?.nome ?? `Consultor ${selectedConsultorKey}`}
           </p>
         ) : (
           <select
             className={`cm-cad-select${consultorError ? " error" : ""}`}
-            value={
-              selectedConsultorId === BOSQUE_DEFAULT
-                ? BOSQUE_DEFAULT
-                : (selectedConsultorId?.toString() ?? "")
-            }
-            onChange={(ev) => {
-              const val = ev.target.value;
-              onSelectConsultor(
-                val === BOSQUE_DEFAULT ? BOSQUE_DEFAULT : Number(val),
-              );
-            }}
+            value={selectedConsultorKey ?? ""}
+            onChange={(ev) => onSelectConsultor(ev.target.value)}
           >
-            <option value={BOSQUE_DEFAULT}>Campo do Bosque (padrão)</option>
             {consultores.map((c) => (
-              <option key={c.id} value={c.id.toString()}>
+              <option key={c.selectionKey} value={c.selectionKey}>
                 {c.nome}
               </option>
             ))}
@@ -2344,6 +2600,7 @@ export default function MobileCadastroScreen() {
     resolver: zodResolver(enderecoSchema) as Resolver<Step2Values>,
   });
   const [usarMesmosDados] = useState(false);
+  const [usarMesmoEndereco, setUsarMesmoEndereco] = useState(false);
   const step3Form = useForm<Step3Values>({
     resolver: zodResolver(responsavelFinanceiroSchema) as Resolver<Step3Values>,
     defaultValues: { usarMesmosDados: false },
@@ -2381,16 +2638,28 @@ export default function MobileCadastroScreen() {
   const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamento | "">(
     "",
   );
+  const [creditCard, setCreditCard] = useState<CreditCardValues>({
+    holderName: "",
+    holderCpf: "",
+    number: "",
+    expiryMonth: "",
+    expiryYear: "",
+    ccv: "",
+  });
+  const [creditCardErrors, setCreditCardErrors] = useState<CreditCardErrors>(
+    {},
+  );
 
   /* Consultor */
   const [consultores, setConsultores] = useState<ConsultorOption[]>([]);
-  const [selectedConsultorId, setSelectedConsultorId] = useState<
-    number | typeof BOSQUE_DEFAULT | undefined
+  const [selectedConsultorKey, setSelectedConsultorKey] = useState<
+    string | undefined
   >();
   const [consultorError, setConsultorError] = useState<string | null>(null);
-  const [consultorIdFromQuery, setConsultorIdFromQuery] = useState<
-    number | undefined
-  >();
+  const [consultorFromQuery, setConsultorFromQuery] = useState<{
+    id: number;
+    tenantId?: string;
+  } | null>(null);
   const [isLoadingConsultores, setIsLoadingConsultores] = useState(true);
 
   useEffect(() => {
@@ -2398,6 +2667,24 @@ export default function MobileCadastroScreen() {
       setEditingDepIndex(null);
     }
   }, [currentStep]);
+
+  useEffect(() => {
+    if (metodoPagamento !== "CARTAO") return;
+    const titular = step1Form.getValues();
+    const responsavel = step3Form.getValues();
+    const nomePadrao = String(
+      responsavel.nomeCompleto || titular.nomeCompleto || "",
+    ).trim();
+    const cpfPadrao = formatCPF(
+      String(responsavel.cpf || titular.cpf || "").replace(/\D/g, ""),
+    );
+
+    setCreditCard((prev) => ({
+      ...prev,
+      holderName: prev.holderName || nomePadrao,
+      holderCpf: prev.holderCpf || cpfPadrao,
+    }));
+  }, [metodoPagamento, step1Form, step3Form]);
 
   /* Sync wizard step with browser history for Android back button */
   useEffect(() => {
@@ -2594,7 +2881,7 @@ export default function MobileCadastroScreen() {
   useEffect(() => {
     let alive = true;
     api
-      .get("/consultor/public")
+      .get("/consultor/public", { params: { scope: "global" } })
       .then((res) => {
         if (!alive) return;
         const list = Array.isArray(res.data) ? res.data : [];
@@ -2603,8 +2890,19 @@ export default function MobileCadastroScreen() {
             .map((item: Record<string, unknown>) => ({
               id: Number(item.id),
               nome: String(item.nome ?? "").trim(),
+              tenantId: String(item.tenantId ?? "")
+                .trim()
+                .toLowerCase(),
+              tenantLabel: String(item.tenantLabel ?? "").trim(),
+              selectionKey: String(item.selectionKey ?? "").trim(),
             }))
-            .filter((c: ConsultorOption) => c.id > 0 && c.nome.length > 0),
+            .filter(
+              (c: ConsultorOption) =>
+                c.id > 0 &&
+                c.nome.length > 0 &&
+                c.tenantId.length > 0 &&
+                c.selectionKey.length > 0,
+            ),
         );
       })
       .catch(() => {
@@ -2621,22 +2919,43 @@ export default function MobileCadastroScreen() {
   /* Consultor from URL */
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const id = Number(
-      new URLSearchParams(window.location.search).get("consultorId"),
-    );
-    if (Number.isFinite(id) && id > 0) setConsultorIdFromQuery(id);
+    const params = new URLSearchParams(window.location.search);
+    const id = Number(params.get("consultorId"));
+    const tenantId = params.get("consultorTenant")?.trim().toLowerCase();
+    if (Number.isFinite(id) && id > 0) {
+      setConsultorFromQuery({
+        id,
+        tenantId: tenantId || undefined,
+      });
+    }
   }, []);
 
   useEffect(() => {
-    if (consultorIdFromQuery) setSelectedConsultorId(consultorIdFromQuery);
-  }, [consultorIdFromQuery]);
+    if (!consultorFromQuery || consultores.length === 0) return;
+    const matched =
+      (consultorFromQuery.tenantId
+        ? consultores.find(
+            (c) =>
+              c.id === consultorFromQuery.id &&
+              c.tenantId === consultorFromQuery.tenantId,
+          )
+        : undefined) ?? consultores.find((c) => c.id === consultorFromQuery.id);
+    if (!matched) return;
+    setSelectedConsultorKey(matched.selectionKey);
+    setConsultorError(null);
+  }, [consultorFromQuery, consultores]);
 
   useEffect(() => {
-    if (consultorIdFromQuery) return;
-    if (selectedConsultorId) return;
+    if (consultorFromQuery) return;
+    if (selectedConsultorKey) return;
     if (isLoadingConsultores) return;
-    setSelectedConsultorId(BOSQUE_DEFAULT);
-  }, [consultorIdFromQuery, isLoadingConsultores, selectedConsultorId]);
+    setSelectedConsultorKey(consultores[0]?.selectionKey);
+  }, [
+    consultorFromQuery,
+    consultores,
+    isLoadingConsultores,
+    selectedConsultorKey,
+  ]);
 
   /* ViaCEP – step 2 */
   const cep2 = step2Form.watch("cep");
@@ -2758,6 +3077,7 @@ export default function MobileCadastroScreen() {
         return true;
       }
       case 4:
+        if (usarMesmoEndereco) return true;
         return await step3Form.trigger(
           [
             "cep",
@@ -2802,6 +3122,11 @@ export default function MobileCadastroScreen() {
         return true;
       case 8:
         if (!metodoPagamento) return false;
+        if (metodoPagamento === "CARTAO") {
+          const errors = validateCreditCard(creditCard);
+          setCreditCardErrors(errors);
+          if (Object.keys(errors).length > 0) return false;
+        }
         return true;
       default:
         return true;
@@ -2826,9 +3151,35 @@ export default function MobileCadastroScreen() {
     }
   };
 
+  const handleCreditCardChange = <K extends keyof CreditCardValues>(
+    field: K,
+    value: CreditCardValues[K],
+  ) => {
+    setCreditCard((prev) => ({ ...prev, [field]: value }));
+    setCreditCardErrors((prev) => {
+      if (!prev[field]) return prev;
+      return { ...prev, [field]: undefined };
+    });
+  };
+
   const handleFinish = async () => {
-    if (!selectedConsultorId) {
+    if (!selectedConsultorKey) {
       setConsultorError("Selecione um consultor para continuar.");
+      return;
+    }
+    if (metodoPagamento === "CARTAO") {
+      const errors = validateCreditCard(creditCard);
+      setCreditCardErrors(errors);
+      if (Object.keys(errors).length > 0) {
+        setCurrentStep(8);
+        return;
+      }
+    }
+    const consultorSelecionado = consultores.find(
+      (item) => item.selectionKey === selectedConsultorKey,
+    );
+    if (!consultorSelecionado) {
+      setConsultorError("Consultor selecionado não foi encontrado.");
       return;
     }
     setSubmitError(null);
@@ -2844,15 +3195,24 @@ export default function MobileCadastroScreen() {
             metodoPagamento === "CARTAO"
               ? "CREDIT_CARD"
               : metodoPagamento || undefined,
+          creditCard:
+            metodoPagamento === "CARTAO"
+              ? {
+                  holderName: creditCard.holderName.trim(),
+                  holderCpf: creditCard.holderCpf,
+                  number: creditCard.number,
+                  expiryMonth: creditCard.expiryMonth,
+                  expiryYear: creditCard.expiryYear,
+                  ccv: creditCard.ccv,
+                }
+              : undefined,
         },
         servicosAdicionais,
         dependentes,
         usarMesmosDados,
-        consultorId:
-          typeof selectedConsultorId === "number"
-            ? selectedConsultorId
-            : undefined,
-        forceTenantBosque: selectedConsultorId === BOSQUE_DEFAULT,
+        consultorId: consultorSelecionado.id,
+        consultorTenantId: consultorSelecionado.tenantId,
+        targetTenantId: consultorSelecionado.tenantId,
       };
       await mutateAsync(payload);
     } catch (err: unknown) {
@@ -2876,7 +3236,30 @@ export default function MobileCadastroScreen() {
       case 3:
         return <Step3Form form={step3Form} usarMesmosDados={usarMesmosDados} />;
       case 4:
-        return <Step4AddressForm form={step3Form} ufValue={uf3} />;
+        return (
+          <Step4AddressForm
+            form={step3Form}
+            ufValue={uf3}
+            usarMesmoEndereco={usarMesmoEndereco}
+            onToggleUsarMesmoEndereco={(checked) => {
+              setUsarMesmoEndereco(checked);
+              if (checked) {
+                const addr = step2Form.getValues();
+                step3Form.setValue("cep", addr.cep ?? "");
+                step3Form.setValue("uf", addr.uf ?? "");
+                step3Form.setValue("cidade", addr.cidade ?? "");
+                step3Form.setValue("bairro", addr.bairro ?? "");
+                step3Form.setValue("logradouro", addr.logradouro ?? "");
+                step3Form.setValue("numero", addr.numero ?? "");
+                step3Form.setValue("complemento", addr.complemento ?? "");
+                step3Form.setValue(
+                  "pontoReferencia",
+                  addr.pontoReferencia ?? "",
+                );
+              }
+            }}
+          />
+        );
       case 5:
         return (
           <Step4Form
@@ -2947,7 +3330,13 @@ export default function MobileCadastroScreen() {
         return (
           <Step7Pagamento
             metodo={metodoPagamento}
-            onMetodoChange={(value) => setMetodoPagamento(value)}
+            onMetodoChange={(value) => {
+              setMetodoPagamento(value);
+              setCreditCardErrors({});
+            }}
+            creditCard={creditCard}
+            creditCardErrors={creditCardErrors}
+            onCreditCardChange={handleCreditCardChange}
           />
         );
       case 9:
@@ -2962,12 +3351,12 @@ export default function MobileCadastroScreen() {
             metodoPagamento={metodoPagamento}
             servicosAdicionais={servicosAdicionais}
             consultores={consultores}
-            selectedConsultorId={selectedConsultorId}
+            selectedConsultorKey={selectedConsultorKey}
             onSelectConsultor={(id) => {
-              setSelectedConsultorId(id);
+              setSelectedConsultorKey(id);
               setConsultorError(null);
             }}
-            isConsultorLocked={Boolean(consultorIdFromQuery)}
+            isConsultorLocked={Boolean(consultorFromQuery)}
             isLoadingConsultores={isLoadingConsultores}
             consultorError={consultorError}
           />

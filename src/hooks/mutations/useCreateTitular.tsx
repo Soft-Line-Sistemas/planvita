@@ -21,6 +21,14 @@ type PlanoFormValues = {
   planoId?: number;
   plano?: Plano | null;
   billingType?: "PIX" | "BOLETO" | "CREDIT_CARD";
+  creditCard?: {
+    holderName: string;
+    holderCpf: string;
+    number: string;
+    expiryMonth: string;
+    expiryYear: string;
+    ccv: string;
+  };
 };
 
 export type CreateTitularInput = {
@@ -29,7 +37,8 @@ export type CreateTitularInput = {
   step3?: Step3Values;
   step5?: PlanoFormValues;
   consultorId?: number;
-  forceTenantBosque?: boolean;
+  consultorTenantId?: string;
+  targetTenantId?: string;
   servicosAdicionais?: string[];
   dependentes: Dependente[];
   usarMesmosDados: boolean;
@@ -45,12 +54,12 @@ export function useCreateTitular(options?: {
     mutationFn: async (payload) => {
       const endpoint =
         options?.variant === "public" ? "/auth/register" : "/titular/full";
-      const { forceTenantBosque, ...requestBody } = payload;
+      const { targetTenantId, ...requestBody } = payload;
       const { data } = await api.post(endpoint, requestBody, {
-        ...(forceTenantBosque
+        ...(options?.variant === "public" && targetTenantId
           ? {
-              headers: { "X-Tenant": "bosque" },
-              params: { tenant: "bosque" },
+              headers: { "X-Tenant": targetTenantId },
+              params: { tenant: targetTenantId },
             }
           : {}),
       });
@@ -96,10 +105,23 @@ export function useCreateTitular(options?: {
       });
     },
     onSuccess: (_data, variables) => {
+      const data = _data as
+        | {
+            recurring?: {
+              status?: "configured" | "failed" | "skipped";
+              message?: string;
+            };
+          }
+        | undefined;
+      const recurringMessage = data?.recurring?.message?.trim();
+      const recurringFailed = data?.recurring?.status === "failed";
+
       if (options?.variant === "public") {
         toast.success("Cadastro concluído!", {
           description:
-            "Agora valide seu acesso (código) e crie sua senha para entrar.",
+            recurringMessage && recurringFailed
+              ? `Agora valide seu acesso e crie sua senha. ${recurringMessage}`
+              : "Agora valide seu acesso (código) e crie sua senha para entrar.",
         });
         const loginHint =
           variables.step1?.email?.trim() || variables.step1?.cpf?.trim() || "";
@@ -111,7 +133,10 @@ export function useCreateTitular(options?: {
       }
 
       toast.success("Titular criado com sucesso!", {
-        description: "Cadastro concluído e vinculado ao plano.",
+        description:
+          recurringMessage && recurringFailed
+            ? `Cadastro concluído e vinculado ao plano. ${recurringMessage}`
+            : "Cadastro concluído e vinculado ao plano.",
       });
       router.push("/painel/cliente");
     },

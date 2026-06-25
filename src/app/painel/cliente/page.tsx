@@ -19,6 +19,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 import { useClientes } from "@/hooks/queries/useClientes";
 import api from "@/utils/api";
+import getTenantFromHost from "@/utils/getTenantFromHost";
 import { sanitizePlanoArray } from "@/utils/planos";
 import type { Plano } from "@/types/PlanType";
 import type { Cliente } from "@/types/ClientType";
@@ -34,9 +35,14 @@ export default function ClientesPage() {
 
     // Verifica se é consultor pelo nome da role
     const isConsultor = user.role?.name?.toLowerCase() === "consultor";
+    const tenantId = user.tenant || getTenantFromHost();
 
     if (isConsultor && user.consultor?.id && typeof window !== "undefined") {
-      return `${window.location.origin}/cliente/cadastro?consultorId=${user.consultor.id}`;
+      const params = new URLSearchParams({
+        consultorId: String(user.consultor.id),
+      });
+      if (tenantId) params.set("consultorTenant", tenantId);
+      return `${window.location.origin}/cliente/cadastro?${params.toString()}`;
     }
     return undefined;
   }, [user]);

@@ -22,9 +22,14 @@ interface ConfirmacaoProps {
     planoSelecionado?: Plano | null;
     consultor?: { name: string };
   };
-  consultores: Array<{ id: number; nome: string }>;
-  selectedConsultorId?: number | "campo-do-bosque";
-  onSelectConsultor: (consultorId: number | "campo-do-bosque") => void;
+  consultores: Array<{
+    id: number;
+    nome: string;
+    tenantId: string;
+    selectionKey: string;
+  }>;
+  selectedConsultorKey?: string;
+  onSelectConsultor: (consultorKey: string) => void;
   isConsultorLocked?: boolean;
   isLoadingConsultores?: boolean;
   consultorError?: string | null;
@@ -33,31 +38,25 @@ interface ConfirmacaoProps {
 export function Confirmacao({
   dados,
   consultores,
-  selectedConsultorId,
+  selectedConsultorKey,
   onSelectConsultor,
   isConsultorLocked = false,
   isLoadingConsultores = false,
   consultorError = null,
 }: ConfirmacaoProps) {
   const { titular, dependentes = [], planoSelecionado, consultor } = dados;
-
-  const selectedValue =
-    selectedConsultorId === "campo-do-bosque"
-      ? "campo-do-bosque"
-      : typeof selectedConsultorId === "number"
-        ? selectedConsultorId.toString()
-        : undefined;
-
   const consultorSelecionadoNoLink =
-    typeof selectedConsultorId === "number" &&
-    !consultores.some((item) => item.id === selectedConsultorId);
+    Boolean(selectedConsultorKey) &&
+    !consultores.some((item) => item.selectionKey === selectedConsultorKey);
 
   const consultoresDisponiveis = consultorSelecionadoNoLink
     ? [
         ...consultores,
         {
-          id: selectedConsultorId as number,
-          nome: `Consultor #${selectedConsultorId}`,
+          id: -1,
+          nome: `Consultor ${selectedConsultorKey}`,
+          tenantId: "",
+          selectionKey: selectedConsultorKey as string,
         },
       ]
     : consultores;
@@ -93,14 +92,8 @@ export function Confirmacao({
           </Label>
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
             <Select
-              value={selectedValue}
-              onValueChange={(value) =>
-                onSelectConsultor(
-                  value === "campo-do-bosque"
-                    ? "campo-do-bosque"
-                    : Number(value),
-                )
-              }
+              value={selectedConsultorKey}
+              onValueChange={onSelectConsultor}
               disabled={isConsultorLocked || isLoadingConsultores}
             >
               <SelectTrigger
@@ -116,11 +109,10 @@ export function Confirmacao({
                 />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="campo-do-bosque">Campo do Bosque</SelectItem>
                 {consultoresDisponiveis.map((consultorItem) => (
                   <SelectItem
-                    key={consultorItem.id}
-                    value={consultorItem.id.toString()}
+                    key={consultorItem.selectionKey}
+                    value={consultorItem.selectionKey}
                   >
                     {consultorItem.nome}
                   </SelectItem>

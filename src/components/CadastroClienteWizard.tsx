@@ -71,17 +71,19 @@ export interface TypedWizardStepsData {
 interface ConsultorOption {
   id: number;
   nome: string;
+  tenantId: string;
+  tenantLabel: string;
+  selectionKey: string;
 }
-
-const BOSQUE_DEFAULT_CONSULTOR = "campo-do-bosque" as const;
 
 export function CadastroClienteWizard({
   variant = "dashboard",
 }: CadastroClienteWizardProps) {
   const isPublic = variant === "public";
-  const [consultorIdFromQuery, setConsultorIdFromQuery] = useState<
-    number | undefined
-  >();
+  const [consultorFromQuery, setConsultorFromQuery] = useState<{
+    id: number;
+    tenantId?: string;
+  } | null>(null);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<TypedWizardStepsData>({});
@@ -96,8 +98,8 @@ export function CadastroClienteWizard({
   const [consultores, setConsultores] = useState<ConsultorOption[]>([]);
   const [isLoadingConsultores, setIsLoadingConsultores] = useState(true);
   const [consultorError, setConsultorError] = useState<string | null>(null);
-  const [selectedConsultorId, setSelectedConsultorId] = useState<
-    number | typeof BOSQUE_DEFAULT_CONSULTOR | undefined
+  const [selectedConsultorKey, setSelectedConsultorKey] = useState<
+    string | undefined
   >();
   const { mutateAsync, isPending } = useCreateTitular({ variant });
   const steps = [
@@ -122,16 +124,17 @@ export function CadastroClienteWizard({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const consultorIdParam = new URLSearchParams(window.location.search).get(
-      "consultorId",
-    );
+    const params = new URLSearchParams(window.location.search);
+    const consultorIdParam = params.get("consultorId");
+    const consultorTenantParam = params.get("consultorTenant");
     const consultorId = consultorIdParam ? Number(consultorIdParam) : undefined;
-    setConsultorIdFromQuery(
-      consultorId && Number.isFinite(consultorId) && consultorId > 0
-        ? consultorId
-        : undefined,
-    );
-  }, []);
+    if (consultorId && Number.isFinite(consultorId) && consultorId > 0) {
+      setConsultorFromQuery({
+        id: consultorId,
+        tenantId: consultorTenantParam?.trim().toLowerCase() || undefined,
+      });
+    }
+  }, [isPublic]);
 
   const buildDependenteErrors = (dep: Dependente): DependenteFieldErrors => {
     const errors: DependenteFieldErrors = {};
@@ -172,7 +175,9 @@ export function CadastroClienteWizard({
     let ativo = true;
     setIsLoadingConsultores(true);
     api
-      .get("/consultor/public")
+      .get("/consultor/public", {
+        params: isPublic ? { scope: "global" } : undefined,
+      })
       .then((res) => {
         if (!ativo) return;
         const data = Array.isArray(res.data) ? res.data : [];
@@ -180,10 +185,19 @@ export function CadastroClienteWizard({
           .map((item) => ({
             id: Number(item?.id),
             nome: String(item?.nome ?? "").trim(),
+            tenantId: String(item?.tenantId ?? "")
+              .trim()
+              .toLowerCase(),
+            tenantLabel: String(item?.tenantLabel ?? "").trim(),
+            selectionKey: String(item?.selectionKey ?? "").trim(),
           }))
           .filter(
             (item) =>
-              Number.isFinite(item.id) && item.id > 0 && item.nome.length > 0,
+              Number.isFinite(item.id) &&
+              item.id > 0 &&
+              item.nome.length > 0 &&
+              item.tenantId.length > 0 &&
+              item.selectionKey.length > 0,
           );
 
         setConsultores(options);
@@ -199,21 +213,35 @@ export function CadastroClienteWizard({
     return () => {
       ativo = false;
     };
-  }, []);
+  }, [isPublic]);
 
   useEffect(() => {
-    if (consultorIdFromQuery) {
-      setSelectedConsultorId(consultorIdFromQuery);
-      setConsultorError(null);
-    }
-  }, [consultorIdFromQuery]);
+    if (!consultorFromQuery || consultores.length === 0) return;
+    const matched =
+      (consultorFromQuery.tenantId
+        ? consultores.find(
+            (item) =>
+              item.id === consultorFromQuery.id &&
+              item.tenantId === consultorFromQuery.tenantId,
+          )
+        : undefined) ??
+      consultores.find((item) => item.id === consultorFromQuery.id);
+    if (!matched) return;
+    setSelectedConsultorKey(matched.selectionKey);
+    setConsultorError(null);
+  }, [consultorFromQuery, consultores]);
 
   useEffect(() => {
-    if (consultorIdFromQuery) return;
-    if (selectedConsultorId) return;
+    if (consultorFromQuery) return;
+    if (selectedConsultorKey) return;
     if (isLoadingConsultores) return;
-    setSelectedConsultorId(BOSQUE_DEFAULT_CONSULTOR);
-  }, [consultorIdFromQuery, isLoadingConsultores, selectedConsultorId]);
+    setSelectedConsultorKey(consultores[0]?.selectionKey);
+  }, [
+    consultorFromQuery,
+    consultores,
+    isLoadingConsultores,
+    selectedConsultorKey,
+  ]);
 
   useEffect(() => {
     let ativo = true;
@@ -357,13 +385,17 @@ export function CadastroClienteWizard({
     currentStep !== 4 || validateDependentes(dependentes).isValid;
 
   const handleFinish = async () => {
-    if (!selectedConsultorId) {
+    if (!selectedConsultorKey) {
       setConsultorError("Selecione o consultor para vincular este cliente.");
       return;
     }
-
-    const shouldForceBosqueTenant =
-      selectedConsultorId === BOSQUE_DEFAULT_CONSULTOR;
+    const consultorSelecionado = consultores.find(
+      (item) => item.selectionKey === selectedConsultorKey,
+    );
+    if (!consultorSelecionado) {
+      setConsultorError("Consultor selecionado não foi encontrado.");
+      return;
+    }
 
     const step1Data = formData.step1 ?? dadosPessoaisForm.getValues();
     const step2Data = formData.step2 ?? enderecoForm.getValues();
@@ -377,11 +409,9 @@ export function CadastroClienteWizard({
       step5: step5Data,
       dependentes,
       usarMesmosDados,
-      consultorId:
-        typeof selectedConsultorId === "number"
-          ? selectedConsultorId
-          : undefined,
-      forceTenantBosque: shouldForceBosqueTenant,
+      consultorId: consultorSelecionado.id,
+      consultorTenantId: consultorSelecionado.tenantId,
+      targetTenantId: isPublic ? consultorSelecionado.tenantId : undefined,
     };
 
     await mutateAsync(payload);
@@ -542,12 +572,12 @@ export function CadastroClienteWizard({
                     planoSelecionado: planoForm.getValues().plano,
                   }}
                   consultores={consultores}
-                  selectedConsultorId={selectedConsultorId}
-                  onSelectConsultor={(consultorId) => {
-                    setSelectedConsultorId(consultorId);
+                  selectedConsultorKey={selectedConsultorKey}
+                  onSelectConsultor={(consultorKey) => {
+                    setSelectedConsultorKey(consultorKey);
                     setConsultorError(null);
                   }}
-                  isConsultorLocked={Boolean(consultorIdFromQuery)}
+                  isConsultorLocked={Boolean(consultorFromQuery)}
                   isLoadingConsultores={isLoadingConsultores}
                   consultorError={consultorError}
                 />
