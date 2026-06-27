@@ -25,11 +25,27 @@ type Props = {
   onComplete: () => void;
 };
 
+const UNIQUE_BG_IMAGES = [...new Set(SLIDES.map((s) => s.bg))];
+
 export default function SplashScreen({ onComplete }: Props) {
   const [phase, setPhase] = useState<"splash" | "carousel">("splash");
   const [slideIndex, setSlideIndex] = useState(0);
 
   const goToCarousel = useCallback(() => setPhase("carousel"), []);
+
+  useEffect(() => {
+    const links = UNIQUE_BG_IMAGES.map((src) => {
+      const link = document.createElement("link");
+      link.rel = "preload";
+      link.as = "image";
+      link.href = src;
+      document.head.appendChild(link);
+      return link;
+    });
+    return () => {
+      links.forEach((l) => document.head.removeChild(l));
+    };
+  }, []);
 
   useEffect(() => {
     if (phase !== "splash") return;
@@ -70,12 +86,25 @@ export default function SplashScreen({ onComplete }: Props) {
 
   return (
     <div className="cm-carousel-root">
-      {/* Background */}
-      <div
-        className="cm-carousel-bg"
-        style={{ backgroundImage: `url("${slide.bg}")` }}
-        aria-hidden="true"
-      />
+      {/* Background images — all rendered, only active one visible */}
+      {SLIDES.map((s, i) => (
+        <Image
+          key={s.bg + i}
+          src={s.bg}
+          alt=""
+          fill
+          priority={i === 0}
+          sizes="100vw"
+          quality={100}
+          className="cm-carousel-bg"
+          style={{
+            objectFit: "cover",
+            opacity: i === slideIndex ? 1 : 0,
+            transition: "opacity 0.4s ease",
+          }}
+          aria-hidden="true"
+        />
+      ))}
 
       {/* Overlay gradient */}
       <div className="cm-carousel-overlay" aria-hidden="true" />

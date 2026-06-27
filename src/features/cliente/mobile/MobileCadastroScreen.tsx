@@ -1975,11 +1975,10 @@ function Step7Pagamento({
       {metodo === "CARTAO" && (
         <div className="cm-cad-card-form">
           <div className="cm-cad-card-info">
-            <strong>Cartão para recorrência</strong>
-            <span>
-              Os dados são enviados por conexão segura e não ficam salvos em
-              texto puro no sistema.
-            </span>
+            <div className="cm-cad-card-info-title">
+              <strong>Pagamento recorrente via cartão</strong>
+              <CadastroSecurityTooltip />
+            </div>
           </div>
 
           <Field
@@ -2124,6 +2123,9 @@ function Step8Confirmacao({
   isConsultorLocked,
   isLoadingConsultores,
   consultorError,
+  aceitouTermos,
+  onAceitouTermosChange,
+  termosRef,
 }: {
   step1: Partial<Step1Values>;
   dependentes: Dependente[];
@@ -2137,6 +2139,9 @@ function Step8Confirmacao({
   isConsultorLocked: boolean;
   isLoadingConsultores: boolean;
   consultorError: string | null;
+  aceitouTermos: boolean;
+  onAceitouTermosChange: (v: boolean) => void;
+  termosRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const [planoModalOpen, setPlanoModalOpen] = useState(false);
   const fmt = (v: number) =>
@@ -2458,6 +2463,29 @@ function Step8Confirmacao({
             document.body,
           )
         : null}
+
+      <div ref={termosRef} className="cm-cad-termos-row">
+        <input
+          id="cm-cad-termos-check"
+          type="checkbox"
+          className="cm-cad-termos-checkbox"
+          checked={aceitouTermos}
+          onChange={(e) => onAceitouTermosChange(e.target.checked)}
+        />
+        <label htmlFor="cm-cad-termos-check" className="cm-cad-termos-label">
+          Li e aceito a{" "}
+          <a
+            href="/privacidade"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="cm-cad-termos-link"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Política de Privacidade
+          </a>{" "}
+          e os termos de uso do serviço.
+        </label>
+      </div>
     </>
   );
 }
@@ -2588,6 +2616,8 @@ export default function MobileCadastroScreen() {
   const isDev = process.env.NODE_ENV === "development";
   const [currentStep, setCurrentStep] = useState(1);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [aceitouTermos, setAceitouTermos] = useState(false);
+  const termosRef = useRef<HTMLDivElement>(null);
   const isHandlingPopStateRef = useRef(false);
   const lastHistoryStepRef = useRef<number | null>(null);
   const historyBootstrappedRef = useRef(false);
@@ -3163,6 +3193,18 @@ export default function MobileCadastroScreen() {
   };
 
   const handleFinish = async () => {
+    if (!aceitouTermos) {
+      termosRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      termosRef.current?.classList.add("cm-cad-termos-highlight");
+      setTimeout(
+        () => termosRef.current?.classList.remove("cm-cad-termos-highlight"),
+        1800,
+      );
+      return;
+    }
     if (!selectedConsultorKey) {
       setConsultorError("Selecione um consultor para continuar.");
       return;
@@ -3359,6 +3401,9 @@ export default function MobileCadastroScreen() {
             isConsultorLocked={Boolean(consultorFromQuery)}
             isLoadingConsultores={isLoadingConsultores}
             consultorError={consultorError}
+            aceitouTermos={aceitouTermos}
+            onAceitouTermosChange={setAceitouTermos}
+            termosRef={termosRef}
           />
         );
       default:
@@ -3514,6 +3559,36 @@ export default function MobileCadastroScreen() {
           numero={waRedirectNumero}
           onClose={() => setWaRedirectModal(null)}
         />
+      )}
+    </div>
+  );
+}
+
+function CadastroSecurityTooltip() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="cm-security-tooltip-wrapper">
+      <button
+        type="button"
+        className="cm-security-tooltip-trigger"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Informações de segurança"
+      >
+        ⓘ
+      </button>
+      {open && (
+        <>
+          <div
+            className="cm-security-tooltip-backdrop"
+            onClick={() => setOpen(false)}
+          />
+          <div className="cm-security-tooltip-box" role="tooltip">
+            Seus dados são transmitidos com criptografia de ponta a ponta e
+            armazenados com segurança pelo processador de pagamentos, em
+            conformidade com o padrão PCI DSS.
+          </div>
+        </>
       )}
     </div>
   );

@@ -32,8 +32,7 @@ export default function ClientePage() {
         style={{
           minHeight: "100dvh",
           width: "100%",
-          background:
-            "linear-gradient(180deg, #0B5D4B 0%, #0E7A61 50%, #0A4F3F 100%)",
+          background: "#f8fafc",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",

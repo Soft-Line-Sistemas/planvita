@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Loader2,
   RefreshCw,
@@ -18,6 +24,14 @@ import {
   Calendar as CalendarIcon,
   PenTool,
   Save,
+  CreditCard,
+  Users,
+  IdCard,
+  PenLine,
+  ShieldCheck,
+  HeartHandshake,
+  BadgeCheck,
+  Flower2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1159,7 +1173,7 @@ export default function ConsultaClientePage() {
       case "PAGO":
       case "RECEBIDO":
         return (
-          <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200">
+          <Badge className="bg-[#e8f5e3] text-[#2d7a1f] hover:bg-[#c5e3be] border-[#c5e3be]">
             <CheckCircle className="w-3 h-3 mr-1" /> Pago
           </Badge>
         );
@@ -1227,450 +1241,538 @@ export default function ConsultaClientePage() {
     }
   };
 
+  // ─── helpers de navegação do dashboard ──────────────────────────
+  const navItems = [
+    { id: "carteirinha", label: "Carteirinha", Icon: IdCard },
+    { id: "plano", label: "Meu Plano", Icon: FileText },
+    ...(cliente?.dependentes && cliente.dependentes.length > 0
+      ? [{ id: "dependentes", label: "Dependentes", Icon: Users }]
+      : []),
+    { id: "financeiro", label: "Financeiro", Icon: CreditCard },
+    { id: "assinaturas", label: "Assinaturas", Icon: PenLine },
+  ] as { id: typeof abaAtiva; label: string; Icon: React.ElementType }[];
+
   return (
-    <main className="min-h-screen bg-linear-to-br from-slate-100 via-white to-slate-100 pb-16">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 pt-16">
-        <header className="space-y-3 text-center">
-          <p className="text-sm uppercase tracking-[0.4em] text-[#22c55e]">
-            Planvita
-          </p>
-          <h1 className="text-3xl font-semibold text-slate-900 md:text-4xl">
-            Área do Cliente
-          </h1>
-          <p className="text-base text-slate-600 md:text-lg">
-            Entre com seu CPF ou e-mail e sua senha para acessar sua
-            carteirinha, boletos e plano.
-          </p>
-        </header>
-
-        <Dialog
-          open={firstAccessOpen}
-          onOpenChange={(open) => {
-            setFirstAccessOpen(open);
-            if (!open) {
-              resetFirstAccessState();
-              clearFirstAccessQueryParams();
-            }
-          }}
-        >
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Primeiro acesso</DialogTitle>
-              <DialogDescription>
-                {firstAccessStep === "setPassword" &&
-                firstAccessVerificationToken
-                  ? "Link validado. Defina sua senha para concluir o primeiro acesso."
-                  : "Valide sua identidade com um código e crie sua senha."}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              {firstAccessStep === "request" && (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">
-                      CPF ou e-mail
-                    </label>
-                    <Input
-                      value={firstAccessLogin}
-                      onChange={(e) => setFirstAccessLogin(e.target.value)}
-                      placeholder="CPF ou e-mail"
-                      autoComplete="username"
-                    />
-                  </div>
-                  {firstAccessInfo && (
-                    <Alert>
-                      <AlertTitle>Info</AlertTitle>
-                      <AlertDescription>{firstAccessInfo}</AlertDescription>
-                    </Alert>
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      {/* ── Modais (primeiro acesso, recuperar senha, cadastro, PIX) ── */}
+      <Dialog
+        open={firstAccessOpen}
+        onOpenChange={(open) => {
+          setFirstAccessOpen(open);
+          if (!open) {
+            resetFirstAccessState();
+            clearFirstAccessQueryParams();
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Primeiro acesso</DialogTitle>
+            <DialogDescription>
+              {firstAccessStep === "setPassword" && firstAccessVerificationToken
+                ? "Link validado. Defina sua senha para concluir o primeiro acesso."
+                : "Valide sua identidade com um código e crie sua senha."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {firstAccessStep === "request" && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    CPF ou e-mail
+                  </label>
+                  <Input
+                    value={firstAccessLogin}
+                    onChange={(e) => setFirstAccessLogin(e.target.value)}
+                    placeholder="CPF ou e-mail"
+                    autoComplete="username"
+                  />
+                </div>
+                {firstAccessInfo && (
+                  <Alert>
+                    <AlertTitle>Info</AlertTitle>
+                    <AlertDescription>{firstAccessInfo}</AlertDescription>
+                  </Alert>
+                )}
+                {firstAccessError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Erro</AlertTitle>
+                    <AlertDescription>{firstAccessError}</AlertDescription>
+                  </Alert>
+                )}
+                <Button
+                  onClick={() => {
+                    void startFirstAccess();
+                  }}
+                  className="w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
+                  disabled={firstAccessLoading}
+                >
+                  {firstAccessLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    "Enviar código"
                   )}
-                  {firstAccessError && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Erro</AlertTitle>
-                      <AlertDescription>{firstAccessError}</AlertDescription>
-                    </Alert>
-                  )}
+                </Button>
+              </>
+            )}
+            {firstAccessStep === "verify" && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">{`Código enviado para ${firstAccessDestination || "seu contato"}`}</label>
+                  <Input
+                    value={firstAccessOtp}
+                    onChange={(e) => setFirstAccessOtp(e.target.value)}
+                    placeholder="000000"
+                    inputMode="numeric"
+                    maxLength={6}
+                  />
+                </div>
+                {firstAccessChannel !== "whatsapp" && (
                   <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
                     onClick={() => {
-                      void startFirstAccess();
+                      void startFirstAccess("whatsapp");
                     }}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
                     disabled={firstAccessLoading}
                   >
-                    {firstAccessLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Enviando...
-                      </>
-                    ) : (
-                      "Enviar código"
-                    )}
+                    Enviar código por WhatsApp
                   </Button>
-                </>
-              )}
-
-              {firstAccessStep === "verify" && (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">
-                      {`Código enviado para ${firstAccessDestination || "seu contato"}`}
-                    </label>
-                    <Input
-                      value={firstAccessOtp}
-                      onChange={(e) => setFirstAccessOtp(e.target.value)}
-                      placeholder="000000"
-                      inputMode="numeric"
-                      maxLength={6}
-                    />
-                  </div>
-                  {firstAccessChannel !== "whatsapp" && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => {
-                        void startFirstAccess("whatsapp");
-                      }}
-                      disabled={firstAccessLoading}
-                    >
-                      Enviar código por WhatsApp
-                    </Button>
+                )}
+                {firstAccessInfo && (
+                  <p className="text-xs text-slate-500">{firstAccessInfo}</p>
+                )}
+                {firstAccessError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Erro</AlertTitle>
+                    <AlertDescription>{firstAccessError}</AlertDescription>
+                  </Alert>
+                )}
+                <Button
+                  onClick={verifyFirstAccessOtp}
+                  className="w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
+                  disabled={firstAccessLoading}
+                >
+                  {firstAccessLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Validando...
+                    </>
+                  ) : (
+                    "Validar código"
                   )}
-                  {firstAccessInfo && (
-                    <p className="text-xs text-slate-500">{firstAccessInfo}</p>
+                </Button>
+              </>
+            )}
+            {firstAccessStep === "setPassword" && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    Nova senha
+                  </label>
+                  <Input
+                    type="password"
+                    value={firstAccessPassword}
+                    onChange={(e) => setFirstAccessPassword(e.target.value)}
+                    placeholder="Mín. 8 caracteres"
+                    autoComplete="new-password"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    Confirmar senha
+                  </label>
+                  <Input
+                    type="password"
+                    value={firstAccessPasswordConfirm}
+                    onChange={(e) =>
+                      setFirstAccessPasswordConfirm(e.target.value)
+                    }
+                    placeholder="Repita a senha"
+                    autoComplete="new-password"
+                  />
+                </div>
+                {firstAccessInfo && (
+                  <Alert>
+                    <AlertTitle>Info</AlertTitle>
+                    <AlertDescription>{firstAccessInfo}</AlertDescription>
+                  </Alert>
+                )}
+                {firstAccessError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Erro</AlertTitle>
+                    <AlertDescription>{firstAccessError}</AlertDescription>
+                  </Alert>
+                )}
+                <Button
+                  onClick={completeFirstAccess}
+                  className="w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
+                  disabled={firstAccessLoading}
+                >
+                  {firstAccessLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    "Criar senha e entrar"
                   )}
-                  {firstAccessError && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Erro</AlertTitle>
-                      <AlertDescription>{firstAccessError}</AlertDescription>
-                    </Alert>
-                  )}
-                  <Button
-                    onClick={verifyFirstAccessOtp}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                    disabled={firstAccessLoading}
-                  >
-                    {firstAccessLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Validando...
-                      </>
-                    ) : (
-                      "Validar código"
-                    )}
-                  </Button>
-                </>
-              )}
-
-              {firstAccessStep === "setPassword" && (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">
-                      Nova senha
-                    </label>
-                    <Input
-                      type="password"
-                      value={firstAccessPassword}
-                      onChange={(e) => setFirstAccessPassword(e.target.value)}
-                      placeholder="Mín. 8 caracteres"
-                      autoComplete="new-password"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">
-                      Confirmar senha
-                    </label>
-                    <Input
-                      type="password"
-                      value={firstAccessPasswordConfirm}
-                      onChange={(e) =>
-                        setFirstAccessPasswordConfirm(e.target.value)
-                      }
-                      placeholder="Repita a senha"
-                      autoComplete="new-password"
-                    />
-                  </div>
-                  {firstAccessInfo && (
-                    <Alert>
-                      <AlertTitle>Info</AlertTitle>
-                      <AlertDescription>{firstAccessInfo}</AlertDescription>
-                    </Alert>
-                  )}
-                  {firstAccessError && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Erro</AlertTitle>
-                      <AlertDescription>{firstAccessError}</AlertDescription>
-                    </Alert>
-                  )}
-                  <Button
-                    onClick={completeFirstAccess}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                    disabled={firstAccessLoading}
-                  >
-                    {firstAccessLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Salvando...
-                      </>
-                    ) : (
-                      "Criar senha e entrar"
-                    )}
-                  </Button>
-                </>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog
-          open={forgotOpen}
-          onOpenChange={(open) => {
-            setForgotOpen(open);
-            if (!open) {
-              setForgotStep("request");
-              setForgotOtp("");
-              setForgotVerificationToken("");
-              setForgotPassword("");
-              setForgotPasswordConfirm("");
-              setForgotDestination(null);
-              setForgotInfo(null);
-              setForgotError(null);
-            }
-          }}
-        >
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Recuperar senha</DialogTitle>
-              <DialogDescription>
-                {forgotStep === "setPassword" && forgotVerificationToken
-                  ? "Link validado. Defina sua nova senha."
-                  : "Envie um código, valide e defina uma nova senha."}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              {forgotStep === "request" && (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">
-                      CPF ou e-mail
-                    </label>
-                    <Input
-                      value={forgotLogin}
-                      onChange={(e) => setForgotLogin(e.target.value)}
-                      placeholder="CPF ou e-mail"
-                      autoComplete="username"
-                    />
-                  </div>
-                  {forgotInfo && (
-                    <Alert>
-                      <AlertTitle>Info</AlertTitle>
-                      <AlertDescription>{forgotInfo}</AlertDescription>
-                    </Alert>
-                  )}
-                  {forgotError && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Erro</AlertTitle>
-                      <AlertDescription>{forgotError}</AlertDescription>
-                    </Alert>
-                  )}
-                  <Button
-                    onClick={startForgotPassword}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                    disabled={forgotLoading}
-                  >
-                    {forgotLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Enviando...
-                      </>
-                    ) : (
-                      "Enviar código"
-                    )}
-                  </Button>
-                </>
-              )}
-
-              {forgotStep === "verify" && (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">
-                      {`Código enviado para ${forgotDestination || "seu contato"}`}
-                    </label>
-                    <Input
-                      value={forgotOtp}
-                      onChange={(e) => setForgotOtp(e.target.value)}
-                      placeholder="000000"
-                      inputMode="numeric"
-                      maxLength={6}
-                    />
-                  </div>
-                  {forgotInfo && (
-                    <Alert>
-                      <AlertTitle>Info</AlertTitle>
-                      <AlertDescription>{forgotInfo}</AlertDescription>
-                    </Alert>
-                  )}
-                  {forgotError && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Erro</AlertTitle>
-                      <AlertDescription>{forgotError}</AlertDescription>
-                    </Alert>
-                  )}
-                  <Button
-                    onClick={verifyForgotOtp}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                    disabled={forgotLoading}
-                  >
-                    {forgotLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Validando...
-                      </>
-                    ) : (
-                      "Validar código"
-                    )}
-                  </Button>
-                </>
-              )}
-
-              {forgotStep === "setPassword" && (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">
-                      Nova senha
-                    </label>
-                    <Input
-                      type="password"
-                      value={forgotPassword}
-                      onChange={(e) => setForgotPassword(e.target.value)}
-                      placeholder="Mín. 8 caracteres"
-                      autoComplete="new-password"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">
-                      Confirmar senha
-                    </label>
-                    <Input
-                      type="password"
-                      value={forgotPasswordConfirm}
-                      onChange={(e) => setForgotPasswordConfirm(e.target.value)}
-                      placeholder="Repita a senha"
-                      autoComplete="new-password"
-                    />
-                  </div>
-                  {forgotInfo && (
-                    <Alert>
-                      <AlertTitle>Info</AlertTitle>
-                      <AlertDescription>{forgotInfo}</AlertDescription>
-                    </Alert>
-                  )}
-                  {forgotError && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Erro</AlertTitle>
-                      <AlertDescription>{forgotError}</AlertDescription>
-                    </Alert>
-                  )}
-                  <Button
-                    onClick={completeForgotPassword}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                    disabled={forgotLoading}
-                  >
-                    {forgotLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Salvando...
-                      </>
-                    ) : (
-                      "Alterar senha"
-                    )}
-                  </Button>
-                </>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog
-          open={cadastroRedirectOpen}
-          onOpenChange={setCadastroRedirectOpen}
-        >
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Cadastro necessário</DialogTitle>
-              <DialogDescription>{cadastroRedirectMessage}</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-2">
-              <Button
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                onClick={() => {
-                  window.location.href = "/cliente/cadastro";
-                }}
-              >
-                Ir para cadastro
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => setCadastroRedirectOpen(false)}
-              >
-                Agora não
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {!cliente && !authChecked && (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
+                </Button>
+              </>
+            )}
           </div>
-        )}
+        </DialogContent>
+      </Dialog>
 
-        {!cliente && authChecked && (
-          <div className="mx-auto w-full max-w-lg space-y-6">
-            <Card className="shadow-lg border-slate-200">
-              <CardHeader>
-                <CardTitle>Login</CardTitle>
-                <CardDescription>
-                  Use seu CPF ou e-mail. Se for seu primeiro acesso, crie sua
-                  senha.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+      <Dialog
+        open={forgotOpen}
+        onOpenChange={(open) => {
+          setForgotOpen(open);
+          if (!open) {
+            setForgotStep("request");
+            setForgotOtp("");
+            setForgotVerificationToken("");
+            setForgotPassword("");
+            setForgotPasswordConfirm("");
+            setForgotDestination(null);
+            setForgotInfo(null);
+            setForgotError(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Recuperar senha</DialogTitle>
+            <DialogDescription>
+              {forgotStep === "setPassword" && forgotVerificationToken
+                ? "Link validado. Defina sua nova senha."
+                : "Envie um código, valide e defina uma nova senha."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {forgotStep === "request" && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    CPF ou e-mail
+                  </label>
+                  <Input
+                    value={forgotLogin}
+                    onChange={(e) => setForgotLogin(e.target.value)}
+                    placeholder="CPF ou e-mail"
+                    autoComplete="username"
+                  />
+                </div>
+                {forgotInfo && (
+                  <Alert>
+                    <AlertTitle>Info</AlertTitle>
+                    <AlertDescription>{forgotInfo}</AlertDescription>
+                  </Alert>
+                )}
+                {forgotError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Erro</AlertTitle>
+                    <AlertDescription>{forgotError}</AlertDescription>
+                  </Alert>
+                )}
+                <Button
+                  onClick={startForgotPassword}
+                  className="w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
+                  disabled={forgotLoading}
+                >
+                  {forgotLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    "Enviar código"
+                  )}
+                </Button>
+              </>
+            )}
+
+            {forgotStep === "verify" && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    {`Código enviado para ${forgotDestination || "seu contato"}`}
+                  </label>
+                  <Input
+                    value={forgotOtp}
+                    onChange={(e) => setForgotOtp(e.target.value)}
+                    placeholder="000000"
+                    inputMode="numeric"
+                    maxLength={6}
+                  />
+                </div>
+                {forgotInfo && (
+                  <Alert>
+                    <AlertTitle>Info</AlertTitle>
+                    <AlertDescription>{forgotInfo}</AlertDescription>
+                  </Alert>
+                )}
+                {forgotError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Erro</AlertTitle>
+                    <AlertDescription>{forgotError}</AlertDescription>
+                  </Alert>
+                )}
+                <Button
+                  onClick={verifyForgotOtp}
+                  className="w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
+                  disabled={forgotLoading}
+                >
+                  {forgotLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Validando...
+                    </>
+                  ) : (
+                    "Validar código"
+                  )}
+                </Button>
+              </>
+            )}
+
+            {forgotStep === "setPassword" && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    Nova senha
+                  </label>
+                  <Input
+                    type="password"
+                    value={forgotPassword}
+                    onChange={(e) => setForgotPassword(e.target.value)}
+                    placeholder="Mín. 8 caracteres"
+                    autoComplete="new-password"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    Confirmar senha
+                  </label>
+                  <Input
+                    type="password"
+                    value={forgotPasswordConfirm}
+                    onChange={(e) => setForgotPasswordConfirm(e.target.value)}
+                    placeholder="Repita a senha"
+                    autoComplete="new-password"
+                  />
+                </div>
+                {forgotInfo && (
+                  <Alert>
+                    <AlertTitle>Info</AlertTitle>
+                    <AlertDescription>{forgotInfo}</AlertDescription>
+                  </Alert>
+                )}
+                {forgotError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Erro</AlertTitle>
+                    <AlertDescription>{forgotError}</AlertDescription>
+                  </Alert>
+                )}
+                <Button
+                  onClick={completeForgotPassword}
+                  className="w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
+                  disabled={forgotLoading}
+                >
+                  {forgotLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    "Alterar senha"
+                  )}
+                </Button>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={cadastroRedirectOpen}
+        onOpenChange={setCadastroRedirectOpen}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cadastro necessário</DialogTitle>
+            <DialogDescription>{cadastroRedirectMessage}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Button
+              className="w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
+              onClick={() => {
+                window.location.href = "/cliente/cadastro";
+              }}
+            >
+              Ir para cadastro
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => setCadastroRedirectOpen(false)}
+            >
+              Agora não
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── TELA DE LOGIN ─────────────────────────────────────────────── */}
+      {!cliente && (
+        <div className="flex min-h-screen bg-white">
+          {/* painel esquerdo — hero com gradiente do mobile */}
+          <div
+            className="hidden lg:flex w-[460px] flex-shrink-0 flex-col justify-between px-12 py-14 text-white relative overflow-hidden"
+            style={{
+              background: "linear-gradient(160deg, #43980d 0%, #66c827 100%)",
+            }}
+          >
+            {/* círculos decorativos de fundo */}
+            <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-white/10" />
+            <div className="absolute bottom-20 -left-16 h-52 w-52 rounded-full bg-white/10" />
+            <div className="absolute top-1/2 right-8 h-32 w-32 rounded-full bg-white/10" />
+
+            {/* logo oficial */}
+            <div className="relative z-10">
+              <Image
+                src="/cliente-mobile/logo.svg"
+                alt="Campo do Bosque"
+                width={200}
+                height={63}
+                className="brightness-0 invert mb-10"
+                unoptimized
+              />
+              <h2 className="text-3xl font-bold leading-snug mb-3">
+                Bem-vindo à<br />
+                Área do Cliente
+              </h2>
+              <p className="text-white/80 text-sm leading-relaxed">
+                Acesse sua carteirinha, acompanhe seu plano, faturas e muito
+                mais com segurança.
+              </p>
+            </div>
+
+            {/* benefícios */}
+            <div className="relative z-10 space-y-3">
+              {[
+                { Icon: ShieldCheck, text: "Proteção para toda a família" },
+                {
+                  Icon: HeartHandshake,
+                  text: "Atendimento humanizado 24 horas",
+                },
+                {
+                  Icon: BadgeCheck,
+                  text: "Cobertura garantida no momento que precisa",
+                },
+                { Icon: Flower2, text: "Cerimônias com dignidade e respeito" },
+              ].map(({ Icon, text }) => (
+                <div key={text} className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+                    <Icon className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="text-sm text-white/90">{text}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* rodapé */}
+            <p className="relative z-10 text-xs text-white/50">
+              © {new Date().getFullYear()} Campo do Bosque · Assistência
+              Funeral
+            </p>
+          </div>
+
+          {/* painel direito — formulário */}
+          <div className="flex flex-1 flex-col items-center justify-center bg-slate-50 px-6 py-12">
+            {/* logo para mobile (visível só em telas pequenas) */}
+            <div className="lg:hidden mb-8">
+              <Image
+                src="/cliente-mobile/logo.svg"
+                alt="Campo do Bosque"
+                width={180}
+                height={56}
+                unoptimized
+              />
+            </div>
+
+            {!authChecked ? (
+              <div className="flex flex-col items-center gap-4 text-slate-500">
+                <Loader2 className="h-10 w-10 animate-spin text-[#3a9b28]" />
+                <p className="text-sm">Verificando sessão...</p>
+              </div>
+            ) : (
+              <div className="w-full max-w-[360px]">
+                {/* cabeçalho do form */}
+                <div className="mb-8">
+                  <h1 className="text-2xl font-bold text-slate-900 mb-1">
+                    Acesse sua conta
+                  </h1>
+                  <p className="text-sm text-slate-500">
+                    Digite seu CPF ou e-mail e senha para entrar.
+                  </p>
+                </div>
+
                 <form onSubmit={handleLoginSubmit} className="space-y-4">
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <label
                       htmlFor="login"
                       className="text-sm font-medium text-slate-700"
                     >
-                      Login (CPF ou e-mail)
+                      CPF ou e-mail
                     </label>
                     <Input
                       id="login"
                       name="login"
-                      placeholder="CPF ou e-mail"
+                      placeholder="000.000.000-00 ou email@exemplo.com"
                       value={loginValue}
                       onChange={(event) => setLoginValue(event.target.value)}
-                      className={authError ? "border-red-500" : ""}
+                      className={`h-11 bg-white ${authError ? "border-red-400 focus-visible:ring-red-300" : "border-slate-300"}`}
                       autoComplete="username"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="senha"
-                      className="text-sm font-medium text-slate-700"
-                    >
-                      Senha
-                    </label>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label
+                        htmlFor="senha"
+                        className="text-sm font-medium text-slate-700"
+                      >
+                        Senha
+                      </label>
+                      <button
+                        type="button"
+                        className="text-xs text-[#3a9b28] hover:text-[#2d7a1f] hover:underline font-medium"
+                        onClick={() => {
+                          setForgotOpen(true);
+                          setForgotStep("request");
+                          setForgotLogin(loginValue.trim());
+                          setForgotOtp("");
+                          setForgotPassword("");
+                          setForgotPasswordConfirm("");
+                          setForgotDestination(null);
+                          setForgotInfo(null);
+                          setForgotError(null);
+                        }}
+                      >
+                        Esqueci minha senha
+                      </button>
+                    </div>
                     <Input
                       id="senha"
                       name="senha"
@@ -1678,22 +1780,27 @@ export default function ConsultaClientePage() {
                       placeholder="Sua senha"
                       value={senhaValue}
                       onChange={(event) => setSenhaValue(event.target.value)}
-                      className={authError ? "border-red-500" : ""}
+                      className={`h-11 bg-white ${authError ? "border-red-400 focus-visible:ring-red-300" : "border-slate-300"}`}
                       autoComplete="current-password"
                     />
                   </div>
 
                   {authError && (
-                    <Alert variant="destructive">
+                    <Alert variant="destructive" className="py-2.5">
                       <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Erro</AlertTitle>
-                      <AlertDescription>{authError}</AlertDescription>
+                      <AlertDescription className="text-sm">
+                        {authError}
+                      </AlertDescription>
                     </Alert>
                   )}
 
                   <Button
                     type="submit"
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="w-full h-11 text-white font-semibold shadow-sm mt-1"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, #3a9b28 0%, #2d7a1f 100%)",
+                    }}
                     disabled={authLoading}
                   >
                     {authLoading ? (
@@ -1706,677 +1813,938 @@ export default function ConsultaClientePage() {
                     )}
                   </Button>
 
-                  <div className="flex flex-col items-center gap-2 pt-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="w-full justify-center text-center text-slate-600 hover:text-slate-900"
-                      onClick={() => {
-                        setForgotOpen(true);
-                        setForgotStep("request");
-                        setForgotLogin(loginValue.trim());
-                        setForgotOtp("");
-                        setForgotPassword("");
-                        setForgotPasswordConfirm("");
-                        setForgotDestination(null);
-                        setForgotInfo(null);
-                        setForgotError(null);
-                      }}
-                    >
-                      Esqueci minha senha
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="w-full justify-center text-center text-slate-600 hover:text-slate-900"
-                      onClick={() => {
-                        setFirstAccessOpen(true);
-                        setFirstAccessStep("request");
-                        setFirstAccessLogin(loginValue.trim());
-                        setFirstAccessOtp("");
-                        setFirstAccessPassword("");
-                        setFirstAccessPasswordConfirm("");
-                        setFirstAccessDestination(null);
-                        setFirstAccessInfo(null);
-                        setFirstAccessError(null);
-                      }}
-                    >
-                      Primeiro acesso / Criar senha
-                    </Button>
-                    {ENABLE_LEGACY_QUICK_ACCESS && (
+                  <div className="relative py-1">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-slate-200" />
+                    </div>
+                    <div className="relative flex justify-center">
+                      <span className="bg-slate-50 px-3 text-xs text-slate-400">
+                        ou
+                      </span>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-11 border-slate-300 text-[#3a9b28] hover:bg-[#f2faf0] hover:border-[#3a9b28] font-medium"
+                    onClick={() => {
+                      setFirstAccessOpen(true);
+                      setFirstAccessStep("request");
+                      setFirstAccessLogin(loginValue.trim());
+                      setFirstAccessOtp("");
+                      setFirstAccessPassword("");
+                      setFirstAccessPasswordConfirm("");
+                      setFirstAccessDestination(null);
+                      setFirstAccessInfo(null);
+                      setFirstAccessError(null);
+                    }}
+                  >
+                    Primeiro acesso / Criar senha
+                  </Button>
+
+                  {ENABLE_LEGACY_QUICK_ACCESS && (
+                    <>
                       <Button
                         type="button"
                         variant="ghost"
-                        className="w-full justify-center text-center text-slate-600 hover:text-slate-900"
+                        className="w-full text-slate-500 hover:text-slate-700 text-sm"
                         onClick={() => setMostrarAcessoRapido((prev) => !prev)}
                       >
                         {mostrarAcessoRapido
                           ? "Ocultar acesso rápido"
                           : "Acesso rápido (legado) por CPF"}
                       </Button>
-                    )}
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-
-            {ENABLE_LEGACY_QUICK_ACCESS && mostrarAcessoRapido && (
-              <Card className="shadow-lg border-slate-200">
-                <CardHeader>
-                  <CardTitle>Acesso rápido (legado)</CardTitle>
-                  <CardDescription>
-                    Consulta direta por CPF (modo compatível com o sistema
-                    atual).
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="cpf"
-                        className="text-sm font-medium text-slate-700"
-                      >
-                        CPF do titular
-                      </label>
-                      <Input
-                        id="cpf"
-                        name="cpf"
-                        inputMode="numeric"
-                        placeholder="000.000.000-00"
-                        value={cpf}
-                        onChange={(event) =>
-                          setCpf(formatCPF(event.target.value))
-                        }
-                        maxLength={14}
-                        className={error ? "border-red-500" : ""}
-                      />
-                    </div>
-
-                    {error && (
-                      <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Erro</AlertTitle>
-                        <AlertDescription>{error}</AlertDescription>
-                      </Alert>
-                    )}
-
-                    <Button
-                      type="submit"
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Consultando...
-                        </>
-                      ) : (
-                        "Consultar"
+                      {mostrarAcessoRapido && (
+                        <form
+                          onSubmit={handleSubmit}
+                          className="space-y-3 pt-2 border-t border-slate-200"
+                        >
+                          <label
+                            htmlFor="cpf"
+                            className="text-sm font-medium text-slate-700"
+                          >
+                            CPF do titular
+                          </label>
+                          <Input
+                            id="cpf"
+                            name="cpf"
+                            inputMode="numeric"
+                            placeholder="000.000.000-00"
+                            value={cpf}
+                            onChange={(event) =>
+                              setCpf(formatCPF(event.target.value))
+                            }
+                            maxLength={14}
+                            className={error ? "border-red-500" : ""}
+                          />
+                          {error && (
+                            <Alert variant="destructive" className="py-2">
+                              <AlertCircle className="h-4 w-4" />
+                              <AlertDescription>{error}</AlertDescription>
+                            </Alert>
+                          )}
+                          <Button
+                            type="submit"
+                            className="w-full bg-[#2d7a1f] hover:bg-[#1e5a14] text-white"
+                            disabled={isLoading}
+                          >
+                            {isLoading ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Consultando...
+                              </>
+                            ) : (
+                              "Consultar"
+                            )}
+                          </Button>
+                        </form>
                       )}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
+                    </>
+                  )}
+                </form>
+              </div>
             )}
           </div>
-        )}
+        </div>
+      )}
 
-        {!isLoading && cliente && (
-          <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+      {/* ── DASHBOARD ─────────────────────────────────────────────────── */}
+      {!isLoading && cliente && (
+        <div className="flex min-h-screen animate-in fade-in duration-300">
+          {/* ── Sidebar ── */}
+          <aside className="hidden lg:flex w-64 flex-shrink-0 flex-col bg-white border-r border-slate-100 shadow-sm">
+            {/* logo / brand */}
+            <div className="flex items-center px-5 py-4 border-b border-slate-100">
+              <Image
+                src="/cliente-mobile/logo.svg"
+                alt="Campo do Bosque"
+                width={148}
+                height={46}
+                unoptimized
+              />
+            </div>
+
+            {/* avatar do cliente */}
+            <div className="px-5 py-5 border-b border-slate-100">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold">
-                  {cliente.nome.charAt(0)}
+                <div className="h-11 w-11 rounded-full bg-gradient-to-br from-[#3a9b28] to-[#2d7a1f] flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                  {cliente.nome.charAt(0).toUpperCase()}
                 </div>
-                <div>
-                  <h2 className="font-semibold text-slate-900">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 truncate">
                     {cliente.nome}
-                  </h2>
-                  <p className="text-sm text-slate-500">{cliente.cpf}</p>
+                  </p>
+                  <p className="text-xs text-slate-400 truncate">
+                    {cliente.cpf}
+                  </p>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                onClick={handleReset}
-                className="text-[#3a9b28] hover:text-[#115b26] hover:bg-[#f2faf0]"
-              >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Sair / Nova Consulta
-              </Button>
-            </div>
-
-            <div className="flex flex-wrap justify-center gap-2">
-              {[
-                { id: "carteirinha", label: "Carteirinha" },
-                { id: "plano", label: "Meu Plano" },
-                cliente?.dependentes && cliente.dependentes.length > 0
-                  ? { id: "dependentes", label: "Dependentes" }
-                  : null,
-                { id: "financeiro", label: "Financeiro e Boletos" },
-                { id: "assinaturas", label: "Assinaturas" },
-              ]
-                .filter(Boolean)
-                .map((aba) => (
-                  <button
-                    key={(aba as { id: string }).id}
-                    onClick={() =>
-                      setAbaAtiva((aba as { id: string }).id as typeof abaAtiva)
-                    }
-                    className={`px-4 py-2 rounded-full text-sm font-medium border transition ${
-                      abaAtiva === (aba as { id: string }).id
-                        ? "bg-[#115b26] text-white border-[#115b26] shadow-md"
-                        : "bg-[#fbfff6] text-[#3a9b28] border-[#3a9b28] hover:bg-[#f2faf0]"
+              {clienteExibicao && (
+                <div className="mt-3">
+                  <Badge
+                    className={`text-[11px] font-semibold px-2 py-0.5 ${
+                      clienteExibicao.plano.status === "ativo"
+                        ? "bg-[#e8f5e3] text-[#2d7a1f] border-[#c5e3be]"
+                        : "bg-rose-100 text-rose-700 border-rose-200"
                     }`}
                   >
-                    {(aba as { label: string }).label}
-                  </button>
-                ))}
+                    {clienteExibicao.plano.status === "ativo"
+                      ? "✓ Plano Ativo"
+                      : "⚠ Plano Suspenso"}
+                  </Badge>
+                </div>
+              )}
             </div>
 
-            {posSuspensaoAtingido && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Plano suspenso com pendência prolongada</AlertTitle>
-                <AlertDescription>
-                  Seu plano está suspenso há mais de {diasPosSuspensao} dias de
-                  atraso. Regularize o pagamento para solicitar a reativação.
-                </AlertDescription>
-              </Alert>
+            {/* navegação */}
+            <nav className="flex-1 px-3 py-4 space-y-0.5">
+              {navItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setAbaAtiva(item.id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    abaAtiva === item.id
+                      ? "bg-[#2d7a1f] text-white shadow-sm"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
+                >
+                  <item.Icon className="h-4 w-4 flex-shrink-0" />
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+
+            {/* rodapé sidebar */}
+            <div className="px-3 py-4 border-t border-slate-100">
+              <button
+                onClick={handleReset}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-all"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Sair
+              </button>
+            </div>
+          </aside>
+
+          {/* ── Conteúdo principal ── */}
+          <div className="flex-1 flex flex-col min-w-0 bg-slate-50">
+            {/* topbar */}
+            <header className="bg-white border-b border-slate-100 px-6 lg:px-8 h-16 flex items-center justify-between flex-shrink-0">
+              <div>
+                <h1 className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                  {(() => {
+                    const active = navItems.find((n) => n.id === abaAtiva);
+                    return active ? (
+                      <active.Icon className="h-4 w-4 text-[#3a9b28]" />
+                    ) : null;
+                  })()}
+                  {navItems.find((n) => n.id === abaAtiva)?.label ??
+                    "Dashboard"}
+                </h1>
+              </div>
+
+              {/* nav mobile (tabs compactas no topo) */}
+              <div className="flex lg:hidden gap-1 overflow-x-auto">
+                {navItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setAbaAtiva(item.id)}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition ${
+                      abaAtiva === item.id
+                        ? "bg-[#2d7a1f] text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="hidden lg:flex items-center gap-2 text-xs text-slate-400">
+                <span>
+                  {new Date().toLocaleDateString("pt-BR", {
+                    weekday: "long",
+                    day: "2-digit",
+                    month: "long",
+                  })}
+                </span>
+              </div>
+            </header>
+
+            {/* alertas de suspensão */}
+            {(posSuspensaoAtingido || suspensoPorRegra) && (
+              <div className="px-6 lg:px-8 pt-4">
+                {posSuspensaoAtingido ? (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>
+                      Plano suspenso com pendência prolongada
+                    </AlertTitle>
+                    <AlertDescription>
+                      Seu plano está suspenso há mais de {diasPosSuspensao} dias
+                      de atraso. Regularize o pagamento para solicitar a
+                      reativação.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Plano suspenso</AlertTitle>
+                    <AlertDescription>
+                      Seu plano atingiu a regra de suspensão ({diasSuspensao}{" "}
+                      dias de atraso). Regularize o pagamento para retomar os
+                      benefícios.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
             )}
 
-            {!posSuspensaoAtingido && suspensoPorRegra && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Plano suspenso</AlertTitle>
-                <AlertDescription>
-                  Seu plano atingiu a regra de suspensão ({diasSuspensao} dias
-                  de atraso). Regularize o pagamento para retomar os benefícios.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {abaAtiva === "carteirinha" && clienteExibicao && (
-              <CarteirinhaAsImage
-                cliente={clienteExibicao}
-                isFlipped={isFlipped}
-                setIsFlipped={setIsFlipped}
-                formatDate={formatDate}
-                formatCurrency={formatCurrency}
-              />
-            )}
-
-            {abaAtiva === "plano" && clienteExibicao && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="md:col-span-2 border-emerald-100 shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-emerald-700">
-                      <FileText className="h-5 w-5" />
-                      Detalhes do Contrato
-                    </CardTitle>
-                    <CardDescription>
-                      Informações completas sobre seu plano atual.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-1">
-                        <span className="text-sm text-gray-500">
-                          Plano Contratado
-                        </span>
-                        <p className="font-semibold text-lg">
+            {/* área de conteúdo */}
+            <main className="flex-1 px-6 lg:px-8 py-6 space-y-6">
+              {/* ── CARTEIRINHA ── */}
+              {abaAtiva === "carteirinha" && clienteExibicao && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-xl bg-[#e8f5e3] flex items-center justify-center">
+                        <span className="text-lg">📋</span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+                          Plano
+                        </p>
+                        <p className="text-sm font-semibold text-slate-800 mt-0.5">
                           {cliente.plano.nome}
                         </p>
                       </div>
-                      <div className="space-y-1">
-                        <span className="text-sm text-gray-500">
-                          Código do Contrato
-                        </span>
-                        <p className="font-medium">{cliente.plano.codigo}</p>
+                    </div>
+                    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                        <span className="text-lg">💰</span>
                       </div>
-                      <div className="space-y-1">
-                        <span className="text-sm text-gray-500">
-                          Valor Mensal
-                        </span>
-                        <p className="font-medium">
+                      <div>
+                        <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+                          Mensalidade
+                        </p>
+                        <p className="text-sm font-semibold text-slate-800 mt-0.5">
                           {formatCurrency(cliente.plano.valorMensal)}
                         </p>
                       </div>
-                      <div className="space-y-1">
-                        <span className="text-sm text-gray-500">Status</span>
-                        <Badge
-                          variant={
-                            clienteExibicao.plano.status === "ativo"
-                              ? "default"
-                              : "destructive"
-                          }
-                          className={
-                            clienteExibicao.plano.status === "ativo"
-                              ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                              : ""
-                          }
-                        >
-                          {clienteExibicao.plano.status.toUpperCase()}
-                        </Badge>
+                    </div>
+                    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
+                      <div
+                        className={`h-10 w-10 rounded-xl flex items-center justify-center ${clienteExibicao.plano.status === "ativo" ? "bg-[#e8f5e3]" : "bg-rose-100"}`}
+                      >
+                        <span className="text-lg">
+                          {clienteExibicao.plano.status === "ativo"
+                            ? "✅"
+                            : "⚠️"}
+                        </span>
                       </div>
-                      <div className="space-y-1">
-                        <span className="text-sm text-gray-500">Vigência</span>
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                          <CalendarIcon className="h-4 w-4 text-gray-400" />
-                          {formatDate(cliente.plano.vigencia.inicio)} até{" "}
-                          {formatDate(cliente.plano.vigencia.fim)}
+                      <div>
+                        <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+                          Status
+                        </p>
+                        <p
+                          className={`text-sm font-semibold mt-0.5 ${clienteExibicao.plano.status === "ativo" ? "text-[#2d7a1f]" : "text-rose-600"}`}
+                        >
+                          {clienteExibicao.plano.status
+                            .charAt(0)
+                            .toUpperCase() +
+                            clienteExibicao.plano.status.slice(1)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+                    <h2 className="text-sm font-semibold text-slate-700 mb-5 flex items-center gap-2">
+                      <span>🪪</span> Carteirinha Digital
+                    </h2>
+                    <CarteirinhaAsImage
+                      cliente={clienteExibicao}
+                      isFlipped={isFlipped}
+                      setIsFlipped={setIsFlipped}
+                      formatDate={formatDate}
+                      formatCurrency={formatCurrency}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ── MEU PLANO ── */}
+              {abaAtiva === "plano" && clienteExibicao && (
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                  <div className="xl:col-span-2 space-y-5">
+                    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+                      <div className="flex items-center gap-2 mb-5">
+                        <div className="h-8 w-8 rounded-lg bg-[#e8f5e3] flex items-center justify-center">
+                          <FileText className="h-4 w-4 text-[#2d7a1f]" />
+                        </div>
+                        <div>
+                          <h2 className="text-sm font-semibold text-slate-800">
+                            Detalhes do Contrato
+                          </h2>
+                          <p className="text-xs text-slate-400">
+                            Informações completas sobre seu plano atual
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-5">
+                        {[
+                          {
+                            label: "Plano Contratado",
+                            value: cliente.plano.nome,
+                            large: true,
+                          },
+                          {
+                            label: "Código do Contrato",
+                            value: cliente.plano.codigo,
+                          },
+                          {
+                            label: "Valor Mensal",
+                            value: formatCurrency(cliente.plano.valorMensal),
+                          },
+                          {
+                            label: "Status",
+                            value: clienteExibicao.plano.status.toUpperCase(),
+                            isStatus: true,
+                          },
+                        ].map((field) => (
+                          <div
+                            key={field.label}
+                            className="space-y-1 p-3 bg-slate-50 rounded-lg"
+                          >
+                            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+                              {field.label}
+                            </p>
+                            {field.isStatus ? (
+                              <Badge
+                                className={`mt-1 ${clienteExibicao.plano.status === "ativo" ? "bg-[#e8f5e3] text-[#2d7a1f] border-[#c5e3be]" : "bg-rose-100 text-rose-700 border-rose-200"}`}
+                              >
+                                {field.value}
+                              </Badge>
+                            ) : (
+                              <p
+                                className={`font-semibold text-slate-800 ${field.large ? "text-base" : "text-sm"}`}
+                              >
+                                {field.value}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                        <div className="col-span-2 space-y-1 p-3 bg-slate-50 rounded-lg">
+                          <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+                            Período de Vigência
+                          </p>
+                          <div className="flex items-center gap-2 text-sm font-semibold text-slate-800 mt-1">
+                            <CalendarIcon className="h-4 w-4 text-[#3a9b28]" />
+                            {formatDate(cliente.plano.vigencia.inicio)}
+                            <span className="text-slate-400 font-normal">
+                              até
+                            </span>
+                            {formatDate(cliente.plano.vigencia.fim)}
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="border-t pt-4">
-                      <h4 className="font-medium mb-3 text-emerald-800">
+                    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+                      <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-[#3a9b28]" />
                         Coberturas e Benefícios
-                      </h4>
-                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[13px] text-gray-600">
+                      </h3>
+                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {cliente.plano.cobertura.map((item, index) => (
                           <li
                             key={`${item}-${index}`}
-                            className="flex items-start gap-1.5 leading-tight"
+                            className="flex items-start gap-2 text-sm text-slate-600 bg-[#f2faf0] rounded-lg px-3 py-2"
                           >
-                            <CheckCircle className="h-3.5 w-3.5 text-emerald-500 mt-0.5 shrink-0" />
-                            <span className="break-words">{item}</span>
+                            <CheckCircle className="h-3.5 w-3.5 text-[#3a9b28] mt-0.5 shrink-0" />
+                            <span>{item}</span>
                           </li>
                         ))}
                       </ul>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
 
-                <Card className="border-emerald-100 shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-emerald-700 text-base">
-                      <History className="h-5 w-5" />
-                      Histórico do Plano
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="relative pl-4 border-l-2 border-emerald-100 space-y-6">
+                  <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+                    <div className="flex items-center gap-2 mb-5">
+                      <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                        <History className="h-4 w-4 text-slate-600" />
+                      </div>
+                      <h2 className="text-sm font-semibold text-slate-800">
+                        Histórico do Plano
+                      </h2>
+                    </div>
+                    <div className="relative pl-5 border-l-2 border-[#e8f5e3] space-y-6">
                       <div className="relative">
-                        <div className="absolute -left-[21px] top-1 h-3 w-3 rounded-full bg-emerald-500 ring-4 ring-white" />
-                        <p className="text-sm font-medium">Situação Atual</p>
-                        <p className="text-xs text-gray-500">
+                        <div className="absolute -left-[25px] top-1 h-3.5 w-3.5 rounded-full bg-[#3a9b28] ring-4 ring-white border border-[#c5e3be]" />
+                        <p className="text-sm font-semibold text-slate-800">
+                          Situação Atual
+                        </p>
+                        <p className="text-xs text-slate-400 mt-0.5">
                           {formatDate(new Date().toISOString())}
                         </p>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-xs text-slate-600 mt-1 bg-slate-50 rounded px-2 py-1">
                           Plano {clienteExibicao.plano.status}
                         </p>
                       </div>
                       <div className="relative">
-                        <div className="absolute -left-[21px] top-1 h-3 w-3 rounded-full bg-gray-300 ring-4 ring-white" />
-                        <p className="text-sm font-medium">Contratação</p>
-                        <p className="text-xs text-gray-500">
+                        <div className="absolute -left-[25px] top-1 h-3.5 w-3.5 rounded-full bg-slate-300 ring-4 ring-white" />
+                        <p className="text-sm font-semibold text-slate-800">
+                          Contratação
+                        </p>
+                        <p className="text-xs text-slate-400 mt-0.5">
                           {formatDate(cliente.plano.vigencia.inicio)}
                         </p>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Início da vigência do plano {cliente.plano.nome}.
+                        <p className="text-xs text-slate-600 mt-1 bg-slate-50 rounded px-2 py-1">
+                          Início da vigência do plano {cliente.plano.nome}
                         </p>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
-            {abaAtiva === "dependentes" && (
-              <Card className="border-emerald-100 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-emerald-700">
-                    Dependentes do plano
-                  </CardTitle>
-                  <CardDescription>
-                    Veja quem está vinculado ao seu plano como dependente.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {cliente.dependentes && cliente.dependentes.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {cliente.dependentes.map((dep) => {
-                        const parentesco = dep.parentesco ?? dep.tipo ?? "—";
-                        const idadeCalculada = getAgeFromBirthDate(
-                          dep.dataNascimento,
-                        );
-                        const idade =
-                          typeof dep.idade === "number"
-                            ? dep.idade
-                            : idadeCalculada;
-                        const carencia =
-                          typeof dep.carenciaRestante === "number"
-                            ? dep.carenciaRestante
-                            : typeof dep.carenciaDias === "number"
-                              ? dep.carenciaDias
-                              : null;
-                        const emCarencia = carencia != null && carencia > 0;
-
-                        return (
-                          <div
-                            key={dep.id}
-                            className="rounded-lg border border-emerald-100 bg-emerald-50/40 p-4 flex flex-col gap-2"
-                          >
-                            <span className="text-sm font-semibold text-slate-900">
-                              {dep.nome}
-                            </span>
-                            <span className="text-xs uppercase tracking-wide text-emerald-700">
-                              {parentesco}
-                            </span>
-                            <span className="text-xs text-slate-500">
-                              Idade: {idade != null ? `${idade} anos` : "—"}
-                            </span>
-                            <span className="text-xs text-slate-500">
-                              Nascimento: {formatBirthDate(dep.dataNascimento)}
-                            </span>
-                            {emCarencia ? (
-                              <span className="mt-1 inline-flex w-fit items-center rounded-full border border-amber-300 bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-                                Carência: {carencia} dias
-                              </span>
-                            ) : dep.valorAdicionalMensal &&
-                              dep.valorAdicionalMensal > 0 ? (
-                              <span className="mt-1 inline-flex w-fit items-center rounded-full border border-lime-300 bg-lime-100 px-3 py-1 text-xs font-semibold text-lime-800">
-                                Adicional:{" "}
-                                {dep.valorAdicionalMensal.toLocaleString(
-                                  "pt-BR",
-                                  {
-                                    style: "currency",
-                                    currency: "BRL",
-                                  },
-                                )}
-                              </span>
-                            ) : (
-                              <span className="mt-1 inline-flex w-fit items-center rounded-full border border-lime-300 bg-lime-100 px-3 py-1 text-xs font-semibold text-lime-800">
-                                Coberto
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-500">
-                      Nenhum dependente cadastrado neste plano.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {abaAtiva === "financeiro" && (
-              <Card className="border-emerald-100 shadow-sm">
-                <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <CardTitle className="text-emerald-700 flex items-center gap-2">
-                      <Barcode className="h-5 w-5" />
-                      Minhas Faturas
-                    </CardTitle>
-                    <CardDescription>
-                      Consulte seus boletos, status de pagamento e emita 2ª via.
-                    </CardDescription>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Select
-                      value={filtroPeriodo}
-                      onValueChange={setFiltroPeriodo}
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <Filter className="w-4 h-4 mr-2" />
-                        <SelectValue placeholder="Período" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todos">Todo o período</SelectItem>
-                        <SelectItem value="30">Últimos 30 dias</SelectItem>
-                        <SelectItem value="60">Últimos 60 dias</SelectItem>
-                        <SelectItem value="90">Últimos 90 dias</SelectItem>
-                        <SelectItem value="ano">Este ano</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <Select
-                      value={filtroStatus}
-                      onValueChange={setFiltroStatus}
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todos">Todos os status</SelectItem>
-                        <SelectItem value="pendente">Pendente</SelectItem>
-                        <SelectItem value="pago">Pago</SelectItem>
-                        <SelectItem value="vencido">Vencido</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {mensagemFinanceiro ? (
-                    <Alert className="mb-4">
-                      <AlertDescription>{mensagemFinanceiro}</AlertDescription>
-                    </Alert>
-                  ) : null}
-                  {isLoadingFinanceiro ? (
-                    <div className="flex flex-col items-center justify-center py-10 gap-3 text-gray-500">
-                      <Loader2 className="h-8 w-8 animate-spin" />
-                      <p>Buscando suas faturas...</p>
-                    </div>
-                  ) : contasFiltradas.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full text-sm text-gray-700">
-                        <thead className="bg-gray-100">
-                          <tr>
-                            <th className="px-4 py-2 text-left">Descrição</th>
-                            <th className="px-4 py-2 text-left">Vencimento</th>
-                            <th className="px-4 py-2 text-left">Valor</th>
-                            <th className="px-4 py-2 text-left">Status</th>
-                            <th className="px-4 py-2 text-right">Ações</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {contasFiltradas.map((conta) => (
-                            <tr key={conta.id} className="border-b">
-                              <td className="px-4 py-2">
-                                <div className="flex items-center gap-2">
-                                  {conta.descricao}
-                                  {(conta.asaasPaymentId ||
-                                    conta.asaasSubscriptionId) && (
-                                    <AsaasWingsMark variant="inline" />
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-4 py-2">
-                                {formatDate(conta.vencimento)}
-                              </td>
-                              <td className="px-4 py-2">
-                                {formatCurrency(conta.valor)}
-                              </td>
-                              <td className="px-4 py-2">
-                                {getStatusBadge(conta.status)}
-                              </td>
-                              <td className="px-4 py-2 text-right">
-                                <div className="flex justify-end gap-2 flex-wrap">
-                                  {conta.paymentUrl ? (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="gap-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                                      onClick={async () => {
-                                        await reconsultarContaAsaasSeNecessario(
-                                          conta,
-                                        );
-                                        window.open(
-                                          conta.paymentUrl!,
-                                          "_blank",
-                                        );
-                                      }}
-                                    >
-                                      <Barcode className="h-4 w-4" />
-                                      {conta.status === "PENDENTE" ||
-                                      conta.status === "ATRASADO"
-                                        ? "Pagar Boleto"
-                                        : "Ver Recibo"}
-                                    </Button>
-                                  ) : null}
-
-                                  {conta.pixQrCode ? (
-                                    <>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="gap-2 text-indigo-700 border-indigo-200 hover:bg-indigo-50"
-                                        onClick={async () => {
-                                          await reconsultarContaAsaasSeNecessario(
-                                            conta,
-                                          );
-                                          setPixSelecionado({
-                                            descricao: conta.descricao,
-                                            valor: conta.valor,
-                                            vencimento: conta.vencimento,
-                                            codigo: conta.pixQrCode!,
-                                          });
-                                        }}
-                                      >
-                                        <QrCode className="h-4 w-4" />
-                                        Ver QR Code PIX
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="gap-2 text-sky-700 border-sky-200 hover:bg-sky-50"
-                                        onClick={async () => {
-                                          await reconsultarContaAsaasSeNecessario(
-                                            conta,
-                                          );
-                                          copiarCodigoPix(conta.pixQrCode!);
-                                        }}
-                                      >
-                                        <Copy className="h-4 w-4" />
-                                        Copiar PIX
-                                      </Button>
-                                    </>
-                                  ) : null}
-
-                                  {!conta.paymentUrl && !conta.pixQrCode ? (
-                                    <span className="text-xs text-gray-400">
-                                      Indisponível
-                                    </span>
-                                  ) : null}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="text-center py-10 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                      <CheckCircle className="h-10 w-10 mx-auto mb-2 text-gray-300" />
-                      <p>
-                        Nenhuma fatura encontrada para o filtro selecionado.
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {abaAtiva === "assinaturas" && (
-              <div className="rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm space-y-4">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                  <div>
-                    <h3 className="text-lg font-semibold text-emerald-700">
-                      Assinaturas digitais
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      Capture as assinaturas do titular e do responsável
-                      financeiro.
-                    </p>
-                  </div>
-                  {assinaturaMensagem && (
-                    <p className="text-sm text-red-600 bg-red-50 px-3 py-1 rounded-md">
-                      {assinaturaMensagem}
-                    </p>
-                  )}
                 </div>
+              )}
 
-                {!cliente.titularId ? (
-                  <p className="text-sm text-gray-500">
-                    Titular não identificado para vincular assinaturas.
-                  </p>
-                ) : isLoadingAssinaturas && assinaturas.length === 0 ? (
-                  <div className="flex items-center gap-2 text-gray-500">
-                    <Loader2 className="size-4 animate-spin" />
-                    Carregando assinaturas...
-                  </div>
-                ) : (
-                  <div className="space-y-5">
-                    <div className="rounded-xl border border-dashed border-emerald-200 bg-emerald-50/60 p-4 text-sm text-gray-700 flex items-center justify-between">
+              {/* ── DEPENDENTES ── */}
+              {abaAtiva === "dependentes" && (
+                <div className="space-y-5">
+                  <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+                    <div className="flex items-center gap-2 mb-5">
+                      <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <span className="text-base">👨‍👩‍👧</span>
+                      </div>
                       <div>
-                        <h4 className="font-semibold text-emerald-800 flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          Contrato de Prestação de Serviços
-                        </h4>
-                        <p className="mt-1">
-                          Leia o contrato antes de realizar as assinaturas.
+                        <h2 className="text-sm font-semibold text-slate-800">
+                          Dependentes do Plano
+                        </h2>
+                        <p className="text-xs text-slate-400">
+                          {cliente.dependentes?.length
+                            ? `${cliente.dependentes.length} dependente${cliente.dependentes.length > 1 ? "s" : ""} vinculado${cliente.dependentes.length > 1 ? "s" : ""}`
+                            : "Nenhum dependente cadastrado"}
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleDownloadContrato}
-                        disabled={baixandoContrato}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-emerald-700 font-medium shadow-sm"
-                      >
-                        {baixandoContrato ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <Download className="size-4" />
-                        )}
-                        {baixandoContrato
-                          ? "Gerando PDF..."
-                          : "Baixar Contrato"}
-                      </button>
+                    </div>
+                    {cliente.dependentes && cliente.dependentes.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {cliente.dependentes.map((dep) => {
+                          const parentesco = dep.parentesco ?? dep.tipo ?? "—";
+                          const idadeCalculada = getAgeFromBirthDate(
+                            dep.dataNascimento,
+                          );
+                          const idade =
+                            typeof dep.idade === "number"
+                              ? dep.idade
+                              : idadeCalculada;
+                          const carencia =
+                            typeof dep.carenciaRestante === "number"
+                              ? dep.carenciaRestante
+                              : typeof dep.carenciaDias === "number"
+                                ? dep.carenciaDias
+                                : null;
+                          const emCarencia = carencia != null && carencia > 0;
+
+                          return (
+                            <div
+                              key={dep.id}
+                              className="rounded-xl border border-slate-100 bg-white shadow-sm p-5 flex flex-col gap-3 hover:border-[#c5e3be] transition-colors"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-slate-600 font-bold text-base flex-shrink-0">
+                                  {dep.nome.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-slate-800 truncate">
+                                    {dep.nome}
+                                  </p>
+                                  <p className="text-xs text-[#2d7a1f] font-medium uppercase tracking-wide">
+                                    {parentesco}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="bg-slate-50 rounded-lg p-2">
+                                  <p className="text-slate-400">Idade</p>
+                                  <p className="font-semibold text-slate-700 mt-0.5">
+                                    {idade != null ? `${idade} anos` : "—"}
+                                  </p>
+                                </div>
+                                <div className="bg-slate-50 rounded-lg p-2">
+                                  <p className="text-slate-400">Nascimento</p>
+                                  <p className="font-semibold text-slate-700 mt-0.5">
+                                    {formatBirthDate(dep.dataNascimento)}
+                                  </p>
+                                </div>
+                              </div>
+                              {emCarencia ? (
+                                <Badge className="w-fit bg-amber-100 text-amber-800 border-amber-300 text-xs">
+                                  Carência: {carencia} dias
+                                </Badge>
+                              ) : dep.valorAdicionalMensal &&
+                                dep.valorAdicionalMensal > 0 ? (
+                                <Badge className="w-fit bg-blue-100 text-blue-800 border-blue-300 text-xs">
+                                  Adicional:{" "}
+                                  {dep.valorAdicionalMensal.toLocaleString(
+                                    "pt-BR",
+                                    { style: "currency", currency: "BRL" },
+                                  )}
+                                </Badge>
+                              ) : (
+                                <Badge className="w-fit bg-[#e8f5e3] text-[#1e5a14] border-[#7cc46e] text-xs">
+                                  ✓ Coberto
+                                </Badge>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 text-slate-400">
+                        <span className="text-4xl block mb-3">👨‍👩‍👧</span>
+                        <p className="text-sm">
+                          Nenhum dependente cadastrado neste plano.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── FINANCEIRO ── */}
+              {abaAtiva === "financeiro" && (
+                <div className="space-y-5">
+                  {/* resumo financeiro */}
+                  {contasFinanceiras.length > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {[
+                        {
+                          label: "Total de Faturas",
+                          value: contasFinanceiras.length,
+                          unit: "faturas",
+                          color: "bg-slate-100 text-slate-600",
+                          icon: "📄",
+                        },
+                        {
+                          label: "Pagas",
+                          value: contasFinanceiras.filter((c) =>
+                            ["PAGO", "RECEBIDO"].includes(
+                              c.status.toUpperCase(),
+                            ),
+                          ).length,
+                          unit: "faturas",
+                          color: "bg-[#e8f5e3] text-[#2d7a1f]",
+                          icon: "✅",
+                        },
+                        {
+                          label: "Pendentes / Vencidas",
+                          value: contasFinanceiras.filter((c) =>
+                            ["PENDENTE", "ATRASADO", "VENCIDO"].includes(
+                              c.status.toUpperCase(),
+                            ),
+                          ).length,
+                          unit: "faturas",
+                          color: "bg-rose-100 text-rose-700",
+                          icon: "⚠️",
+                        },
+                      ].map((stat) => (
+                        <div
+                          key={stat.label}
+                          className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4"
+                        >
+                          <div
+                            className={`h-10 w-10 rounded-xl flex items-center justify-center ${stat.color}`}
+                          >
+                            <span className="text-lg">{stat.icon}</span>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+                              {stat.label}
+                            </p>
+                            <p className="text-xl font-bold text-slate-800 mt-0.5">
+                              {stat.value}{" "}
+                              <span className="text-xs font-normal text-slate-400">
+                                {stat.unit}
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* tabela de faturas */}
+                  <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+                          <Barcode className="h-4 w-4 text-indigo-700" />
+                        </div>
+                        <div>
+                          <h2 className="text-sm font-semibold text-slate-800">
+                            Minhas Faturas
+                          </h2>
+                          <p className="text-xs text-slate-400">
+                            Consulte boletos, PIX e status de pagamento
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Select
+                          value={filtroPeriodo}
+                          onValueChange={setFiltroPeriodo}
+                        >
+                          <SelectTrigger className="w-[150px] h-8 text-xs">
+                            <Filter className="w-3 h-3 mr-1.5" />
+                            <SelectValue placeholder="Período" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="todos">
+                              Todo o período
+                            </SelectItem>
+                            <SelectItem value="30">Últimos 30 dias</SelectItem>
+                            <SelectItem value="60">Últimos 60 dias</SelectItem>
+                            <SelectItem value="90">Últimos 90 dias</SelectItem>
+                            <SelectItem value="ano">Este ano</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Select
+                          value={filtroStatus}
+                          onValueChange={setFiltroStatus}
+                        >
+                          <SelectTrigger className="w-[140px] h-8 text-xs">
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="todos">Todos</SelectItem>
+                            <SelectItem value="pendente">Pendente</SelectItem>
+                            <SelectItem value="pago">Pago</SelectItem>
+                            <SelectItem value="vencido">Vencido</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {TIPOS_ASSINATURA.map((tipo, index) => {
-                        const assinaturaAtual = assinaturasMap[tipo.id];
-                        const previewUrl = buildAssinaturaUrl(
-                          assinaturaAtual?.id,
-                          "inline",
-                        );
-                        const downloadUrl = buildAssinaturaUrl(
-                          assinaturaAtual?.id,
-                          "attachment",
-                        );
+                    {mensagemFinanceiro && (
+                      <div className="px-5 pt-4">
+                        <Alert className="py-2">
+                          <AlertDescription>
+                            {mensagemFinanceiro}
+                          </AlertDescription>
+                        </Alert>
+                      </div>
+                    )}
 
-                        return (
-                          <AssinaturaCard
-                            key={tipo.id}
-                            tipoId={tipo.id}
-                            titulo={tipo.label}
-                            assinatura={assinaturaAtual}
-                            onSalvar={handleSalvarAssinatura}
-                            salvando={assinaturaEmProgresso === tipo.id}
-                            previewUrl={previewUrl}
-                            downloadUrl={downloadUrl}
-                            estado={
-                              assinaturaAtual
-                                ? "concluida"
-                                : index === proximaEtapaIndex
-                                  ? "ativa"
-                                  : "pendente"
-                            }
-                          />
-                        );
-                      })}
+                    <div className="p-2">
+                      {isLoadingFinanceiro ? (
+                        <div className="flex flex-col items-center justify-center py-14 gap-3 text-slate-400">
+                          <Loader2 className="h-8 w-8 animate-spin text-[#3a9b28]" />
+                          <p className="text-sm">Buscando suas faturas...</p>
+                        </div>
+                      ) : contasFiltradas.length > 0 ? (
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-slate-100">
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                                  Descrição
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                                  Vencimento
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                                  Valor
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                                  Status
+                                </th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                                  Ações
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {contasFiltradas.map((conta) => (
+                                <tr
+                                  key={conta.id}
+                                  className="border-b border-slate-50 hover:bg-slate-50 transition-colors"
+                                >
+                                  <td className="px-4 py-3 text-slate-700">
+                                    <div className="flex items-center gap-2 font-medium">
+                                      {conta.descricao}
+                                      {(conta.asaasPaymentId ||
+                                        conta.asaasSubscriptionId) && (
+                                        <AsaasWingsMark variant="inline" />
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 text-slate-500 text-xs">
+                                    {formatDate(conta.vencimento)}
+                                  </td>
+                                  <td className="px-4 py-3 font-semibold text-slate-800">
+                                    {formatCurrency(conta.valor)}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    {getStatusBadge(conta.status)}
+                                  </td>
+                                  <td className="px-4 py-3 text-right">
+                                    <div className="flex justify-end gap-1.5 flex-wrap">
+                                      {conta.paymentUrl && (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-7 text-xs gap-1.5 text-[#2d7a1f] border-[#c5e3be] hover:bg-[#f2faf0]"
+                                          onClick={async () => {
+                                            await reconsultarContaAsaasSeNecessario(
+                                              conta,
+                                            );
+                                            window.open(
+                                              conta.paymentUrl!,
+                                              "_blank",
+                                            );
+                                          }}
+                                        >
+                                          <Barcode className="h-3 w-3" />
+                                          {conta.status === "PENDENTE" ||
+                                          conta.status === "ATRASADO"
+                                            ? "Pagar"
+                                            : "Recibo"}
+                                        </Button>
+                                      )}
+                                      {conta.pixQrCode && (
+                                        <>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-7 text-xs gap-1.5 text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+                                            onClick={async () => {
+                                              await reconsultarContaAsaasSeNecessario(
+                                                conta,
+                                              );
+                                              setPixSelecionado({
+                                                descricao: conta.descricao,
+                                                valor: conta.valor,
+                                                vencimento: conta.vencimento,
+                                                codigo: conta.pixQrCode!,
+                                              });
+                                            }}
+                                          >
+                                            <QrCode className="h-3 w-3" /> PIX
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-7 text-xs gap-1.5 text-sky-700 border-sky-200 hover:bg-sky-50"
+                                            onClick={async () => {
+                                              await reconsultarContaAsaasSeNecessario(
+                                                conta,
+                                              );
+                                              copiarCodigoPix(conta.pixQrCode!);
+                                            }}
+                                          >
+                                            <Copy className="h-3 w-3" /> Copiar
+                                          </Button>
+                                        </>
+                                      )}
+                                      {!conta.paymentUrl &&
+                                        !conta.pixQrCode && (
+                                          <span className="text-xs text-slate-300">
+                                            —
+                                          </span>
+                                        )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="text-center py-14 text-slate-400">
+                          <CheckCircle className="h-10 w-10 mx-auto mb-3 text-slate-200" />
+                          <p className="text-sm">
+                            Nenhuma fatura encontrada para o filtro selecionado.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+
+              {/* ── ASSINATURAS ── */}
+              {abaAtiva === "assinaturas" && (
+                <div className="space-y-5">
+                  <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-lg bg-violet-100 flex items-center justify-center">
+                          <span className="text-base">✍️</span>
+                        </div>
+                        <div>
+                          <h2 className="text-sm font-semibold text-slate-800">
+                            Assinaturas Digitais
+                          </h2>
+                          <p className="text-xs text-slate-400">
+                            Capture as assinaturas do titular e do responsável
+                            financeiro
+                          </p>
+                        </div>
+                      </div>
+                      {assinaturaMensagem && (
+                        <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-lg">
+                          {assinaturaMensagem}
+                        </p>
+                      )}
+                    </div>
+
+                    {!cliente.titularId ? (
+                      <p className="text-sm text-slate-400">
+                        Titular não identificado para vincular assinaturas.
+                      </p>
+                    ) : isLoadingAssinaturas && assinaturas.length === 0 ? (
+                      <div className="flex items-center gap-2 text-slate-400 py-8 justify-center">
+                        <Loader2 className="size-4 animate-spin" /> Carregando
+                        assinaturas...
+                      </div>
+                    ) : (
+                      <div className="space-y-5">
+                        <div className="rounded-xl border border-dashed border-[#c5e3be] bg-[#f2faf0] p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-lg bg-[#e8f5e3] flex items-center justify-center flex-shrink-0">
+                              <FileText className="h-4 w-4 text-[#2d7a1f]" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-semibold text-[#164d10]">
+                                Contrato de Prestação de Serviços
+                              </h4>
+                              <p className="text-xs text-[#2d7a1f]">
+                                Leia o contrato antes de realizar as
+                                assinaturas.
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleDownloadContrato}
+                            disabled={baixandoContrato}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-[#c5e3be] rounded-lg hover:bg-[#f2faf0] transition-colors text-[#1e5a14] text-sm font-medium shadow-sm flex-shrink-0"
+                          >
+                            {baixandoContrato ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <Download className="size-4" />
+                            )}
+                            {baixandoContrato
+                              ? "Gerando PDF..."
+                              : "Baixar Contrato"}
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {TIPOS_ASSINATURA.map((tipo, index) => {
+                            const assinaturaAtual = assinaturasMap[tipo.id];
+                            const previewUrl = buildAssinaturaUrl(
+                              assinaturaAtual?.id,
+                              "inline",
+                            );
+                            const downloadUrl = buildAssinaturaUrl(
+                              assinaturaAtual?.id,
+                              "attachment",
+                            );
+                            return (
+                              <AssinaturaCard
+                                key={tipo.id}
+                                tipoId={tipo.id}
+                                titulo={tipo.label}
+                                assinatura={assinaturaAtual}
+                                onSalvar={handleSalvarAssinatura}
+                                salvando={assinaturaEmProgresso === tipo.id}
+                                previewUrl={previewUrl}
+                                downloadUrl={downloadUrl}
+                                estado={
+                                  assinaturaAtual
+                                    ? "concluida"
+                                    : index === proximaEtapaIndex
+                                      ? "ativa"
+                                      : "pendente"
+                                }
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </main>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* ── Modal PIX ── */}
       <Dialog
         open={Boolean(pixSelecionado)}
         onOpenChange={(open) => {
@@ -2476,7 +2844,7 @@ export default function ConsultaClientePage() {
           </div>
         </DialogContent>
       </Dialog>
-    </main>
+    </div>
   );
 }
 
@@ -2528,9 +2896,9 @@ function AssinaturaCard({
 
   if (capturando) {
     return (
-      <Card className="border-emerald-200 shadow-md">
+      <Card className="border-[#c5e3be] shadow-md">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium text-emerald-800">
+          <CardTitle className="text-base font-medium text-[#1e5a14]">
             Coletando: {titulo}
           </CardTitle>
           <CardDescription>
@@ -2559,7 +2927,7 @@ function AssinaturaCard({
           <Button
             onClick={confirmarAssinatura}
             disabled={salvando}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
           >
             {salvando ? (
               <>
@@ -2580,18 +2948,18 @@ function AssinaturaCard({
 
   if (estado === "concluida" && assinatura) {
     return (
-      <Card className="border-emerald-100 bg-emerald-50/30">
+      <Card className="border-[#e8f5e3] bg-[#f2faf0]/30">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium text-emerald-800 flex items-center justify-between">
+          <CardTitle className="text-base font-medium text-[#1e5a14] flex items-center justify-between">
             {titulo}
-            <CheckCircle className="h-5 w-5 text-emerald-500" />
+            <CheckCircle className="h-5 w-5 text-[#3a9b28]" />
           </CardTitle>
           <CardDescription className="text-xs">
             Assinado em {formatDate(assinatura.createdAt)}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-20 w-full border border-emerald-100 bg-white rounded flex items-center justify-center overflow-hidden">
+          <div className="h-20 w-full border border-[#e8f5e3] bg-white rounded flex items-center justify-center overflow-hidden">
             {previewUrl ? (
               <Image
                 src={previewUrl}
@@ -2613,7 +2981,7 @@ function AssinaturaCard({
             <Button
               variant="outline"
               size="sm"
-              className="w-full text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+              className="w-full text-[#2d7a1f] border-[#c5e3be] hover:bg-[#f2faf0]"
               onClick={() => window.open(downloadUrl, "_blank")}
             >
               <Download className="mr-2 size-4" />
@@ -2629,7 +2997,7 @@ function AssinaturaCard({
     <Card
       className={`transition-all ${
         estado === "ativa"
-          ? "border-emerald-400 shadow-md ring-2 ring-emerald-100"
+          ? "border-[#3a9b28] shadow-md ring-2 ring-[#e8f5e3]"
           : "border-slate-200 opacity-70 grayscale"
       }`}
     >
@@ -2637,7 +3005,7 @@ function AssinaturaCard({
         <CardTitle className="text-base font-medium text-slate-700 flex items-center justify-between">
           {titulo}
           {estado === "ativa" && (
-            <span className="flex h-2 w-2 rounded-full bg-emerald-500"></span>
+            <span className="flex h-2 w-2 rounded-full bg-[#3a9b28]"></span>
           )}
         </CardTitle>
         <CardDescription>
@@ -2650,7 +3018,7 @@ function AssinaturaCard({
         <Button
           className={`w-full ${
             estado === "ativa"
-              ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+              ? "bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
               : "bg-slate-100 text-slate-400"
           }`}
           disabled={estado !== "ativa"}

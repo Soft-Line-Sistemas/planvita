@@ -929,6 +929,13 @@ function PaymentPendingView({
             pagamento de adesão ainda não foi confirmado.
           </p>
         )}
+        <p
+          className="cm-login-flow-sub"
+          style={{ opacity: 0.85, fontSize: 13 }}
+        >
+          Este pagamento refere-se à mensalidade do seu plano de assistência
+          funeral contratado com Campo do Bosque.
+        </p>
 
         <div
           style={{
