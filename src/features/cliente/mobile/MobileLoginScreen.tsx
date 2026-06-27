@@ -76,6 +76,7 @@ export interface MobileLoginProps {
   ppError: string | null;
   ppSucesso: boolean;
   onReenviarPagamento: () => void;
+  onVerificarPagamento: () => void;
 }
 
 /* ===================================================================
@@ -877,6 +878,7 @@ function PaymentPendingView({
   ppError,
   ppSucesso,
   onReenviarPagamento,
+  onVerificarPagamento,
   setAuthView,
 }: Pick<
   MobileLoginProps,
@@ -890,6 +892,7 @@ function PaymentPendingView({
   | "ppError"
   | "ppSucesso"
   | "onReenviarPagamento"
+  | "onVerificarPagamento"
   | "setAuthView"
 >) {
   const formatCurrency = (v: number) =>
@@ -1014,6 +1017,22 @@ function PaymentPendingView({
           </>
         )}
 
+        <button
+          type="button"
+          className="cm-login-btn-secondary"
+          disabled={ppLoading}
+          onClick={onVerificarPagamento}
+        >
+          {ppLoading ? (
+            <>
+              <Loader2 size={18} className="cm-spinner" />
+              Verificando...
+            </>
+          ) : (
+            "Ja paguei, liberar primeiro acesso"
+          )}
+        </button>
+
         {ppError && <ErrBox message={ppError} />}
 
         <button
@@ -1072,6 +1091,7 @@ export default function MobileLoginScreen(props: MobileLoginProps) {
             ppError={props.ppError}
             ppSucesso={props.ppSucesso}
             onReenviarPagamento={props.onReenviarPagamento}
+            onVerificarPagamento={props.onVerificarPagamento}
             setAuthView={setAuthView}
           />
         )}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BackBar } from "./BackBar";
 
 export const metadata: Metadata = {
   title: "Política de Privacidade — Campo do Bosque",
@@ -12,7 +13,7 @@ export default function PoliticaPrivacidadePage() {
       style={{
         maxWidth: 720,
         margin: "0 auto",
-        padding: "48px 24px 80px",
+        padding: "48px 24px 140px",
         fontFamily: "Inter, system-ui, sans-serif",
         color: "#212121",
         lineHeight: 1.7,
@@ -302,6 +303,7 @@ export default function PoliticaPrivacidadePage() {
         Campo do Bosque — Plataforma de Assistência Funeral &copy;{" "}
         {new Date().getFullYear()}
       </div>
+      <BackBar />
     </main>
   );
 }
