@@ -240,8 +240,8 @@ const ENABLE_PARCERIAS_CADASTRO = false;
 const STEPS = [
   { id: 1, title: "Titular" },
   { id: 2, title: "Endereço do titular" },
-  { id: 3, title: "Responsável financeiro" },
-  { id: 4, title: "Endereço do responsável" },
+  { id: 3, title: "Corresponsável financeiro" },
+  { id: 4, title: "Endereço do corresponsável" },
   { id: 5, title: "Dependentes" },
   { id: 6, title: "Planos" },
   { id: 7, title: "Serviços adicionais" },

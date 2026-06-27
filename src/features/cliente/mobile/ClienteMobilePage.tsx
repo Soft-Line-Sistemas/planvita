@@ -1020,14 +1020,12 @@ export default function ClienteMobilePage() {
   const suspensoPorRegra = maxDiasAtraso >= diasSuspensao;
   const posSuspensaoAtingido = maxDiasAtraso >= diasPosSuspensao;
 
-  /* Bloqueio por contrato pendente: ativa após 24h do pagamento confirmado */
+  /* Bloqueio por contrato pendente: ativa assim que o pagamento é confirmado */
   const contratosBloqueado = useMemo(() => {
     if (!cliente?.assinaturasPendentes) return false;
     const confirmadoEm = cliente?.pagamentoConfirmadoEm;
     if (!confirmadoEm) return false;
-    const diffMs = Date.now() - new Date(confirmadoEm).getTime();
-    const diffHoras = diffMs / (1000 * 60 * 60);
-    return diffHoras >= 24;
+    return !Number.isNaN(new Date(confirmadoEm).getTime());
   }, [cliente]);
 
   const clienteExibicao = useMemo<ClientePlano | null>(() => {

@@ -49,6 +49,7 @@ type HistoricoPlanoItem = {
   data: string;
   descricao: string;
   destaque?: boolean;
+  sortDate: string;
 };
 
 const STATUS_BADGE: Record<
@@ -110,6 +111,7 @@ export default function EntendaSeuPlanoScreen({
       data: formatDate(new Date().toISOString()),
       descricao: `Plano ${badge.label.toLowerCase()}, contrato vigente e acompanhamento cadastral disponível pelo aplicativo.`,
       destaque: true,
+      sortDate: new Date().toISOString(),
     },
     ...(temClubeBeneficios
       ? [
@@ -125,6 +127,11 @@ export default function EntendaSeuPlanoScreen({
               : formatDate(new Date().toISOString()),
             descricao:
               "Rede de parceiros e benefícios do plano disponibilizada conforme a cobertura contratada.",
+            sortDate: dataValidaInicio
+              ? new Date(
+                  dataInicioVigencia.getTime() + 15 * 24 * 60 * 60 * 1000,
+                ).toISOString()
+              : new Date().toISOString(),
           },
         ]
       : []),
@@ -135,6 +142,7 @@ export default function EntendaSeuPlanoScreen({
             titulo: "Implantação da vigência",
             data: formatDate(plano.vigencia.inicio),
             descricao: `Ativação do plano ${plano.nome} com início da cobertura prevista em contrato.`,
+            sortDate: plano.vigencia.inicio,
           },
         ]
       : []),
@@ -146,10 +154,13 @@ export default function EntendaSeuPlanoScreen({
             data: formatDate(dataContratacao.toISOString()),
             descricao:
               "Proposta formalizada e contrato emitido para adesão do titular ao plano.",
+            sortDate: dataContratacao.toISOString(),
           },
         ]
       : []),
-  ];
+  ].sort(
+    (a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime(),
+  );
 
   useEffect(() => {
     if (initialSection !== "historico") return;
