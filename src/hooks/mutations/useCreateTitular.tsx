@@ -107,22 +107,40 @@ export function useCreateTitular(options?: {
     onSuccess: (_data, variables) => {
       const data = _data as
         | {
+            paymentPending?: boolean;
+            message?: string;
             recurring?: {
               status?: "configured" | "failed" | "skipped";
               message?: string;
             };
           }
         | undefined;
+      const paymentPending = data?.paymentPending === true;
       const recurringMessage = data?.recurring?.message?.trim();
       const recurringFailed = data?.recurring?.status === "failed";
 
       if (options?.variant === "public") {
         toast.success("Cadastro concluído!", {
-          description:
-            recurringMessage && recurringFailed
+          description: paymentPending
+            ? data?.message?.trim() ||
+              "Verifique o SMS ou Email para acessar a cobranca e concluir o pagamento."
+            : recurringMessage && recurringFailed
               ? `Agora valide seu acesso e crie sua senha. ${recurringMessage}`
               : "Agora valide seu acesso (código) e crie sua senha para entrar.",
         });
+
+        if (paymentPending) {
+          const loginHint =
+            variables.step1?.email?.trim() ||
+            variables.step1?.cpf?.trim() ||
+            "";
+          const params = new URLSearchParams();
+          params.set("modo", "pagamento-pendente");
+          if (loginHint) params.set("login", loginHint);
+          router.push(`/cliente?${params.toString()}`);
+          return;
+        }
+
         const loginHint =
           variables.step1?.email?.trim() || variables.step1?.cpf?.trim() || "";
         const params = new URLSearchParams();

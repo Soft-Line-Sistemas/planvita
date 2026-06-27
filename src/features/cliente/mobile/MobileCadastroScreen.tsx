@@ -628,7 +628,7 @@ function Step2Form({
 }
 
 /* ================================================================
-   Step 3 – Responsável Financeiro
+   Step 3 – Corresponsável Financeiro
    ================================================================ */
 
 function Step3Form({

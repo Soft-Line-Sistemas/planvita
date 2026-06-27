@@ -145,6 +145,15 @@ function extractServerCode(err: unknown): string | null {
     : null;
 }
 
+type PaymentPendingPayload = {
+  nome?: string;
+  emailMasked?: string;
+  telefoneMasked?: string;
+  paymentUrl?: string;
+  vencimento?: string;
+  valor?: number;
+};
+
 function getSubdomainFromCurrentHost(): string | null {
   if (typeof window === "undefined") return null;
   const host = window.location.hostname.toLowerCase();
@@ -239,6 +248,32 @@ export default function ClienteMobilePage() {
   const [ppLoading, setPpLoading] = useState(false);
   const [ppError, setPpError] = useState<string | null>(null);
   const [ppSucesso, setPpSucesso] = useState(false);
+
+  const populatePaymentPending = useCallback((d: PaymentPendingPayload) => {
+    setPpNome(d.nome ?? null);
+    setPpEmailMasked(d.emailMasked ?? null);
+    setPpTelefoneMasked(d.telefoneMasked ?? null);
+    setPpPaymentUrl(d.paymentUrl ?? null);
+    setPpVencimento(d.vencimento ?? null);
+    setPpValor(d.valor ?? null);
+  }, []);
+
+  const loadPaymentPending = useCallback(
+    async (login: string, markSuccess = false) => {
+      setPpNome(null);
+      setPpEmailMasked(null);
+      setPpTelefoneMasked(null);
+      setPpPaymentUrl(null);
+      setPpVencimento(null);
+      setPpValor(null);
+      setPpError(null);
+      setPpSucesso(markSuccess);
+
+      const res = await api.post("/auth/pagamento/reenviar", { login });
+      populatePaymentPending(res.data as PaymentPendingPayload);
+    },
+    [populatePaymentPending],
+  );
 
   /* --- Navigation --- */
   const [activeTab, setActiveTab] = useState<TabId>("home");
@@ -369,6 +404,21 @@ export default function ClienteMobilePage() {
       setAuthView("first-access");
     }
 
+    if (modo === "pagamento-pendente") {
+      if (loginHint) {
+        setLoginValue(loginHint);
+        setFaLogin(loginHint);
+      }
+      setAuthView("payment-pending");
+      if (loginHint) {
+        void loadPaymentPending(loginHint).catch(() => {
+          setPpError(
+            "Nao foi possivel carregar os dados da cobranca. Voce ainda pode reenviar o link abaixo.",
+          );
+        });
+      }
+    }
+
     if (modo === "reset") {
       if (tokenFromUrl) {
         setFgVerificationToken(tokenFromUrl);
@@ -381,7 +431,7 @@ export default function ClienteMobilePage() {
       }
       setAuthView("forgot");
     }
-  }, []);
+  }, [loadPaymentPending]);
 
   /* ===== Auth check ===== */
   useEffect(() => {
@@ -520,33 +570,9 @@ export default function ClienteMobilePage() {
         return;
       }
       if (status === 402 && code === "PAYMENT_REQUIRED") {
-        setPpNome(null);
-        setPpEmailMasked(null);
-        setPpTelefoneMasked(null);
-        setPpPaymentUrl(null);
-        setPpVencimento(null);
-        setPpValor(null);
-        setPpError(null);
-        setPpSucesso(false);
         setAuthView("payment-pending");
         try {
-          const res = await api.post("/auth/pagamento/reenviar", {
-            login: loginValue.trim(),
-          });
-          const d = res.data as {
-            nome?: string;
-            emailMasked?: string;
-            telefoneMasked?: string;
-            paymentUrl?: string;
-            vencimento?: string;
-            valor?: number;
-          };
-          setPpNome(d.nome ?? null);
-          setPpEmailMasked(d.emailMasked ?? null);
-          setPpTelefoneMasked(d.telefoneMasked ?? null);
-          setPpPaymentUrl(d.paymentUrl ?? null);
-          setPpVencimento(d.vencimento ?? null);
-          setPpValor(d.valor ?? null);
+          await loadPaymentPending(loginValue.trim());
         } catch {
           // non-fatal — view already shown with "reenviar" option
         }
@@ -588,33 +614,9 @@ export default function ClienteMobilePage() {
           return;
         }
         if (status === 402 && code === "PAYMENT_REQUIRED") {
-          setPpNome(null);
-          setPpEmailMasked(null);
-          setPpTelefoneMasked(null);
-          setPpPaymentUrl(null);
-          setPpVencimento(null);
-          setPpValor(null);
-          setPpError(null);
-          setPpSucesso(false);
           setAuthView("payment-pending");
           try {
-            const res = await api.post("/auth/pagamento/reenviar", {
-              login: loginValue.trim(),
-            });
-            const d = res.data as {
-              nome?: string;
-              emailMasked?: string;
-              telefoneMasked?: string;
-              paymentUrl?: string;
-              vencimento?: string;
-              valor?: number;
-            };
-            setPpNome(d.nome ?? null);
-            setPpEmailMasked(d.emailMasked ?? null);
-            setPpTelefoneMasked(d.telefoneMasked ?? null);
-            setPpPaymentUrl(d.paymentUrl ?? null);
-            setPpVencimento(d.vencimento ?? null);
-            setPpValor(d.valor ?? null);
+            await loadPaymentPending(loginValue.trim());
           } catch {
             // non-fatal
           }
@@ -625,7 +627,14 @@ export default function ClienteMobilePage() {
         setAuthLoading(false);
       }
     },
-    [authLoading, carregarCliente, loginValue, selecionarTenant, senhaValue],
+    [
+      authLoading,
+      carregarCliente,
+      loadPaymentPending,
+      loginValue,
+      selecionarTenant,
+      senhaValue,
+    ],
   );
 
   /* ===================================================================
@@ -864,23 +873,7 @@ export default function ClienteMobilePage() {
     setPpSucesso(false);
     setPpLoading(true);
     try {
-      const res = await api.post("/auth/pagamento/reenviar", {
-        login: loginValue.trim(),
-      });
-      const d = res.data as {
-        nome?: string;
-        emailMasked?: string;
-        telefoneMasked?: string;
-        paymentUrl?: string;
-        vencimento?: string;
-        valor?: number;
-      };
-      setPpNome(d.nome ?? null);
-      setPpEmailMasked(d.emailMasked ?? null);
-      setPpTelefoneMasked(d.telefoneMasked ?? null);
-      setPpPaymentUrl(d.paymentUrl ?? null);
-      setPpVencimento(d.vencimento ?? null);
-      setPpValor(d.valor ?? null);
+      await loadPaymentPending(loginValue.trim(), true);
       setPpSucesso(true);
     } catch (err) {
       const msg = extractServerMessage(err);
@@ -888,7 +881,58 @@ export default function ClienteMobilePage() {
     } finally {
       setPpLoading(false);
     }
-  }, [loginValue]);
+  }, [loadPaymentPending, loginValue]);
+
+  const onVerificarPagamento = useCallback(async () => {
+    setPpError(null);
+    setPpSucesso(false);
+
+    const login = loginValue.trim();
+    const loginErr = validarLoginCliente(login);
+    if (loginErr) {
+      setPpError(loginErr);
+      return;
+    }
+
+    setPpLoading(true);
+    try {
+      setFaLogin(login);
+      const { data } = await api.post("/auth/first-access", { login });
+      const destination =
+        data?.start?.destinationMasked || data?.start?.channel || "seu contato";
+      setFaDestination(destination);
+      setFaChannel(data?.start?.channel === "whatsapp" ? "whatsapp" : "email");
+      const devOtp = data?.start?.dev?.otp;
+      setFaInfo(
+        devOtp
+          ? `Pagamento confirmado. Codigo (dev): ${devOtp}`
+          : "Pagamento confirmado. Enviamos um codigo para validar seu primeiro acesso.",
+      );
+      setFaStep("verify");
+      setAuthView("first-access");
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response
+        ?.status;
+      const code = extractServerCode(err);
+      const msg = extractServerMessage(err);
+
+      if (status === 402 && code === "PAYMENT_REQUIRED") {
+        setPpError(
+          "O pagamento ainda nao foi confirmado. Assim que o webhook atualizar, este botao liberara o primeiro acesso.",
+        );
+        try {
+          await loadPaymentPending(login);
+        } catch {
+          // keep current state
+        }
+        return;
+      }
+
+      setPpError(msg ?? "Nao foi possivel verificar o pagamento agora.");
+    } finally {
+      setPpLoading(false);
+    }
+  }, [loadPaymentPending, loginValue]);
 
   /* ===================================================================
      Logout
@@ -1131,6 +1175,7 @@ export default function ClienteMobilePage() {
           ppError={ppError}
           ppSucesso={ppSucesso}
           onReenviarPagamento={onReenviarPagamento}
+          onVerificarPagamento={onVerificarPagamento}
         />
 
         {modalCadastroAberto && (

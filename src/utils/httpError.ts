@@ -36,6 +36,10 @@ function normalizeValidationMessage(message?: string): string {
     return "Selecione uma opção válida para o campo Sexo.";
   }
 
+  if (lowerMessage.startsWith("request failed with status code")) {
+    return "Não foi possível concluir a solicitação. Tente novamente em instantes.";
+  }
+
   return normalized;
 }
 
@@ -53,7 +57,7 @@ export function extractApiError(err: unknown): ApiErrorPayload {
 
   const fallbackMessage =
     typeof axiosError?.message === "string"
-      ? axiosError.message
+      ? normalizeValidationMessage(axiosError.message)
       : "Erro inesperado.";
 
   return { message: fallbackMessage };
