@@ -39,6 +39,9 @@ type TitularResponse = {
   statusPlano?: string | null;
   dataContratacao?: string | null;
   pagamentoConfirmadoEm?: string | null;
+  asaasCardLast4?: string | null;
+  asaasCardBrand?: string | null;
+  asaasCardHolderName?: string | null;
   assinaturas?: Array<{ tipo?: string | null }> | null;
   fotoPerfil?: {
     id?: number | null;
@@ -158,6 +161,14 @@ export const mapTitularToCarteirinha = (
     (tipo) => !tiposAssinados.has(tipo),
   );
 
+  const cartaoPagamento = titular?.asaasCardLast4
+    ? {
+        last4: titular.asaasCardLast4,
+        brand: titular.asaasCardBrand ?? "",
+        holderName: titular.asaasCardHolderName ?? "",
+      }
+    : null;
+
   return {
     titularId: titular?.id ?? null,
     tenantSlug: titular?.tenantSlug ?? null,
@@ -169,6 +180,8 @@ export const mapTitularToCarteirinha = (
     telefone: titular?.telefone ?? undefined,
     pagamentoConfirmadoEm: titular?.pagamentoConfirmadoEm ?? null,
     assinaturasPendentes,
+    cartaoPagamento,
+    metodoPagamentoAtual: cartaoPagamento ? "CREDIT_CARD" : null,
     plano: {
       id: plano?.id ? String(plano.id) : "plano-indefinido",
       nome: plano?.nome ?? "Plano não informado",

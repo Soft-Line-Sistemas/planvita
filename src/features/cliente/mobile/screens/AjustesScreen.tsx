@@ -2,13 +2,27 @@
 
 import { useEffect, useRef, useState } from "react";
 import NextImage from "next/image";
-import { Loader2, CheckCircle, AlertCircle, MessageCircle } from "lucide-react";
+import {
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  MessageCircle,
+  CreditCard,
+  QrCode,
+  Barcode,
+  ArrowRight,
+} from "lucide-react";
 import type { ClientePlano } from "@/types/ClientePlano";
 import { changePassword } from "@/services/auth-cliente.service";
 import {
   removerFotoPerfilCliente,
   salvarFotoPerfilCliente,
 } from "@/services/cliente-ajustes.service";
+import {
+  alterarPagamentoCliente,
+  type CreditCardPayload,
+  type MetodoPagamentoBillingType,
+} from "@/services/cliente-pagamento.service";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +36,7 @@ type Props = {
   onLogout: () => void;
   onBack: () => void;
   onFotoPerfilChange: (fotoPerfilUrl: string | null) => void;
+  onPagamentoAlterado?: (novoMetodo: string) => void;
   openFotoModalOnEnter?: boolean;
   onOpenFotoModalHandled?: () => void;
 };
@@ -646,6 +661,788 @@ function AlterarFotoModal({
 }
 
 /* ===================================================================
+   Card formatters
+   =================================================================== */
+
+function formatCardNumber(value: string): string {
+  return value
+    .replace(/\D/g, "")
+    .slice(0, 19)
+    .replace(/(.{4})/g, "$1 ")
+    .trim();
+}
+
+function formatCardExpiryMonth(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 2);
+}
+
+function formatCardExpiryYear(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 4);
+}
+
+function formatCardCcv(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 4);
+}
+
+function formatCPF(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  return digits
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
+type CardValues = {
+  holderName: string;
+  holderCpf: string;
+  number: string;
+  expiryMonth: string;
+  expiryYear: string;
+  ccv: string;
+};
+
+type CardErrors = Partial<Record<keyof CardValues, string>>;
+
+function validateCard(card: CardValues): CardErrors {
+  const errors: CardErrors = {};
+  if (!card.holderName.trim() || card.holderName.trim().length < 3) {
+    errors.holderName = "Informe o nome impresso no cartão.";
+  }
+  if (card.holderCpf.replace(/\D/g, "").length !== 11) {
+    errors.holderCpf = "CPF do portador inválido.";
+  }
+  const cardDigits = card.number.replace(/\D/g, "");
+  if (cardDigits.length < 13 || cardDigits.length > 19) {
+    errors.number = "Número do cartão inválido.";
+  }
+  const month = Number(card.expiryMonth.replace(/\D/g, ""));
+  if (!month || month < 1 || month > 12) {
+    errors.expiryMonth = "Mês inválido.";
+  }
+  const yearDigits = card.expiryYear.replace(/\D/g, "");
+  if (yearDigits.length !== 2 && yearDigits.length !== 4) {
+    errors.expiryYear = "Ano inválido.";
+  }
+  if (card.ccv.replace(/\D/g, "").length < 3) {
+    errors.ccv = "CVV inválido.";
+  }
+  return errors;
+}
+
+function emptyCard(): CardValues {
+  return {
+    holderName: "",
+    holderCpf: "",
+    number: "",
+    expiryMonth: "",
+    expiryYear: "",
+    ccv: "",
+  };
+}
+
+function extractErrorMessage(err: unknown): string {
+  const e = err as { response?: { data?: { message?: unknown } } };
+  return typeof e?.response?.data?.message === "string"
+    ? e.response.data.message
+    : "Não foi possível alterar o pagamento.";
+}
+
+/* ===================================================================
+   CardForm — formulário de cartão reutilizável
+   =================================================================== */
+
+function CardForm({
+  card,
+  errors,
+  onChange,
+}: {
+  card: CardValues;
+  errors: CardErrors;
+  onChange: <K extends keyof CardValues>(
+    field: K,
+    value: CardValues[K],
+  ) => void;
+}) {
+  return (
+    <div className="cm-cad-card-form" style={{ marginTop: 16 }}>
+      <div className="cm-cad-card-info">
+        <strong>Dados do cartão</strong>
+        <span>Conexão segura — dados não ficam salvos em texto puro.</span>
+      </div>
+
+      <div
+        style={{
+          marginTop: 12,
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+        }}
+      >
+        <div>
+          <label className="cm-cad-label">
+            Nome impresso no cartão{" "}
+            <span style={{ color: "var(--cm-red)" }}>*</span>
+          </label>
+          <input
+            className={`cm-input${errors.holderName ? " error" : ""}`}
+            value={card.holderName}
+            onChange={(e) => onChange("holderName", e.target.value)}
+            autoComplete="cc-name"
+            placeholder="Como está no cartão"
+          />
+          {errors.holderName && (
+            <p className="cm-field-error">{errors.holderName}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="cm-cad-label">
+            CPF do portador <span style={{ color: "var(--cm-red)" }}>*</span>
+          </label>
+          <input
+            className={`cm-input${errors.holderCpf ? " error" : ""}`}
+            value={card.holderCpf}
+            onChange={(e) => onChange("holderCpf", formatCPF(e.target.value))}
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder="000.000.000-00"
+          />
+          {errors.holderCpf && (
+            <p className="cm-field-error">{errors.holderCpf}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="cm-cad-label">
+            Número do cartão <span style={{ color: "var(--cm-red)" }}>*</span>
+          </label>
+          <input
+            className={`cm-input${errors.number ? " error" : ""}`}
+            value={card.number}
+            onChange={(e) =>
+              onChange("number", formatCardNumber(e.target.value))
+            }
+            inputMode="numeric"
+            autoComplete="cc-number"
+            placeholder="0000 0000 0000 0000"
+          />
+          {errors.number && <p className="cm-field-error">{errors.number}</p>}
+        </div>
+
+        <div
+          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
+        >
+          <div>
+            <label className="cm-cad-label">
+              Mês <span style={{ color: "var(--cm-red)" }}>*</span>
+            </label>
+            <input
+              className={`cm-input${errors.expiryMonth ? " error" : ""}`}
+              value={card.expiryMonth}
+              onChange={(e) =>
+                onChange("expiryMonth", formatCardExpiryMonth(e.target.value))
+              }
+              inputMode="numeric"
+              autoComplete="cc-exp-month"
+              placeholder="MM"
+            />
+            {errors.expiryMonth && (
+              <p className="cm-field-error">{errors.expiryMonth}</p>
+            )}
+          </div>
+          <div>
+            <label className="cm-cad-label">
+              Ano <span style={{ color: "var(--cm-red)" }}>*</span>
+            </label>
+            <input
+              className={`cm-input${errors.expiryYear ? " error" : ""}`}
+              value={card.expiryYear}
+              onChange={(e) =>
+                onChange("expiryYear", formatCardExpiryYear(e.target.value))
+              }
+              inputMode="numeric"
+              autoComplete="cc-exp-year"
+              placeholder="AAAA"
+            />
+            {errors.expiryYear && (
+              <p className="cm-field-error">{errors.expiryYear}</p>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <label className="cm-cad-label">
+            CVV <span style={{ color: "var(--cm-red)" }}>*</span>
+          </label>
+          <input
+            className={`cm-input${errors.ccv ? " error" : ""}`}
+            value={card.ccv}
+            onChange={(e) => onChange("ccv", formatCardCcv(e.target.value))}
+            inputMode="numeric"
+            autoComplete="cc-csc"
+            placeholder="CVV"
+          />
+          {errors.ccv && <p className="cm-field-error">{errors.ccv}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===================================================================
+   AlterarPagamentoView
+   =================================================================== */
+
+type PagamentoSubView = "menu" | "atualizar_cartao" | "trocar_metodo";
+
+function AlterarPagamentoView({
+  cliente,
+  onClose,
+  onPagamentoAlterado,
+}: {
+  cliente: ClientePlano;
+  onClose: () => void;
+  onPagamentoAlterado?: (novoMetodo: string) => void;
+}) {
+  const [subView, setSubView] = useState<PagamentoSubView>("menu");
+  const [card, setCard] = useState<CardValues>(emptyCard());
+  const [cardErrors, setCardErrors] = useState<CardErrors>({});
+  const [novoMetodo, setNovoMetodo] =
+    useState<MetodoPagamentoBillingType>("PIX");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const metodoAtual = cliente.metodoPagamentoAtual;
+  const cartao = cliente.cartaoPagamento;
+
+  const handleCardChange = <K extends keyof CardValues>(
+    field: K,
+    value: CardValues[K],
+  ) => {
+    setCard((prev) => ({ ...prev, [field]: value }));
+    setCardErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const handleAtualizarCartao = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    const errs = validateCard(card);
+    if (Object.keys(errs).length > 0) {
+      setCardErrors(errs);
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await alterarPagamentoCliente({
+        action: "ATUALIZAR_CARTAO",
+        creditCard: card as CreditCardPayload,
+      });
+      setSuccess(true);
+      onPagamentoAlterado?.(result.metodoPagamento);
+      setTimeout(onClose, 1800);
+    } catch (err) {
+      setError(extractErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTrocarMetodo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (novoMetodo === "CREDIT_CARD") {
+      const errs = validateCard(card);
+      if (Object.keys(errs).length > 0) {
+        setCardErrors(errs);
+        return;
+      }
+    }
+    setLoading(true);
+    try {
+      const result = await alterarPagamentoCliente({
+        action: "TROCAR_METODO",
+        novoMetodo,
+        creditCard:
+          novoMetodo === "CREDIT_CARD"
+            ? (card as CreditCardPayload)
+            : undefined,
+      });
+      setSuccess(true);
+      onPagamentoAlterado?.(result.metodoPagamento);
+      setTimeout(onClose, 1800);
+    } catch (err) {
+      setError(extractErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const labelMetodo = (m: string | null | undefined) => {
+    if (m === "CREDIT_CARD") return "Cartão de crédito";
+    if (m === "PIX") return "PIX";
+    if (m === "BOLETO") return "Boleto";
+    return "—";
+  };
+
+  const iconMetodo = (m: string | null | undefined) => {
+    if (m === "CREDIT_CARD") return <CreditCard size={18} aria-hidden />;
+    if (m === "PIX") return <QrCode size={18} aria-hidden />;
+    return <Barcode size={18} aria-hidden />;
+  };
+
+  const SuccessState = () => (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 12,
+        padding: "32px 0",
+        textAlign: "center",
+      }}
+    >
+      <div
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: "50%",
+          background: "var(--cm-green-light)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <CheckCircle size={28} color="var(--cm-green-action)" />
+      </div>
+      <p style={{ fontWeight: 700, fontSize: 16, color: "var(--cm-gray-800)" }}>
+        Pagamento atualizado!
+      </p>
+      <p style={{ fontSize: 14, color: "var(--cm-gray-600)" }}>
+        Suas próximas cobranças já refletem a alteração.
+      </p>
+    </div>
+  );
+
+  /* ---- menu ---- */
+  if (subView === "menu") {
+    return (
+      <div
+        id="screen-alterar-pagamento"
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+      >
+        <div className="cm-app-header">
+          <div className="cm-app-header-row">
+            <button
+              type="button"
+              className="cm-btn-back"
+              onClick={onClose}
+              aria-label="Voltar"
+            >
+              <NextImage
+                src="/cliente-mobile/Vector-30.svg"
+                alt=""
+                width={20}
+                height={17}
+                aria-hidden
+              />
+            </button>
+            <h1>Pagamento</h1>
+          </div>
+        </div>
+
+        <div
+          className="cm-panel"
+          style={{
+            padding: 0,
+            borderRadius: "20px 20px 0 0",
+            marginTop: 3,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          {/* método atual */}
+          <div style={{ padding: "20px 16px 12px" }}>
+            <p
+              style={{
+                fontSize: 12,
+                color: "var(--cm-gray-500)",
+                marginBottom: 6,
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
+                fontWeight: 600,
+              }}
+            >
+              Método atual
+            </p>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "12px 14px",
+                borderRadius: 12,
+                background: "var(--cm-gray-50, #f8f8f8)",
+                border: "1px solid var(--cm-gray-100, #ebebeb)",
+              }}
+            >
+              <span style={{ color: "var(--cm-green-action)" }}>
+                {iconMetodo(metodoAtual)}
+              </span>
+              <div style={{ flex: 1 }}>
+                <p
+                  style={{
+                    fontWeight: 600,
+                    fontSize: 14,
+                    color: "var(--cm-gray-800)",
+                    margin: 0,
+                  }}
+                >
+                  {labelMetodo(metodoAtual)}
+                </p>
+                {cartao && (
+                  <p
+                    style={{
+                      fontSize: 12,
+                      color: "var(--cm-gray-500)",
+                      margin: 0,
+                    }}
+                  >
+                    {cartao.brand} •••• {cartao.last4} — {cartao.holderName}
+                  </p>
+                )}
+                {!metodoAtual && (
+                  <p
+                    style={{
+                      fontSize: 12,
+                      color: "var(--cm-gray-400)",
+                      margin: 0,
+                    }}
+                  >
+                    Não identificado
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="cm-settings-list" style={{ padding: "4px 16px" }}>
+            {metodoAtual === "CREDIT_CARD" && (
+              <button
+                type="button"
+                className="cm-settings-item"
+                onClick={() => {
+                  setSubView("atualizar_cartao");
+                  setCard(emptyCard());
+                  setCardErrors({});
+                  setError(null);
+                  setSuccess(false);
+                }}
+              >
+                <span className="cm-settings-item-label">
+                  Atualizar cartão de crédito
+                </span>
+                <NextImage
+                  src="/cliente-mobile/Vector-32.svg"
+                  alt=""
+                  width={12}
+                  height={12}
+                  className="cm-settings-arrow"
+                  aria-hidden
+                />
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="cm-settings-item"
+              onClick={() => {
+                setSubView("trocar_metodo");
+                setCard(emptyCard());
+                setCardErrors({});
+                setError(null);
+                setSuccess(false);
+              }}
+            >
+              <span className="cm-settings-item-label">
+                Trocar método de pagamento
+              </span>
+              <NextImage
+                src="/cliente-mobile/Vector-32.svg"
+                alt=""
+                width={12}
+                height={12}
+                className="cm-settings-arrow"
+                aria-hidden
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ---- atualizar cartão ---- */
+  if (subView === "atualizar_cartao") {
+    return (
+      <div
+        id="screen-atualizar-cartao"
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+      >
+        <div className="cm-app-header">
+          <div className="cm-app-header-row">
+            <button
+              type="button"
+              className="cm-btn-back"
+              onClick={() => setSubView("menu")}
+              aria-label="Voltar"
+            >
+              <NextImage
+                src="/cliente-mobile/Vector-30.svg"
+                alt=""
+                width={20}
+                height={17}
+                aria-hidden
+              />
+            </button>
+            <h1>Atualizar cartão</h1>
+          </div>
+        </div>
+
+        <div
+          className="cm-panel cm-alterar-senha-panel"
+          style={{ overflowY: "auto" }}
+        >
+          {success ? (
+            <SuccessState />
+          ) : (
+            <form onSubmit={handleAtualizarCartao}>
+              <div className="cm-alterar-senha-heading">
+                <CreditCard size={22} aria-hidden />
+                <h2>Novo cartão de crédito</h2>
+              </div>
+              <p
+                style={{
+                  fontSize: 13,
+                  color: "var(--cm-gray-600)",
+                  marginBottom: 4,
+                }}
+              >
+                O novo cartão substituirá o atual na recorrência mensal.
+              </p>
+
+              <CardForm
+                card={card}
+                errors={cardErrors}
+                onChange={handleCardChange}
+              />
+
+              {error && (
+                <div
+                  className="cm-alert cm-alert-danger"
+                  style={{ marginTop: 12 }}
+                >
+                  <AlertCircle
+                    size={15}
+                    style={{ flexShrink: 0, marginTop: 1 }}
+                  />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="cm-btn-solid cm-alterar-senha-submit"
+                disabled={loading}
+                style={{ marginTop: 16 }}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={18} className="cm-spinner" /> Salvando...
+                  </>
+                ) : (
+                  "Salvar novo cartão"
+                )}
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* ---- trocar método ---- */
+  const opcoes: Array<{
+    id: MetodoPagamentoBillingType;
+    label: string;
+    desc: string;
+  }> = [
+    { id: "PIX", label: "PIX", desc: "Cobrança instantânea com QR Code." },
+    {
+      id: "BOLETO",
+      label: "Boleto bancário",
+      desc: "Pagamento por boleto mensal.",
+    },
+    {
+      id: "CREDIT_CARD",
+      label: "Cartão de crédito",
+      desc: "Recorrência automática no cartão.",
+    },
+  ];
+
+  return (
+    <div
+      id="screen-trocar-metodo"
+      style={{
+        flex: 1,
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+      }}
+    >
+      <div className="cm-app-header">
+        <div className="cm-app-header-row">
+          <button
+            type="button"
+            className="cm-btn-back"
+            onClick={() => setSubView("menu")}
+            aria-label="Voltar"
+          >
+            <NextImage
+              src="/cliente-mobile/Vector-30.svg"
+              alt=""
+              width={20}
+              height={17}
+              aria-hidden
+            />
+          </button>
+          <h1>Trocar método</h1>
+        </div>
+      </div>
+
+      <div
+        className="cm-panel cm-alterar-senha-panel"
+        style={{ overflowY: "auto" }}
+      >
+        {success ? (
+          <SuccessState />
+        ) : (
+          <form onSubmit={handleTrocarMetodo}>
+            <div className="cm-alterar-senha-heading">
+              <ArrowRight size={22} aria-hidden />
+              <h2>Novo método de pagamento</h2>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+                marginTop: 12,
+              }}
+            >
+              {opcoes.map((opt) => {
+                const checked = novoMetodo === opt.id;
+                const isAtual = opt.id === metodoAtual;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    className={`cm-cad-payment-card${checked ? " selected" : ""}`}
+                    onClick={() => {
+                      setNovoMetodo(opt.id);
+                      setCardErrors({});
+                    }}
+                    disabled={isAtual}
+                    style={
+                      isAtual ? { opacity: 0.45, cursor: "not-allowed" } : {}
+                    }
+                  >
+                    <div className="cm-cad-payment-card-top">
+                      <div
+                        className={`cm-cad-plan-radio${checked ? " selected" : ""}`}
+                      >
+                        {checked && <div className="cm-cad-plan-radio-dot" />}
+                      </div>
+                      <div className="cm-cad-payment-main">
+                        <p className="cm-cad-service-title">
+                          {opt.label}
+                          {isAtual && (
+                            <span
+                              style={{
+                                fontSize: 11,
+                                color: "var(--cm-gray-400)",
+                                marginLeft: 6,
+                              }}
+                            >
+                              (atual)
+                            </span>
+                          )}
+                        </p>
+                        <p className="cm-cad-service-desc">{opt.desc}</p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {novoMetodo === "CREDIT_CARD" && (
+              <CardForm
+                card={card}
+                errors={cardErrors}
+                onChange={handleCardChange}
+              />
+            )}
+
+            {error && (
+              <div
+                className="cm-alert cm-alert-danger"
+                style={{ marginTop: 12 }}
+              >
+                <AlertCircle
+                  size={15}
+                  style={{ flexShrink: 0, marginTop: 1 }}
+                />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="cm-btn-solid cm-alterar-senha-submit"
+              disabled={loading || novoMetodo === metodoAtual}
+              style={{ marginTop: 16 }}
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={18} className="cm-spinner" /> Salvando...
+                </>
+              ) : (
+                "Confirmar troca"
+              )}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ===================================================================
    AjustesScreen
    =================================================================== */
 
@@ -654,12 +1451,14 @@ export default function AjustesScreen({
   onLogout,
   onBack,
   onFotoPerfilChange,
+  onPagamentoAlterado,
   openFotoModalOnEnter = false,
   onOpenFotoModalHandled,
 }: Props) {
   const [showChangePwd, setShowChangePwd] = useState(false);
   const [showFotoModal, setShowFotoModal] = useState(false);
   const [showContatoModal, setShowContatoModal] = useState(false);
+  const [showPagamento, setShowPagamento] = useState(false);
 
   useEffect(() => {
     if (!openFotoModalOnEnter) return;
@@ -669,6 +1468,16 @@ export default function AjustesScreen({
 
   if (showChangePwd) {
     return <AlterarSenhaView onClose={() => setShowChangePwd(false)} />;
+  }
+
+  if (showPagamento) {
+    return (
+      <AlterarPagamentoView
+        cliente={cliente}
+        onClose={() => setShowPagamento(false)}
+        onPagamentoAlterado={onPagamentoAlterado}
+      />
+    );
   }
 
   return (
@@ -757,6 +1566,22 @@ export default function AjustesScreen({
             <span className="cm-settings-item-label">
               Alterar foto de Perfil
             </span>
+            <NextImage
+              src="/cliente-mobile/Vector-32.svg"
+              alt=""
+              width={12}
+              height={12}
+              className="cm-settings-arrow"
+              aria-hidden
+            />
+          </button>
+
+          <button
+            type="button"
+            className="cm-settings-item"
+            onClick={() => setShowPagamento(true)}
+          >
+            <span className="cm-settings-item-label">Pagamento</span>
             <NextImage
               src="/cliente-mobile/Vector-32.svg"
               alt=""
