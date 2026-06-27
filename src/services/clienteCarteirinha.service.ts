@@ -39,6 +39,7 @@ type TitularResponse = {
   statusPlano?: string | null;
   dataContratacao?: string | null;
   pagamentoConfirmadoEm?: string | null;
+  formaPagamentoAdesao?: string | null;
   asaasCardLast4?: string | null;
   asaasCardBrand?: string | null;
   asaasCardHolderName?: string | null;
@@ -66,6 +67,25 @@ const startOfDay = (value: string) => {
   if (Number.isNaN(date.getTime())) return null;
   date.setHours(0, 0, 0, 0);
   return date;
+};
+
+const normalizeMetodoPagamento = (
+  value?: string | null,
+): ClientePlano["metodoPagamentoAtual"] => {
+  const normalized = String(value ?? "")
+    .trim()
+    .toUpperCase();
+
+  if (normalized === "CREDIT_CARD" || normalized === "CARTAO") {
+    return "CREDIT_CARD";
+  }
+  if (normalized === "PIX") {
+    return "PIX";
+  }
+  if (normalized === "BOLETO") {
+    return "BOLETO";
+  }
+  return null;
 };
 
 const calculateRemainingCarencia = (
@@ -168,6 +188,9 @@ export const mapTitularToCarteirinha = (
         holderName: titular.asaasCardHolderName ?? "",
       }
     : null;
+  const metodoPagamentoAtual =
+    normalizeMetodoPagamento(titular?.formaPagamentoAdesao) ??
+    (cartaoPagamento ? "CREDIT_CARD" : null);
 
   return {
     titularId: titular?.id ?? null,
@@ -181,7 +204,7 @@ export const mapTitularToCarteirinha = (
     pagamentoConfirmadoEm: titular?.pagamentoConfirmadoEm ?? null,
     assinaturasPendentes,
     cartaoPagamento,
-    metodoPagamentoAtual: cartaoPagamento ? "CREDIT_CARD" : null,
+    metodoPagamentoAtual,
     plano: {
       id: plano?.id ? String(plano.id) : "plano-indefinido",
       nome: plano?.nome ?? "Plano não informado",
