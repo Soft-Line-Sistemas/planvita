@@ -1261,6 +1261,25 @@ export default function ClienteMobilePage() {
             onLogout={handleLogout}
             onBack={goBack}
             onFotoPerfilChange={handleFotoPerfilChange}
+            onPagamentoAlterado={(novoMetodo) => {
+              setCliente((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      metodoPagamentoAtual:
+                        novoMetodo === "CREDIT_CARD" ||
+                        novoMetodo === "PIX" ||
+                        novoMetodo === "BOLETO"
+                          ? novoMetodo
+                          : prev.metodoPagamentoAtual,
+                      cartaoPagamento:
+                        novoMetodo !== "CREDIT_CARD"
+                          ? null
+                          : prev.cartaoPagamento,
+                    }
+                  : prev,
+              );
+            }}
             openFotoModalOnEnter={abrirFotoModalAoEntrarAjustes}
             onOpenFotoModalHandled={() =>
               setAbrirFotoModalAoEntrarAjustes(false)

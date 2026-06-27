@@ -28,6 +28,12 @@ export interface DependentePlano {
   valorAdicionalMensal?: number;
 }
 
+export interface CartaoPagamento {
+  last4: string;
+  brand: string;
+  holderName: string;
+}
+
 export interface ClientePlano {
   titularId?: number | string | null;
   tenantSlug?: string | null;
@@ -41,4 +47,6 @@ export interface ClientePlano {
   dependentes?: DependentePlano[];
   pagamentoConfirmadoEm?: string | null;
   assinaturasPendentes?: boolean;
+  metodoPagamentoAtual?: "CREDIT_CARD" | "PIX" | "BOLETO" | null;
+  cartaoPagamento?: CartaoPagamento | null;
 }
