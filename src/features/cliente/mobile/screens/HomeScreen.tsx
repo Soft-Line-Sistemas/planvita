@@ -114,7 +114,8 @@ export default function HomeScreen({
           >
             <span>
               Plano suspenso há mais de {diasPosSuspensao} dias de atraso.
-              Regularize o pagamento para reativação.
+              Regularize a mensalidade do seu plano de assistência funeral Campo
+              do Bosque para reativação.
             </span>
           </div>
         )}
@@ -125,7 +126,8 @@ export default function HomeScreen({
           >
             <span>
               Plano atingiu a regra de suspensão ({diasSuspensao} dias de
-              atraso). Regularize o pagamento.
+              atraso). Regularize a mensalidade do seu plano de assistência
+              funeral Campo do Bosque.
             </span>
           </div>
         )}

@@ -24,7 +24,8 @@ export default function SidebarWrapper({ children }: { children: ReactNode }) {
   const showSidebar =
     !pathname.includes("/login") &&
     pathname !== "/cliente" &&
-    pathname !== "/cliente/cadastro";
+    pathname !== "/cliente/cadastro" &&
+    pathname !== "/privacidade";
 
   useEffect(() => {
     const storedState =

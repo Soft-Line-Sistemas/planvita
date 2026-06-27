@@ -11,12 +11,15 @@ import {
   QrCode,
   Barcode,
   ArrowRight,
+  ShieldCheck,
+  Trash2,
 } from "lucide-react";
 import type { ClientePlano } from "@/types/ClientePlano";
 import { changePassword } from "@/services/auth-cliente.service";
 import {
   removerFotoPerfilCliente,
   salvarFotoPerfilCliente,
+  solicitarExclusaoContaCliente,
 } from "@/services/cliente-ajustes.service";
 import {
   alterarPagamentoCliente,
@@ -1443,6 +1446,263 @@ function AlterarPagamentoView({
 }
 
 /* ===================================================================
+   ExcluirContaView
+   =================================================================== */
+
+function ExcluirContaView({
+  onClose,
+  onContaExcluida,
+}: {
+  onClose: () => void;
+  onContaExcluida: () => void;
+}) {
+  const [etapa, setEtapa] = useState<"aviso" | "confirmacao" | "sucesso">(
+    "aviso",
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleConfirmar = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      await solicitarExclusaoContaCliente();
+      setEtapa("sucesso");
+      setTimeout(onContaExcluida, 2500);
+    } catch (err) {
+      const e = err as { response?: { data?: { message?: unknown } } };
+      const msg =
+        typeof e?.response?.data?.message === "string"
+          ? e.response.data.message
+          : "Não foi possível encerrar a conta. Tente novamente.";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        flex: 1,
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+      }}
+      id="screen-excluir-conta"
+    >
+      <div className="cm-app-header">
+        <div className="cm-app-header-row">
+          {etapa !== "sucesso" && (
+            <button
+              type="button"
+              className="cm-btn-back"
+              onClick={onClose}
+              aria-label="Voltar"
+            >
+              <NextImage
+                src="/cliente-mobile/Vector-30.svg"
+                alt=""
+                width={20}
+                height={17}
+                aria-hidden
+              />
+            </button>
+          )}
+          <h1>Excluir conta</h1>
+        </div>
+      </div>
+
+      <div
+        className="cm-panel cm-alterar-senha-panel"
+        style={{ overflowY: "auto" }}
+      >
+        {etapa === "sucesso" ? (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 12,
+              padding: "32px 0",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: "50%",
+                background: "var(--cm-green-light)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <CheckCircle size={28} color="var(--cm-green-action)" />
+            </div>
+            <p
+              style={{
+                fontWeight: 700,
+                fontSize: 16,
+                color: "var(--cm-gray-800)",
+              }}
+            >
+              Conta encerrada
+            </p>
+            <p style={{ fontSize: 14, color: "var(--cm-gray-600)" }}>
+              Seus dados foram desativados. Você será desconectado.
+            </p>
+          </div>
+        ) : etapa === "aviso" ? (
+          <>
+            <div className="cm-alterar-senha-heading">
+              <Trash2 size={22} color="var(--cm-red, #e03131)" aria-hidden />
+              <h2>Atenção</h2>
+            </div>
+
+            <div
+              style={{
+                fontSize: 14,
+                color: "var(--cm-gray-700)",
+                lineHeight: 1.6,
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
+                marginTop: 4,
+              }}
+            >
+              <p>
+                Ao excluir sua conta, o acesso ao aplicativo será bloqueado e a
+                cobrança recorrente do seu plano será cancelada.
+              </p>
+              <p>
+                Seus dados cadastrais serão mantidos conforme exigência legal e
+                contratual.
+              </p>
+              <p style={{ fontWeight: 600, color: "var(--cm-gray-800)" }}>
+                Esta ação não pode ser desfeita pelo aplicativo.
+              </p>
+            </div>
+
+            {error && (
+              <div
+                className="cm-alert cm-alert-danger"
+                style={{ marginTop: 16 }}
+              >
+                <AlertCircle
+                  size={15}
+                  style={{ flexShrink: 0, marginTop: 1 }}
+                />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
+                marginTop: 24,
+              }}
+            >
+              <button
+                type="button"
+                className="cm-btn-solid"
+                style={{
+                  background: "var(--cm-red, #e03131)",
+                  borderColor: "var(--cm-red, #e03131)",
+                }}
+                onClick={() => setEtapa("confirmacao")}
+              >
+                Continuar com a exclusão
+              </button>
+              <button
+                type="button"
+                className="cm-btn-outline"
+                onClick={onClose}
+              >
+                Cancelar
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="cm-alterar-senha-heading">
+              <Trash2 size={22} color="var(--cm-red, #e03131)" aria-hidden />
+              <h2>Confirmar exclusão</h2>
+            </div>
+
+            <p
+              style={{
+                fontSize: 14,
+                color: "var(--cm-gray-600)",
+                lineHeight: 1.6,
+                marginBottom: 20,
+              }}
+            >
+              Confirme que deseja encerrar sua conta e cancelar a recorrência do
+              plano. Clique em <strong>Excluir minha conta</strong> para
+              prosseguir.
+            </p>
+
+            {error && (
+              <div
+                className="cm-alert cm-alert-danger"
+                style={{ marginTop: 4 }}
+              >
+                <AlertCircle
+                  size={15}
+                  style={{ flexShrink: 0, marginTop: 1 }}
+                />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
+                marginTop: 12,
+              }}
+            >
+              <button
+                type="button"
+                className="cm-btn-solid"
+                style={{
+                  background: "var(--cm-red, #e03131)",
+                  borderColor: "var(--cm-red, #e03131)",
+                }}
+                onClick={handleConfirmar}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={18} className="cm-spinner" /> Processando...
+                  </>
+                ) : (
+                  "Excluir minha conta"
+                )}
+              </button>
+              <button
+                type="button"
+                className="cm-btn-outline"
+                onClick={() => setEtapa("aviso")}
+                disabled={loading}
+              >
+                Voltar
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ===================================================================
    AjustesScreen
    =================================================================== */
 
@@ -1459,6 +1719,7 @@ export default function AjustesScreen({
   const [showFotoModal, setShowFotoModal] = useState(false);
   const [showContatoModal, setShowContatoModal] = useState(false);
   const [showPagamento, setShowPagamento] = useState(false);
+  const [showExcluirConta, setShowExcluirConta] = useState(false);
 
   useEffect(() => {
     if (!openFotoModalOnEnter) return;
@@ -1476,6 +1737,15 @@ export default function AjustesScreen({
         cliente={cliente}
         onClose={() => setShowPagamento(false)}
         onPagamentoAlterado={onPagamentoAlterado}
+      />
+    );
+  }
+
+  if (showExcluirConta) {
+    return (
+      <ExcluirContaView
+        onClose={() => setShowExcluirConta(false)}
+        onContaExcluida={onLogout}
       />
     );
   }
@@ -1582,6 +1852,60 @@ export default function AjustesScreen({
             onClick={() => setShowPagamento(true)}
           >
             <span className="cm-settings-item-label">Pagamento</span>
+            <NextImage
+              src="/cliente-mobile/Vector-32.svg"
+              alt=""
+              width={12}
+              height={12}
+              className="cm-settings-arrow"
+              aria-hidden
+            />
+          </button>
+
+          <button
+            type="button"
+            className="cm-settings-item"
+            onClick={() => window.open("/privacidade", "_blank")}
+          >
+            <span
+              className="cm-settings-item-label"
+              style={{ display: "flex", alignItems: "center", gap: 8 }}
+            >
+              <ShieldCheck
+                size={16}
+                color="var(--cm-green-action)"
+                aria-hidden
+              />
+              Política de Privacidade
+            </span>
+            <NextImage
+              src="/cliente-mobile/Vector-32.svg"
+              alt=""
+              width={12}
+              height={12}
+              className="cm-settings-arrow"
+              aria-hidden
+            />
+          </button>
+
+          <button
+            type="button"
+            className="cm-settings-item"
+            onClick={() => setShowExcluirConta(true)}
+            style={{ color: "var(--cm-red, #e03131)" }}
+          >
+            <span
+              className="cm-settings-item-label"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                color: "var(--cm-red, #e03131)",
+              }}
+            >
+              <Trash2 size={16} aria-hidden />
+              Excluir conta
+            </span>
             <NextImage
               src="/cliente-mobile/Vector-32.svg"
               alt=""

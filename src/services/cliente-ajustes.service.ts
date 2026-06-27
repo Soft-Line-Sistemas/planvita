@@ -37,3 +37,7 @@ export const salvarFotoPerfilCliente = async (
 export const removerFotoPerfilCliente = async (): Promise<void> => {
   await api.delete("/titular/me/foto");
 };
+
+export const solicitarExclusaoContaCliente = async (): Promise<void> => {
+  await api.delete("/titular/me");
+};
