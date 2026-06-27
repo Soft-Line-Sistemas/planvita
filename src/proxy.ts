@@ -77,6 +77,10 @@ export function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  if (pathname.startsWith("/privacidade")) {
+    return NextResponse.next();
+  }
+
   if (pathname.startsWith("/login/redirecionamento")) {
     return NextResponse.next();
   }
