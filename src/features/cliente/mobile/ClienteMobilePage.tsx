@@ -332,66 +332,6 @@ export default function ClienteMobilePage() {
     }
   }, []);
 
-  /* ===== Browser history sync for Android back button ===== */
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const onPopState = (event: PopStateEvent) => {
-      const navState = event.state?.clienteMobileNav as
-        | { screen?: ScreenId; activeTab?: TabId }
-        | undefined;
-      if (!navState?.screen || !navState?.activeTab) return;
-
-      const navStateNormalizado = normalizarNavegacaoBloqueada(
-        {
-          activeTab: navState.activeTab,
-          screen: navState.screen,
-        },
-        contratosBloqueado,
-      );
-
-      isHandlingPopStateRef.current = true;
-      setActiveTab(navStateNormalizado.activeTab);
-      setScreen(navStateNormalizado.screen);
-    };
-
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, [contratosBloqueado]);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !cliente) return;
-    const navState = normalizarNavegacaoBloqueada(
-      { screen, activeTab },
-      contratosBloqueado,
-    );
-    const historyKey = `${navState.activeTab}:${navState.screen}`;
-
-    if (!historyBootstrappedRef.current) {
-      window.history.replaceState(
-        { ...(window.history.state ?? {}), clienteMobileNav: navState },
-        "",
-      );
-      lastHistoryKeyRef.current = historyKey;
-      historyBootstrappedRef.current = true;
-      return;
-    }
-
-    if (isHandlingPopStateRef.current) {
-      lastHistoryKeyRef.current = historyKey;
-      isHandlingPopStateRef.current = false;
-      return;
-    }
-
-    if (lastHistoryKeyRef.current === historyKey) return;
-    lastHistoryKeyRef.current = historyKey;
-
-    window.history.pushState(
-      { ...(window.history.state ?? {}), clienteMobileNav: navState },
-      "",
-    );
-  }, [activeTab, cliente, contratosBloqueado, screen]);
-
   /* --- URL params handled ref --- */
   const urlParamsHandledRef = useRef(false);
 
@@ -1062,6 +1002,66 @@ export default function ClienteMobilePage() {
       plano: { ...cliente.plano, status: "suspenso" },
     };
   }, [cliente, suspensoPorRegra]);
+
+  /* ===== Browser history sync for Android back button ===== */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const onPopState = (event: PopStateEvent) => {
+      const navState = event.state?.clienteMobileNav as
+        | { screen?: ScreenId; activeTab?: TabId }
+        | undefined;
+      if (!navState?.screen || !navState?.activeTab) return;
+
+      const navStateNormalizado = normalizarNavegacaoBloqueada(
+        {
+          activeTab: navState.activeTab,
+          screen: navState.screen,
+        },
+        contratosBloqueado,
+      );
+
+      isHandlingPopStateRef.current = true;
+      setActiveTab(navStateNormalizado.activeTab);
+      setScreen(navStateNormalizado.screen);
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [contratosBloqueado]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !cliente) return;
+    const navState = normalizarNavegacaoBloqueada(
+      { screen, activeTab },
+      contratosBloqueado,
+    );
+    const historyKey = `${navState.activeTab}:${navState.screen}`;
+
+    if (!historyBootstrappedRef.current) {
+      window.history.replaceState(
+        { ...(window.history.state ?? {}), clienteMobileNav: navState },
+        "",
+      );
+      lastHistoryKeyRef.current = historyKey;
+      historyBootstrappedRef.current = true;
+      return;
+    }
+
+    if (isHandlingPopStateRef.current) {
+      lastHistoryKeyRef.current = historyKey;
+      isHandlingPopStateRef.current = false;
+      return;
+    }
+
+    if (lastHistoryKeyRef.current === historyKey) return;
+    lastHistoryKeyRef.current = historyKey;
+
+    window.history.pushState(
+      { ...(window.history.state ?? {}), clienteMobileNav: navState },
+      "",
+    );
+  }, [activeTab, cliente, contratosBloqueado, screen]);
 
   const { data: parceriasDisponiveis = [] } = useQuery({
     queryKey: ["parcerias", "cliente", "gate"],
