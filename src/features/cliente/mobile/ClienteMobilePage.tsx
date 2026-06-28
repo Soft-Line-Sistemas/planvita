@@ -86,6 +86,20 @@ type TenantCadastro = {
   cliente: ClientePlano;
 };
 
+function normalizarNavegacaoBloqueada(
+  navState: { screen: ScreenId; activeTab: TabId },
+  contratosBloqueado: boolean,
+): { screen: ScreenId; activeTab: TabId } {
+  if (!contratosBloqueado || navState.screen === "assinaturas") {
+    return navState;
+  }
+
+  return {
+    activeTab: "home",
+    screen: "assinaturas",
+  };
+}
+
 /* ===================================================================
    Helpers
    =================================================================== */
@@ -328,19 +342,30 @@ export default function ClienteMobilePage() {
         | undefined;
       if (!navState?.screen || !navState?.activeTab) return;
 
+      const navStateNormalizado = normalizarNavegacaoBloqueada(
+        {
+          activeTab: navState.activeTab,
+          screen: navState.screen,
+        },
+        contratosBloqueado,
+      );
+
       isHandlingPopStateRef.current = true;
-      setActiveTab(navState.activeTab);
-      setScreen(navState.screen);
+      setActiveTab(navStateNormalizado.activeTab);
+      setScreen(navStateNormalizado.screen);
     };
 
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, []);
+  }, [contratosBloqueado]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !cliente) return;
-    const navState = { screen, activeTab };
-    const historyKey = `${activeTab}:${screen}`;
+    const navState = normalizarNavegacaoBloqueada(
+      { screen, activeTab },
+      contratosBloqueado,
+    );
+    const historyKey = `${navState.activeTab}:${navState.screen}`;
 
     if (!historyBootstrappedRef.current) {
       window.history.replaceState(
@@ -365,7 +390,7 @@ export default function ClienteMobilePage() {
       { ...(window.history.state ?? {}), clienteMobileNav: navState },
       "",
     );
-  }, [activeTab, cliente, screen]);
+  }, [activeTab, cliente, contratosBloqueado, screen]);
 
   /* --- URL params handled ref --- */
   const urlParamsHandledRef = useRef(false);
@@ -1065,6 +1090,52 @@ export default function ClienteMobilePage() {
     goTo("assinaturas");
   }, [goTo]);
 
+  useEffect(() => {
+    if (!contratosBloqueado) return;
+    if (activeTab !== "home") setActiveTab("home");
+    if (screen !== "assinaturas") setScreen("assinaturas");
+  }, [activeTab, contratosBloqueado, screen]);
+
+  const goToComBloqueioContrato = useCallback(
+    (destino: ScreenId) => {
+      if (contratosBloqueado && destino !== "assinaturas") {
+        setScreen("assinaturas");
+        return;
+      }
+      goTo(destino);
+    },
+    [contratosBloqueado, goTo],
+  );
+
+  const changeTabComBloqueioContrato = useCallback(
+    (tab: TabId) => {
+      if (contratosBloqueado) {
+        setActiveTab("home");
+        setScreen("assinaturas");
+        return;
+      }
+      changeTab(tab);
+    },
+    [contratosBloqueado, changeTab],
+  );
+
+  const goBackComBloqueioContrato = useCallback(() => {
+    if (contratosBloqueado) {
+      setActiveTab("home");
+      setScreen("assinaturas");
+      return;
+    }
+    goBack();
+  }, [contratosBloqueado, goBack]);
+
+  const goToAjustesComModalFotoBloqueioContrato = useCallback(() => {
+    if (contratosBloqueado) {
+      setScreen("assinaturas");
+      return;
+    }
+    goToAjustesComModalFoto();
+  }, [contratosBloqueado, goToAjustesComModalFoto]);
+
   /* ===================================================================
      Render – Onboarding splash / carousel (first visit, unauthenticated)
      ================================================================ */
@@ -1255,16 +1326,19 @@ export default function ClienteMobilePage() {
             posSuspensaoAtingido={posSuspensaoAtingido}
             diasSuspensao={diasSuspensao}
             diasPosSuspensao={diasPosSuspensao}
-            goTo={goTo}
-            changeTab={changeTab}
-            onOpenFotoAjustes={goToAjustesComModalFoto}
+            goTo={goToComBloqueioContrato}
+            changeTab={changeTabComBloqueioContrato}
+            onOpenFotoAjustes={goToAjustesComModalFotoBloqueioContrato}
             onLogout={handleLogout}
             hasParcerias={hasParcerias}
           />
         )}
 
         {screen === "carteirinha" && clienteExibicao && (
-          <CarteirinhaScreen cliente={clienteExibicao} onBack={goBack} />
+          <CarteirinhaScreen
+            cliente={clienteExibicao}
+            onBack={goBackComBloqueioContrato}
+          />
         )}
 
         {screen === "faturas" && (
@@ -1274,7 +1348,7 @@ export default function ClienteMobilePage() {
             errorMessage={
               erroFinanceiro instanceof Error ? erroFinanceiro.message : null
             }
-            onBack={goBack}
+            onBack={goBackComBloqueioContrato}
             mostrarHistoricoCompleto={mostrarHistoricoCompletoFaturas}
             onHistoricoCompletoChange={setMostrarHistoricoCompletoFaturas}
           />
@@ -1289,20 +1363,23 @@ export default function ClienteMobilePage() {
                   ? parseInt(cliente.titularId, 10)
                   : null
             }
-            onBack={goBack}
+            onBack={goBackComBloqueioContrato}
             onAllSigned={refreshCliente}
           />
         )}
 
         {screen === "atendimento" && (
-          <AtendimentoScreen onBack={goBack} tenantSlug={tenantAtivo} />
+          <AtendimentoScreen
+            onBack={goBackComBloqueioContrato}
+            tenantSlug={tenantAtivo}
+          />
         )}
 
         {screen === "ajustes" && (
           <AjustesScreen
             cliente={cliente}
             onLogout={handleLogout}
-            onBack={goBack}
+            onBack={goBackComBloqueioContrato}
             onFotoPerfilChange={handleFotoPerfilChange}
             onPagamentoAlterado={(novoMetodo) => {
               setCliente((prev) =>
@@ -1331,26 +1408,32 @@ export default function ClienteMobilePage() {
         )}
 
         {screen === "entenda-seu-plano" && clienteExibicao && (
-          <EntendaSeuPlanoScreen cliente={clienteExibicao} onBack={goBack} />
+          <EntendaSeuPlanoScreen
+            cliente={clienteExibicao}
+            onBack={goBackComBloqueioContrato}
+          />
         )}
 
         {screen === "historico-plano" && clienteExibicao && (
           <EntendaSeuPlanoScreen
             cliente={clienteExibicao}
-            onBack={goBack}
+            onBack={goBackComBloqueioContrato}
             initialSection="historico"
             headerTitle="Histórico do Plano"
           />
         )}
 
         {screen === "dependentes" && clienteExibicao && (
-          <DependentesScreen cliente={clienteExibicao} onBack={goBack} />
+          <DependentesScreen
+            cliente={clienteExibicao}
+            onBack={goBackComBloqueioContrato}
+          />
         )}
 
         {screen === "parcerias" && hasParcerias && (
           <ParceriasScreen
-            onBack={goBack}
-            onGoAtendimento={() => changeTab("atendimento")}
+            onBack={goBackComBloqueioContrato}
+            onGoAtendimento={() => changeTabComBloqueioContrato("atendimento")}
           />
         )}
       </div>
