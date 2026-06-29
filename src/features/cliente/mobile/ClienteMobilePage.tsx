@@ -1297,9 +1297,9 @@ export default function ClienteMobilePage() {
      Render – Authenticated shell
      ================================================================ */
   const showTabBar = SCREENS_WITH_TABBAR.includes(screen);
-  const tabBarActive: TabId = TABS.some((tab) => tab.id === screen)
+  const tabBarActive: TabId | null = TABS.some((tab) => tab.id === screen)
     ? (screen as TabId)
-    : activeTab;
+    : null;
 
   return (
     <div className="cm-app">
