@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { CheckCircle, XCircle, Loader2, Trash2 } from "lucide-react";
 
@@ -12,11 +11,15 @@ type Estado =
   | "erro"
   | "token-ausente";
 
-export function ConfirmarExclusaoClient() {
-  const searchParams = useSearchParams();
-  const token = searchParams.get("token") ?? "";
-  const tenant = searchParams.get("tenant") ?? "";
+type ConfirmarExclusaoClientProps = {
+  token: string;
+  tenant: string;
+};
 
+export function ConfirmarExclusaoClient({
+  token,
+  tenant,
+}: ConfirmarExclusaoClientProps) {
   const [estado, setEstado] = useState<Estado>(
     token ? "carregando" : "token-ausente",
   );
