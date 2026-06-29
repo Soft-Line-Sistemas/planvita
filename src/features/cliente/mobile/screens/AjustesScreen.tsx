@@ -1404,11 +1404,72 @@ function AlterarPagamentoView({
             </div>
 
             {novoMetodo === "CREDIT_CARD" && (
-              <CardForm
-                card={card}
-                errors={cardErrors}
-                onChange={handleCardChange}
-              />
+              <>
+                {cartao && (
+                  <div
+                    style={{
+                      marginTop: 16,
+                      padding: "12px 14px",
+                      borderRadius: 10,
+                      background: "var(--cm-gray-50, #f8f8f8)",
+                      border: "1px solid var(--cm-gray-100, #ebebeb)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                    }}
+                  >
+                    <CreditCard
+                      size={18}
+                      color="var(--cm-gray-500)"
+                      aria-hidden
+                    />
+                    <div>
+                      <p
+                        style={{
+                          fontSize: 12,
+                          color: "var(--cm-gray-500)",
+                          margin: 0,
+                          marginBottom: 2,
+                        }}
+                      >
+                        Cartão atual
+                      </p>
+                      <p
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: "var(--cm-gray-800)",
+                          margin: 0,
+                          fontFamily: "monospace",
+                          letterSpacing: "0.05em",
+                        }}
+                      >
+                        {cartao.brand && (
+                          <span style={{ marginRight: 6 }}>{cartao.brand}</span>
+                        )}
+                        **** **** **** {cartao.last4}
+                      </p>
+                      {cartao.holderName && (
+                        <p
+                          style={{
+                            fontSize: 12,
+                            color: "var(--cm-gray-500)",
+                            margin: 0,
+                            marginTop: 1,
+                          }}
+                        >
+                          {cartao.holderName}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <CardForm
+                  card={card}
+                  errors={cardErrors}
+                  onChange={handleCardChange}
+                />
+              </>
             )}
 
             {error && (
@@ -1577,12 +1638,8 @@ function ExcluirContaView({
                 Ao excluir sua conta, o acesso ao aplicativo será bloqueado e a
                 cobrança recorrente do seu plano será cancelada.
               </p>
-              <p>
-                Seus dados cadastrais serão mantidos conforme exigência legal e
-                contratual.
-              </p>
               <p style={{ fontWeight: 600, color: "var(--cm-gray-800)" }}>
-                Esta ação não pode ser desfeita pelo aplicativo.
+                Esta ação não pode ser desfeita.
               </p>
             </div>
 
@@ -1865,7 +1922,9 @@ export default function AjustesScreen({
           <button
             type="button"
             className="cm-settings-item"
-            onClick={() => window.open("/privacidade", "_blank")}
+            onClick={() => {
+              window.location.href = "/privacidade";
+            }}
           >
             <span
               className="cm-settings-item-label"
