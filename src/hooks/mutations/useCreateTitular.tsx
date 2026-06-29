@@ -32,6 +32,13 @@ type PlanoFormValues = {
 };
 
 export type CreateTitularInput = {
+  consents?: {
+    privacyPolicyAccepted?: boolean;
+    privacyPolicyVersion?: string | null;
+    serviceContractAccepted?: boolean;
+    serviceContractVersion?: string | null;
+    origin?: string | null;
+  };
   step1?: Step1Values;
   step2?: Step2Values;
   step3?: Step3Values;
