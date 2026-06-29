@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { CheckCircle, XCircle, Loader2, Trash2 } from "lucide-react";
+import { BackBar } from "@/app/privacidade/BackBar";
 
 type Estado =
   | "carregando"
@@ -227,6 +228,8 @@ export function ConfirmarExclusaoClient({
           {" · "}
           <a href="/cliente">Ir para o app</a>
         </footer>
+
+        <BackBar />
       </div>
     </>
   );

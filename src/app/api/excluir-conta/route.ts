@@ -1,29 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-function extractTenantFromHost(host: string): string | null {
-  const h = host.split(":")[0].toLowerCase();
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api";
 
-  if (h.endsWith(".localhost")) {
-    const sub = h.replace(".localhost", "");
-    return sub === "app" || sub === "www" ? null : sub;
-  }
-
-  if (h.endsWith(".planvita.com.br")) {
-    const parts = h.split(".");
-    if (parts.length > 3) {
-      const sub = parts.slice(0, -3).join(".");
-      return sub === "app" || sub === "www" ? null : sub;
-    }
-  }
-
-  return null;
-}
-
+// POST /api/excluir-conta?step=buscar  → busca tenants pelo e-mail
+// POST /api/excluir-conta?step=solicitar → envia e-mail de confirmação
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as { email?: unknown };
+    const step = req.nextUrl.searchParams.get("step") ?? "buscar";
+    const body = (await req.json()) as Record<string, unknown>;
+
     const email =
-      typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+      typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json(
@@ -32,26 +19,42 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const host = req.headers.get("host") ?? "";
-    const tenant = extractTenantFromHost(host);
+    if (step === "buscar") {
+      const backendRes = await fetch(
+        `${API_BASE}/v1/titular/public/buscar-tenants-email`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        },
+      );
+      const data = await backendRes.json().catch(() => ({}));
+      return NextResponse.json(data, { status: backendRes.status });
+    }
 
-    const apiBase =
-      process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api";
-    const apiUrl = `${apiBase}/v1/titular/public/solicitar-exclusao`;
+    if (step === "solicitar") {
+      const tenantId =
+        typeof body.tenantId === "string" ? body.tenantId.trim() : "";
+      if (!tenantId) {
+        return NextResponse.json(
+          { message: "Plano não identificado." },
+          { status: 400 },
+        );
+      }
 
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    if (tenant) headers["X-Tenant"] = tenant;
+      const backendRes = await fetch(
+        `${API_BASE}/v1/titular/public/solicitar-exclusao`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, tenantId }),
+        },
+      );
+      const data = await backendRes.json().catch(() => ({}));
+      return NextResponse.json(data, { status: backendRes.status });
+    }
 
-    const backendRes = await fetch(apiUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ email }),
-    });
-
-    const data = await backendRes.json().catch(() => ({}));
-    return NextResponse.json(data, { status: backendRes.status });
+    return NextResponse.json({ message: "Passo inválido." }, { status: 400 });
   } catch {
     return NextResponse.json(
       { message: "Erro interno. Tente novamente mais tarde." },

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { BackBar } from "@/app/privacidade/BackBar";
 import {
   Trash2,
   AlertTriangle,
@@ -11,10 +12,12 @@ import {
   ShieldAlert,
   Lock,
   FileX,
+  ChevronRight,
 } from "lucide-react";
 import "@/app/styles/cliente-mobile.css";
 
-type Etapa = "aviso" | "confirmacao" | "email-enviado";
+type Etapa = "aviso" | "confirmacao" | "escolha-plano" | "email-enviado";
+type TenantMatch = { tenantId: string; label: string };
 
 const CONSEQUENCIAS = [
   {
@@ -42,8 +45,9 @@ export function ExcluirContaClient() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tenants, setTenants] = useState<TenantMatch[]>([]);
 
-  const handleSolicitarExclusao = async (e: React.FormEvent) => {
+  const handleBuscarTenants = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
       setError("Informe o e-mail cadastrado na sua conta.");
@@ -54,7 +58,7 @@ export function ExcluirContaClient() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/excluir-conta", {
+      const res = await fetch("/api/excluir-conta?step=buscar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim().toLowerCase() }),
@@ -70,10 +74,58 @@ export function ExcluirContaClient() {
         );
       }
 
+      const found: TenantMatch[] = Array.isArray(data.tenants)
+        ? data.tenants
+        : [];
+
+      if (found.length === 0) {
+        // Silencia — mostra mesma tela de "e-mail enviado" para não revelar ausência
+        setEtapa("email-enviado");
+        return;
+      }
+
+      if (found.length === 1) {
+        // Só um plano: envia direto sem pedir escolha
+        await enviarSolicitacao(found[0].tenantId);
+        return;
+      }
+
+      // Mais de um plano: pede escolha
+      setTenants(found);
+      setEtapa("escolha-plano");
+    } catch (err) {
+      const e = err as Error;
+      setError(e.message || "Erro inesperado. Tente novamente mais tarde.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const enviarSolicitacao = async (tenantId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/excluir-conta?step=solicitar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), tenantId }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(
+          typeof data?.message === "string"
+            ? data.message
+            : "Não foi possível enviar o e-mail. Tente novamente.",
+        );
+      }
+
       setEtapa("email-enviado");
     } catch (err) {
       const e = err as Error;
       setError(e.message || "Erro inesperado. Tente novamente mais tarde.");
+      setEtapa("confirmacao");
     } finally {
       setLoading(false);
     }
@@ -473,7 +525,20 @@ export function ExcluirContaClient() {
                 setEtapa("aviso");
                 setError(null);
               }}
-              onSubmit={handleSolicitarExclusao}
+              onSubmit={handleBuscarTenants}
+            />
+          )}
+
+          {etapa === "escolha-plano" && (
+            <EtapaEscolhaPlano
+              tenants={tenants}
+              loading={loading}
+              error={error}
+              onEscolher={enviarSolicitacao}
+              onVoltar={() => {
+                setEtapa("confirmacao");
+                setError(null);
+              }}
             />
           )}
 
@@ -487,6 +552,8 @@ export function ExcluirContaClient() {
           {" · "}
           <a href="/cliente">Ir para o app</a>
         </footer>
+
+        <BackBar />
       </div>
     </>
   );
@@ -636,7 +703,102 @@ function EtapaConfirmacao({
   );
 }
 
-/* ── Etapa 3: E-mail enviado ────────────────────────────────── */
+/* ── Etapa 3: Escolha de plano (multi-tenant) ───────────────── */
+
+function EtapaEscolhaPlano({
+  tenants,
+  loading,
+  error,
+  onEscolher,
+  onVoltar,
+}: {
+  tenants: TenantMatch[];
+  loading: boolean;
+  error: string | null;
+  onEscolher: (tenantId: string) => void;
+  onVoltar: () => void;
+}) {
+  return (
+    <>
+      <div className="ec-form-card">
+        <div className="ec-form-heading">
+          <Trash2 size={22} color="#e53935" />
+          <h2>Escolha o plano</h2>
+        </div>
+
+        <p className="ec-form-desc">
+          Encontramos mais de um plano vinculado a esse e-mail. Selecione qual
+          conta deseja excluir.
+        </p>
+
+        {error && (
+          <div className="ec-alert-danger" style={{ marginBottom: 16 }}>
+            <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {tenants.map((t) => (
+            <button
+              key={t.tenantId}
+              type="button"
+              disabled={loading}
+              onClick={() => onEscolher(t.tenantId)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                width: "100%",
+                padding: "16px 18px",
+                background: "#fafafa",
+                border: "1.5px solid #e0e0e0",
+                borderRadius: 14,
+                cursor: loading ? "not-allowed" : "pointer",
+                fontFamily: "Inter, system-ui, sans-serif",
+                opacity: loading ? 0.5 : 1,
+                transition: "border-color 0.15s, background 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.borderColor =
+                  "#e53935";
+                (e.currentTarget as HTMLButtonElement).style.background =
+                  "#fff0f0";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.borderColor =
+                  "#e0e0e0";
+                (e.currentTarget as HTMLButtonElement).style.background =
+                  "#fafafa";
+              }}
+            >
+              <span style={{ fontSize: 15, fontWeight: 700, color: "#212121" }}>
+                {t.label}
+              </span>
+              {loading ? (
+                <Loader2 size={18} color="#9e9e9e" className="ec-spinner" />
+              ) : (
+                <ChevronRight size={18} color="#9e9e9e" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          className="ec-btn-neutral"
+          onClick={onVoltar}
+          disabled={loading}
+          style={{ marginTop: 16 }}
+        >
+          Voltar
+        </button>
+      </div>
+    </>
+  );
+}
+
+/* ── Etapa 4: E-mail enviado ────────────────────────────────── */
 
 function EtapaEmailEnviado({ email }: { email: string }) {
   return (
