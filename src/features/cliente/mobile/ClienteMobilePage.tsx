@@ -973,26 +973,6 @@ export default function ClienteMobilePage() {
     staleTime: 30 * 1000,
   });
 
-  const { data: regraNotificacao } = useQuery<{
-    diasSuspensao?: number | null;
-    diasPosSuspensao?: number | null;
-  } | null>({
-    queryKey: ["cliente-regras-mobile", tenantAtivo],
-    queryFn: async () => {
-      const { data } = await api.get("/regras");
-      if (!Array.isArray(data) || !data.length) return null;
-      const r = data[0];
-      return r
-        ? {
-            diasSuspensao: r.diasSuspensao,
-            diasPosSuspensao: r.diasPosSuspensao,
-          }
-        : null;
-    },
-    enabled: Boolean(tenantAtivo),
-    staleTime: 60 * 1000,
-  });
-
   /* Suspension logic */
   const maxDiasAtraso = useMemo(() => {
     if (!contasFinanceiras.length) return 0;
@@ -1007,14 +987,8 @@ export default function ClienteMobilePage() {
     }, 0);
   }, [contasFinanceiras]);
 
-  const diasSuspensao =
-    regraNotificacao?.diasSuspensao && regraNotificacao.diasSuspensao > 0
-      ? regraNotificacao.diasSuspensao
-      : DEFAULT_DIAS_SUSPENSAO;
-  const diasPosSuspensao =
-    regraNotificacao?.diasPosSuspensao && regraNotificacao.diasPosSuspensao > 0
-      ? regraNotificacao.diasPosSuspensao
-      : DEFAULT_DIAS_POS_SUSPENSAO;
+  const diasSuspensao = DEFAULT_DIAS_SUSPENSAO;
+  const diasPosSuspensao = DEFAULT_DIAS_POS_SUSPENSAO;
 
   const suspensoPorRegra = maxDiasAtraso >= diasSuspensao;
   const posSuspensaoAtingido = maxDiasAtraso >= diasPosSuspensao;
@@ -1323,17 +1297,9 @@ export default function ClienteMobilePage() {
      Render – Authenticated shell
      ================================================================ */
   const showTabBar = SCREENS_WITH_TABBAR.includes(screen);
-  const tabBarActive: TabId =
-    screen === "assinaturas" ||
-    screen === "entenda-seu-plano" ||
-    screen === "historico-plano" ||
-    screen === "dependentes" ||
-    screen === "parcerias" ||
-    screen === "carteirinha"
-      ? "home"
-      : SCREENS_WITH_TABBAR.includes(screen)
-        ? (screen as TabId)
-        : activeTab;
+  const tabBarActive: TabId = TABS.some((tab) => tab.id === screen)
+    ? (screen as TabId)
+    : activeTab;
 
   return (
     <div className="cm-app">

@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, CheckCircle } from "lucide-react";
+import { Loader2, CheckCircle, RotateCw, X, Save } from "lucide-react";
 import Image from "next/image";
 import {
   listarAssinaturas,
@@ -75,6 +75,148 @@ function buildAssinaturaUrl(
   return params.toString() ? `${base}?${params}` : base;
 }
 
+/* === Fullscreen landscape overlay for signing === */
+function SignatureFullscreenOverlay({
+  tipoId,
+  onSalvar,
+  salvando,
+  onClose,
+}: {
+  tipoId: string;
+  onSalvar: (tipo: string, base64: string) => Promise<void>;
+  salvando: boolean;
+  onClose: () => void;
+}) {
+  const padRef = useRef<SignaturePadHandle>(null);
+  const [dims, setDims] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    function measure() {
+      // Overlay ocupa a tela inteira; canvas fica na área abaixo da toolbar
+      setDims({ w: window.innerHeight, h: window.innerWidth - 56 });
+    }
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  const handleConfirm = async () => {
+    if (!padRef.current?.hasDrawing()) {
+      alert("Por favor, assine antes de salvar.");
+      return;
+    }
+    const dataUrl = padRef.current.getDataURL();
+    if (dataUrl) await onSalvar(tipoId, dataUrl);
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        background: "#fff",
+        display: "flex",
+        alignItems: "stretch",
+        justifyContent: "stretch",
+        /* Gira a tela inteira 90° no sentido horário → landscape forçado */
+        transform: "rotate(90deg)",
+        transformOrigin: "center center",
+        width: "100dvh",
+        height: "100dvw",
+        top: "50%",
+        left: "50%",
+        marginTop: "calc(-50dvw)",
+        marginLeft: "calc(-50dvh)",
+      }}
+    >
+      {/* Toolbar lateral (fica no topo após a rotação) */}
+      <div
+        style={{
+          width: 56,
+          flexShrink: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "10px 0",
+          borderBottom: "1px solid #e5e7eb",
+          background: "#f9fafb",
+        }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={salvando}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 8,
+            borderRadius: 8,
+            color: "#6b7280",
+          }}
+          aria-label="Fechar"
+        >
+          <X size={22} />
+        </button>
+        <button
+          type="button"
+          onClick={handleConfirm}
+          disabled={salvando}
+          style={{
+            background: "var(--cm-green-primary, #16a34a)",
+            border: "none",
+            cursor: "pointer",
+            padding: 10,
+            borderRadius: 10,
+            color: "#fff",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 4,
+            fontSize: 11,
+            fontWeight: 600,
+          }}
+          aria-label="Salvar assinatura"
+        >
+          {salvando ? (
+            <Loader2 size={20} className="cm-spinner" />
+          ) : (
+            <Save size={20} />
+          )}
+        </button>
+      </div>
+
+      {/* Área do canvas ocupa o restante */}
+      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+        {dims.w > 0 && (
+          <SignaturePad
+            ref={padRef}
+            width={dims.w}
+            height={dims.h}
+            className="touch-none cursor-crosshair"
+          />
+        )}
+        <p
+          style={{
+            position: "absolute",
+            bottom: 8,
+            left: 0,
+            right: 0,
+            textAlign: "center",
+            fontSize: 12,
+            color: "#9ca3af",
+            pointerEvents: "none",
+          }}
+        >
+          Assine usando o dedo ou caneta
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* === Signature capture (active card inline) === */
 function SignatureCapture({
   tipoId,
@@ -88,6 +230,7 @@ function SignatureCapture({
   onCancel: () => void;
 }) {
   const padRef = useRef<SignaturePadHandle>(null);
+  const [fullscreen, setFullscreen] = useState(false);
 
   const handleConfirm = async () => {
     if (!padRef.current?.hasDrawing()) {
@@ -100,6 +243,17 @@ function SignatureCapture({
 
   return (
     <>
+      {fullscreen && (
+        <SignatureFullscreenOverlay
+          tipoId={tipoId}
+          salvando={salvando}
+          onSalvar={async (id, b64) => {
+            await onSalvar(id, b64);
+            setFullscreen(false);
+          }}
+          onClose={() => setFullscreen(false)}
+        />
+      )}
       <p className="cm-assinatura-subtitle">
         Assine no quadro abaixo usando o dedo ou caneta.
       </p>
@@ -119,6 +273,16 @@ function SignatureCapture({
           disabled={salvando}
         >
           Cancelar
+        </button>
+        <button
+          type="button"
+          className="cm-btn-outline"
+          onClick={() => setFullscreen(true)}
+          disabled={salvando}
+          style={{ display: "flex", alignItems: "center", gap: 6 }}
+        >
+          <RotateCw size={15} />
+          Girar
         </button>
         <button
           type="button"
