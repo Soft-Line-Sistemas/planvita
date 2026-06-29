@@ -44,7 +44,8 @@
 .cm-app {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  min-height: var(--cm-app-height, 100dvh);
+  height: var(--cm-app-height, 100dvh);
   overflow: hidden;
   background: var(--cm-screen-gradient);
   font-family: var(--cm-font);
@@ -2495,7 +2496,7 @@
   --cm-green-lightest: #f2faf0;
   --cm-shadow-btn: 0 4px 12px rgba(58, 155, 40, 0.3);
   --cm-font: 'Inter', system-ui, sans-serif;
-  --cm-cad-nav-offset: calc(78px + max(env(safe-area-inset-bottom, 0px), 16px) + 22px);
+  --cm-cad-nav-offset: calc(78px + max(env(safe-area-inset-bottom, 0px), 16px) + 40px);
 
   min-height: 100dvh;
   height: 100dvh;

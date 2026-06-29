@@ -3,6 +3,17 @@
 import { ChevronLeft } from "lucide-react";
 
 export function BackBar() {
+  const handleBack = () => {
+    if (typeof window === "undefined") return;
+
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    window.location.href = "/cliente";
+  };
+
   return (
     <>
       <style>{`
@@ -29,7 +40,7 @@ export function BackBar() {
       >
         <button
           type="button"
-          onClick={() => window.history.back()}
+          onClick={handleBack}
           style={{
             display: "flex",
             alignItems: "center",

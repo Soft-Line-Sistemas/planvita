@@ -340,6 +340,40 @@ export default function ClienteMobilePage() {
     if (subdomainFromHost) setTenantSelecionado(subdomainFromHost);
   }, [subdomainFromHost]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const root = document.documentElement;
+
+    const syncViewportHeight = () => {
+      const viewportHeight =
+        window.visualViewport?.height ?? window.innerHeight;
+      root.style.setProperty("--cm-app-height", `${viewportHeight}px`);
+    };
+
+    syncViewportHeight();
+
+    const onPageShow = () => syncViewportHeight();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") syncViewportHeight();
+    };
+
+    window.addEventListener("resize", syncViewportHeight);
+    window.addEventListener("orientationchange", syncViewportHeight);
+    window.addEventListener("pageshow", onPageShow);
+    window.visualViewport?.addEventListener("resize", syncViewportHeight);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.removeEventListener("resize", syncViewportHeight);
+      window.removeEventListener("orientationchange", syncViewportHeight);
+      window.removeEventListener("pageshow", onPageShow);
+      window.visualViewport?.removeEventListener("resize", syncViewportHeight);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      root.style.removeProperty("--cm-app-height");
+    };
+  }, []);
+
   /* ===== Handle URL params (primeiro-acesso / reset) ===== */
   useEffect(() => {
     if (typeof window === "undefined" || urlParamsHandledRef.current) return;
