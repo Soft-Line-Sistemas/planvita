@@ -257,13 +257,29 @@ export default function PoliticaPrivacidadePage() {
       <Section title="8. Exclusão de conta">
         <p>
           Você pode solicitar a exclusão da sua conta e dos seus dados pessoais
-          diretamente pelo aplicativo, na seção <strong>Ajustes</strong>, ou por
-          meio da central de atendimento.
+          pelos seguintes meios:
         </p>
+        <ul>
+          <li>
+            Diretamente no aplicativo, na seção <strong>Ajustes</strong>.
+          </li>
+          <li>
+            Pela página pública de exclusão:{" "}
+            <a
+              href="/excluir-conta"
+              style={{ color: "#1e5a14", fontWeight: 600 }}
+            >
+              planvita.com.br/excluir-conta
+            </a>
+            .
+          </li>
+          <li>Por meio da central de atendimento.</li>
+        </ul>
         <p>
-          A exclusão implica o encerramento do acesso ao aplicativo. Dados que
-          precisam ser retidos por obrigação legal ou contratual serão mantidos
-          pelo prazo mínimo exigido e, em seguida, eliminados ou anonimizados.
+          A exclusão implica o encerramento do acesso ao aplicativo e o
+          cancelamento da cobrança recorrente do plano. Dados que precisam ser
+          retidos por obrigação legal ou contratual serão mantidos pelo prazo
+          mínimo exigido e, em seguida, eliminados ou anonimizados.
         </p>
       </Section>
 

@@ -154,6 +154,9 @@ const DIRECT_PARENTESCOS_GRADE_FAMILIAR = new Set<string>([
   "Neto(a)",
 ]);
 const RESPONSAVEL_FINANCEIRO_CONTA_NO_PLANO = new Set<string>(["Cônjuge"]);
+const PRIVACY_POLICY_VERSION = "2025-06";
+const SERVICE_CONTRACT_VERSION = "2025-06";
+const CADASTRO_CONSENT_ORIGIN = "cliente_mobile_cadastro_publico";
 const VALORES_ADICIONAL_POR_IDADE = [
   { ate: 60, valor: 9.9 },
   { ate: 70, valor: 19.9 },
@@ -2123,6 +2126,9 @@ function Step8Confirmacao({
   isConsultorLocked,
   isLoadingConsultores,
   consultorError,
+  aceitouContrato,
+  onAceitouContratoChange,
+  contratoRef,
   aceitouTermos,
   onAceitouTermosChange,
   termosRef,
@@ -2139,6 +2145,9 @@ function Step8Confirmacao({
   isConsultorLocked: boolean;
   isLoadingConsultores: boolean;
   consultorError: string | null;
+  aceitouContrato: boolean;
+  onAceitouContratoChange: (v: boolean) => void;
+  contratoRef: React.RefObject<HTMLDivElement | null>;
   aceitouTermos: boolean;
   onAceitouTermosChange: (v: boolean) => void;
   termosRef: React.RefObject<HTMLDivElement | null>;
@@ -2464,6 +2473,28 @@ function Step8Confirmacao({
           )
         : null}
 
+      <div ref={contratoRef} className="cm-cad-termos-row">
+        <input
+          id="cm-cad-contrato-check"
+          type="checkbox"
+          className="cm-cad-termos-checkbox"
+          checked={aceitouContrato}
+          onChange={(e) => onAceitouContratoChange(e.target.checked)}
+        />
+        <label htmlFor="cm-cad-contrato-check" className="cm-cad-termos-label">
+          Li e concordo com o{" "}
+          <a
+            href="/docs/contrato.pdf"
+            download="contrato-campo-bosque.pdf"
+            className="cm-cad-termos-link"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Contrato de Prestação de Serviços
+          </a>
+          .
+        </label>
+      </div>
+
       <div ref={termosRef} className="cm-cad-termos-row">
         <input
           id="cm-cad-termos-check"
@@ -2616,6 +2647,8 @@ export default function MobileCadastroScreen() {
   const isDev = process.env.NODE_ENV === "development";
   const [currentStep, setCurrentStep] = useState(1);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [aceitouContrato, setAceitouContrato] = useState(false);
+  const contratoRef = useRef<HTMLDivElement>(null);
   const [aceitouTermos, setAceitouTermos] = useState(false);
   const termosRef = useRef<HTMLDivElement>(null);
   const isHandlingPopStateRef = useRef(false);
@@ -3193,6 +3226,18 @@ export default function MobileCadastroScreen() {
   };
 
   const handleFinish = async () => {
+    if (!aceitouContrato) {
+      contratoRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      contratoRef.current?.classList.add("cm-cad-termos-highlight");
+      setTimeout(
+        () => contratoRef.current?.classList.remove("cm-cad-termos-highlight"),
+        1800,
+      );
+      return;
+    }
     if (!aceitouTermos) {
       termosRef.current?.scrollIntoView({
         behavior: "smooth",
@@ -3227,6 +3272,13 @@ export default function MobileCadastroScreen() {
     setSubmitError(null);
     try {
       const payload: CreateTitularInput = {
+        consents: {
+          privacyPolicyAccepted: aceitouTermos,
+          privacyPolicyVersion: PRIVACY_POLICY_VERSION,
+          serviceContractAccepted: aceitouContrato,
+          serviceContractVersion: SERVICE_CONTRACT_VERSION,
+          origin: CADASTRO_CONSENT_ORIGIN,
+        },
         step1: step1Form.getValues(),
         step2: step2Form.getValues(),
         step3: { ...step3Form.getValues(), usarMesmosDados },
@@ -3401,6 +3453,9 @@ export default function MobileCadastroScreen() {
             isConsultorLocked={Boolean(consultorFromQuery)}
             isLoadingConsultores={isLoadingConsultores}
             consultorError={consultorError}
+            aceitouContrato={aceitouContrato}
+            onAceitouContratoChange={setAceitouContrato}
+            contratoRef={contratoRef}
             aceitouTermos={aceitouTermos}
             onAceitouTermosChange={setAceitouTermos}
             termosRef={termosRef}
