@@ -76,6 +76,10 @@ function buildAssinaturaUrl(
 }
 
 /* === Fullscreen landscape overlay for signing === */
+// O overlay ocupa toda a tela SEM rotação CSS (que quebra as coordenadas do pointer).
+// O canvas é posicionado rotacionado via transform apenas visualmente para o layout,
+// mas o desenho real usa um canvas interno não-rotacionado cujas coordenadas são
+// mapeadas manualmente a partir do toque no espaço rotacionado.
 function SignatureFullscreenOverlay({
   tipoId,
   onSalvar,
@@ -87,25 +91,107 @@ function SignatureFullscreenOverlay({
   salvando: boolean;
   onClose: () => void;
 }) {
-  const padRef = useRef<SignaturePadHandle>(null);
-  const [dims, setDims] = useState({ w: 0, h: 0 });
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isDrawingRef = useRef(false);
+  const hasDrawingRef = useRef(false);
+  // Dimensões da tela (portrait)
+  const [vw, setVw] = useState(0);
+  const [vh, setVh] = useState(0);
 
   useEffect(() => {
     function measure() {
-      // Overlay ocupa a tela inteira; canvas fica na área abaixo da toolbar
-      setDims({ w: window.innerHeight, h: window.innerWidth - 56 });
+      setVw(window.innerWidth);
+      setVh(window.innerHeight);
     }
     measure();
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
   }, []);
 
+  // Largura do canvas rotacionado = altura da tela; altura = largura da tela - toolbar
+  const TOOLBAR = 52;
+  // canvas em landscape: W = vh, H = vw - TOOLBAR
+  const canvasW = vh;
+  const canvasH = vw - TOOLBAR;
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || canvasW === 0 || canvasH === 0) return;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = canvasW * dpr;
+    canvas.height = canvasH * dpr;
+    const ctx = canvas.getContext("2d")!;
+    ctx.scale(dpr, dpr);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = "#0f172a";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvasW, canvasH);
+  }, [canvasW, canvasH]);
+
+  // O overlay não tem rotate. O canvas é exibido com rotate(90deg) no CSS apenas para
+  // parecer landscape, mas os eventos de pointer são capturados no espaço visual rotacionado.
+  // Precisamos mapear as coordenadas do pointer (espaço portrait) → espaço canvas (landscape).
+  // O canvas está rotacionado 90° CW em torno do seu centro visual.
+  // Ponto (px, py) na tela → canvas: cx = py - canvasTop, cy = canvasW - (px - canvasLeft)
+  // onde canvasLeft/canvasTop são calculados a partir do bounding rect do elemento canvas.
+  function toCanvasCoords(
+    clientX: number,
+    clientY: number,
+  ): { x: number; y: number } | null {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    // rect é o rect APÓS o transform CSS rotate(90deg)
+    // O canvas visual tem: rect.left, rect.top, rect.width=canvasH (pois ficou girado), rect.height=canvasW
+    const relX = clientX - rect.left; // 0..canvasH (visual)
+    const relY = clientY - rect.top; // 0..canvasW (visual)
+    // Mapeamento inverso da rotação 90° CW:
+    // canvas_x = relY * (canvasW/rect.height)   → ao longo do eixo horizontal original
+    // canvas_y = (rect.width - relX) * (canvasH/rect.width)
+    const scaleX = canvasW / rect.height;
+    const scaleY = canvasH / rect.width;
+    return {
+      x: relY * scaleX,
+      y: (rect.width - relX) * scaleY,
+    };
+  }
+
+  function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    e.preventDefault();
+    const pos = toCanvasCoords(e.clientX, e.clientY);
+    if (!pos) return;
+    const ctx = canvasRef.current?.getContext("2d");
+    if (!ctx) return;
+    isDrawingRef.current = true;
+    hasDrawingRef.current = true;
+    canvasRef.current?.setPointerCapture(e.pointerId);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+  }
+
+  function handlePointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!isDrawingRef.current) return;
+    const pos = toCanvasCoords(e.clientX, e.clientY);
+    const ctx = canvasRef.current?.getContext("2d");
+    if (!pos || !ctx) return;
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+  }
+
+  function handlePointerUp(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!isDrawingRef.current) return;
+    canvasRef.current?.releasePointerCapture(e.pointerId);
+    isDrawingRef.current = false;
+  }
+
   const handleConfirm = async () => {
-    if (!padRef.current?.hasDrawing()) {
+    if (!hasDrawingRef.current) {
       alert("Por favor, assine antes de salvar.");
       return;
     }
-    const dataUrl = padRef.current.getDataURL();
+    const dataUrl = canvasRef.current?.toDataURL("image/png") ?? null;
     if (dataUrl) await onSalvar(tipoId, dataUrl);
   };
 
@@ -115,31 +201,20 @@ function SignatureFullscreenOverlay({
         position: "fixed",
         inset: 0,
         zIndex: 9999,
-        background: "#fff",
+        background: "#f9fafb",
         display: "flex",
-        alignItems: "stretch",
-        justifyContent: "stretch",
-        /* Gira a tela inteira 90° no sentido horário → landscape forçado */
-        transform: "rotate(90deg)",
-        transformOrigin: "center center",
-        width: "100dvh",
-        height: "100dvw",
-        top: "50%",
-        left: "50%",
-        marginTop: "calc(-50dvw)",
-        marginLeft: "calc(-50dvh)",
+        flexDirection: "column",
       }}
     >
-      {/* Toolbar lateral (fica no topo após a rotação) */}
+      {/* Toolbar horizontal no topo (portrait) */}
       <div
         style={{
-          width: 56,
+          height: TOOLBAR,
           flexShrink: 0,
           display: "flex",
-          flexDirection: "column",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "10px 0",
+          padding: "0 16px",
           borderBottom: "1px solid #e5e7eb",
           background: "#f9fafb",
         }}
@@ -155,11 +230,18 @@ function SignatureFullscreenOverlay({
             padding: 8,
             borderRadius: 8,
             color: "#6b7280",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 14,
           }}
-          aria-label="Fechar"
         >
-          <X size={22} />
+          <X size={20} />
+          Cancelar
         </button>
+        <span style={{ fontSize: 13, color: "#6b7280" }}>
+          Gire o celular para assinar
+        </span>
         <button
           type="button"
           onClick={handleConfirm}
@@ -168,40 +250,64 @@ function SignatureFullscreenOverlay({
             background: "var(--cm-green-primary, #16a34a)",
             border: "none",
             cursor: "pointer",
-            padding: 10,
+            padding: "8px 14px",
             borderRadius: 10,
             color: "#fff",
             display: "flex",
-            flexDirection: "column",
             alignItems: "center",
-            gap: 4,
-            fontSize: 11,
+            gap: 6,
+            fontSize: 14,
             fontWeight: 600,
           }}
-          aria-label="Salvar assinatura"
         >
           {salvando ? (
-            <Loader2 size={20} className="cm-spinner" />
+            <Loader2 size={18} className="cm-spinner" />
           ) : (
-            <Save size={20} />
+            <>
+              <Save size={18} />
+              Salvar
+            </>
           )}
         </button>
       </div>
 
-      {/* Área do canvas ocupa o restante */}
-      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-        {dims.w > 0 && (
-          <SignaturePad
-            ref={padRef}
-            width={dims.w}
-            height={dims.h}
-            className="touch-none cursor-crosshair"
+      {/* Área do canvas: rotacionada 90° CW via CSS para aparecer landscape */}
+      <div
+        style={{
+          flex: 1,
+          position: "relative",
+          overflow: "hidden",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {canvasW > 0 && canvasH > 0 && (
+          <canvas
+            ref={canvasRef}
+            style={{
+              width: canvasW,
+              height: canvasH,
+              // Rotaciona visualmente: o canvas fica em landscape dentro da tela portrait
+              transform: "rotate(90deg)",
+              transformOrigin: "center center",
+              background: "#fff",
+              touchAction: "none",
+              cursor: "crosshair",
+              border: "1px solid #e5e7eb",
+              borderRadius: 8,
+              boxShadow: "0 1px 6px rgba(0,0,0,0.08)",
+            }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
           />
         )}
         <p
           style={{
             position: "absolute",
-            bottom: 8,
+            bottom: 12,
             left: 0,
             right: 0,
             textAlign: "center",
