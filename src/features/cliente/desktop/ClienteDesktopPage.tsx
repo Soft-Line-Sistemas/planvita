@@ -515,12 +515,9 @@ export default function ConsultaClientePage() {
       if (mode === "inline") {
         params.set("mode", "inline");
       }
-      if (tenantAtivo) {
-        params.set("tenant", tenantAtivo);
-      }
       return params.toString() ? `${base}?${params.toString()}` : base;
     },
-    [tenantAtivo],
+    [],
   );
 
   const selecionarTenant = useCallback((tenant: string) => {
