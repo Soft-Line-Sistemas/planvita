@@ -109,13 +109,8 @@ export default function CarteirinhaAsImage({
           box-shadow: 0 25px 50px rgba(0,0,0,.25);
           display:flex;flex-direction:column;justify-content:space-between;gap:0;
         ">
-          <div style="
-            position:absolute;left:-170px;bottom:-140px;width:480px;height:480px;border-radius:9999px;
-            background:radial-gradient(circle at center, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 68%);
-            pointer-events:none;
-          "></div>
 
-          <div style="position:relative;z-index:1;">
+          <div style="position:relative;z-index:1;max-width:63%;">
             <span style="
               display:inline-flex;align-items:center;border:1px solid rgba(17,17,17,0.45);border-radius:999px;
               padding:6px 14px;color:#111111;font-size:14px;font-weight:600;margin-bottom:18px;
@@ -126,10 +121,10 @@ export default function CarteirinhaAsImage({
             <p style="margin:0;color:#111111;font-size:16px;line-height:1.65;">Vigência ${vigFim}</p>
           </div>
 
-          <div style="position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:space-between;gap:10px;">
+          <div style="position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:space-between;gap:10px;max-width:63%;">
             <div style="display:flex;flex-direction:column;gap:12px;">
               <span style="
-                display:inline-flex;align-items:center;background:${COLORS.emerald500_20};border-radius:22px;
+                display:inline-flex;align-items:center;background:rgba(171,240,12,1);border-radius:22px;
                 padding:6px 14px;color:#1E5A14;font-size:16px;font-weight:700;
               ">Plano: <strong style="margin-left:4px;">${planoNome}</strong></span>
               <span style="font-size:13px;letter-spacing:.3px;color:#111111;">Agora você faz parte da rede Planvita</span>
