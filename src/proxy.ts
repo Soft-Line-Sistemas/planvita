@@ -44,10 +44,6 @@ export function proxy(req: NextRequest) {
   const subdomain = getSubdomainFromHost(host);
   const onAppSubdomain = isAppSubdomain(host);
 
-  if (pathname.startsWith("/api")) {
-    return new NextResponse("Not Found", { status: 404 });
-  }
-
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
