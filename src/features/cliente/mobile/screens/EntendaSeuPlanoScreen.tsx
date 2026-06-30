@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { ClientePlano } from "@/types/ClientePlano";
+import { buildPlanoHistorico } from "@/utils/planoHistorico";
 
 type Props = {
   cliente: ClientePlano;
@@ -42,15 +43,6 @@ function formatCpf(cpf: string) {
 function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
-
-type HistoricoPlanoItem = {
-  id: string;
-  titulo: string;
-  data: string;
-  descricao: string;
-  destaque?: boolean;
-  sortDate: string;
-};
 
 const STATUS_BADGE: Record<
   string,
@@ -96,71 +88,7 @@ export default function EntendaSeuPlanoScreen({
     color: "#666",
     label: plano.status,
   };
-  const dataInicioVigencia = new Date(plano.vigencia.inicio);
-  const dataValidaInicio = !isNaN(dataInicioVigencia.getTime());
-  const dataContratacao = dataValidaInicio
-    ? new Date(dataInicioVigencia.getTime() - 24 * 60 * 60 * 1000)
-    : null;
-  const temClubeBeneficios = plano.cobertura.some((item) =>
-    item.toLowerCase().includes("benef"),
-  );
-  const historicoPlano: HistoricoPlanoItem[] = [
-    {
-      id: "status-atual",
-      titulo: "Status do plano",
-      data: formatDate(new Date().toISOString()),
-      descricao: `Plano ${badge.label.toLowerCase()}, contrato vigente e acompanhamento cadastral disponível pelo aplicativo.`,
-      destaque: true,
-      sortDate: new Date().toISOString(),
-    },
-    ...(temClubeBeneficios
-      ? [
-          {
-            id: "beneficios",
-            titulo: "Benefícios complementares habilitados",
-            data: dataValidaInicio
-              ? formatDate(
-                  new Date(
-                    dataInicioVigencia.getTime() + 15 * 24 * 60 * 60 * 1000,
-                  ).toISOString(),
-                )
-              : formatDate(new Date().toISOString()),
-            descricao:
-              "Rede de parceiros e benefícios do plano disponibilizada conforme a cobertura contratada.",
-            sortDate: dataValidaInicio
-              ? new Date(
-                  dataInicioVigencia.getTime() + 15 * 24 * 60 * 60 * 1000,
-                ).toISOString()
-              : new Date().toISOString(),
-          },
-        ]
-      : []),
-    ...(dataValidaInicio
-      ? [
-          {
-            id: "implantacao",
-            titulo: "Implantação da vigência",
-            data: formatDate(plano.vigencia.inicio),
-            descricao: `Ativação do plano ${plano.nome} com início da cobertura prevista em contrato.`,
-            sortDate: plano.vigencia.inicio,
-          },
-        ]
-      : []),
-    ...(dataContratacao
-      ? [
-          {
-            id: "contratacao",
-            titulo: "Contratação",
-            data: formatDate(dataContratacao.toISOString()),
-            descricao:
-              "Proposta formalizada e contrato emitido para adesão do titular ao plano.",
-            sortDate: dataContratacao.toISOString(),
-          },
-        ]
-      : []),
-  ].sort(
-    (a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime(),
-  );
+  const historicoPlano = buildPlanoHistorico(cliente);
 
   useEffect(() => {
     if (initialSection !== "historico") return;
@@ -575,8 +503,9 @@ export default function EntendaSeuPlanoScreen({
                       width: 11,
                       height: 11,
                       borderRadius: "50%",
-                      background:
-                        index === 0 ? "var(--cm-green-primary)" : "#D3D3D3",
+                      background: item.concluido
+                        ? "var(--cm-green-primary)"
+                        : "#D3D3D3",
                     }}
                   />
                   {index < historicoPlano.length - 1 && (
@@ -587,8 +516,9 @@ export default function EntendaSeuPlanoScreen({
                         top: 16,
                         width: 2,
                         height: "calc(100% + 16px)",
-                        background:
-                          index === 0 ? "var(--cm-green-primary)" : "#D3D3D3",
+                        background: item.concluido
+                          ? "var(--cm-green-primary)"
+                          : "#D3D3D3",
                       }}
                     />
                   )}
@@ -609,7 +539,7 @@ export default function EntendaSeuPlanoScreen({
                       color: "#535353",
                     }}
                   >
-                    {item.data}
+                    {formatDate(item.data)}
                   </p>
                   <p
                     style={{

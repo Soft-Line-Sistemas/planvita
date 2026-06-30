@@ -3,6 +3,7 @@ export interface PlanoDetalhado {
   nome: string;
   codigo: string;
   status: "ativo" | "suspenso" | "inativo" | string;
+  ativadoEm?: string | null;
   vigencia: {
     inicio: string;
     fim: string;
@@ -34,6 +35,11 @@ export interface CartaoPagamento {
   holderName: string;
 }
 
+export interface AssinaturaPlano {
+  tipo: string;
+  createdAt?: string | null;
+}
+
 export interface ClientePlano {
   titularId?: number | string | null;
   tenantSlug?: string | null;
@@ -45,8 +51,10 @@ export interface ClientePlano {
   telefone?: string;
   plano: PlanoDetalhado;
   dependentes?: DependentePlano[];
+  dataContratacao?: string | null;
   pagamentoConfirmadoEm?: string | null;
   assinaturasPendentes?: boolean;
+  assinaturas?: AssinaturaPlano[];
   metodoPagamentoAtual?: "CREDIT_CARD" | "PIX" | "BOLETO" | null;
   cartaoPagamento?: CartaoPagamento | null;
 }

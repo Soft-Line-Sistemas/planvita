@@ -43,7 +43,10 @@ type TitularResponse = {
   asaasCardLast4?: string | null;
   asaasCardBrand?: string | null;
   asaasCardHolderName?: string | null;
-  assinaturas?: Array<{ tipo?: string | null }> | null;
+  assinaturas?: Array<{
+    tipo?: string | null;
+    createdAt?: string | null;
+  }> | null;
   fotoPerfil?: {
     id?: number | null;
     arquivoUrl?: string | null;
@@ -61,6 +64,12 @@ type TitularResponse = {
 };
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
+const ASSINATURAS_OBRIGATORIAS = [
+  "TITULAR_ASSINATURA_1",
+  "TITULAR_ASSINATURA_2",
+  "CORRESPONSAVEL_ASSINATURA_1",
+  "CORRESPONSAVEL_ASSINATURA_2",
+];
 
 const startOfDay = (value: string) => {
   const date = new Date(value);
@@ -86,6 +95,19 @@ const normalizeMetodoPagamento = (
     return "BOLETO";
   }
   return null;
+};
+
+const getLatestDate = (...values: Array<string | null | undefined>) => {
+  const validValues = values.filter((value): value is string => {
+    if (!value) return false;
+    return !Number.isNaN(new Date(value).getTime());
+  });
+
+  if (!validValues.length) return null;
+
+  return validValues.reduce((latest, current) =>
+    new Date(current).getTime() > new Date(latest).getTime() ? current : latest,
+  );
 };
 
 const calculateRemainingCarencia = (
@@ -145,9 +167,6 @@ export const mapTitularToCarteirinha = (
   );
   const valorTotalMensal = valorMensalBase + valorAdicionalMensal;
 
-  const vigenciaInicio = titular?.dataContratacao ?? new Date().toISOString();
-  const vigenciaFim = addMonths(vigenciaInicio, plano?.vigenciaMeses ?? 12);
-
   const numeroCarteirinha = `PV-${String(titular?.id ?? "000000").padStart(
     6,
     "0",
@@ -157,9 +176,11 @@ export const mapTitularToCarteirinha = (
   const statusMapped: ClientePlano["plano"]["status"] =
     statusPlano === "ativo"
       ? "ativo"
-      : statusPlano === "suspenso"
-        ? "suspenso"
-        : "inativo";
+      : statusPlano === "pendente_assinatura"
+        ? "pendente_assinatura"
+        : statusPlano === "suspenso"
+          ? "suspenso"
+          : "inativo";
 
   const fotoPerfilQuery = titular?.fotoPerfil?.dataUpload
     ? `?t=${encodeURIComponent(titular.fotoPerfil.dataUpload)}`
@@ -168,18 +189,37 @@ export const mapTitularToCarteirinha = (
     ? `${getApiUrl()}/${API_VERSION}/titular/me/foto/arquivo${fotoPerfilQuery}`
     : null;
 
-  const ASSINATURAS_OBRIGATORIAS = [
-    "TITULAR_ASSINATURA_1",
-    "TITULAR_ASSINATURA_2",
-    "CORRESPONSAVEL_ASSINATURA_1",
-    "CORRESPONSAVEL_ASSINATURA_2",
-  ];
-  const tiposAssinados = new Set(
-    (titular?.assinaturas ?? []).map((a) => a?.tipo ?? ""),
+  const assinaturas =
+    titular?.assinaturas?.map((assinatura) => ({
+      tipo: assinatura?.tipo ?? "",
+      createdAt: assinatura?.createdAt ?? null,
+    })) ?? [];
+  const tiposAssinados = new Map(
+    assinaturas.map((assinatura) => [assinatura.tipo, assinatura]),
   );
   const assinaturasPendentes = ASSINATURAS_OBRIGATORIAS.some(
     (tipo) => !tiposAssinados.has(tipo),
   );
+  const ultimaAssinaturaObrigatoriaEm = assinaturasPendentes
+    ? null
+    : getLatestDate(
+        ...ASSINATURAS_OBRIGATORIAS.map(
+          (tipo) => tiposAssinados.get(tipo)?.createdAt ?? null,
+        ),
+      );
+  const ativadoEm =
+    titular?.pagamentoConfirmadoEm && ultimaAssinaturaObrigatoriaEm
+      ? getLatestDate(
+          titular.pagamentoConfirmadoEm,
+          ultimaAssinaturaObrigatoriaEm,
+        )
+      : null;
+  const vigenciaInicio =
+    ativadoEm ??
+    titular?.pagamentoConfirmadoEm ??
+    titular?.dataContratacao ??
+    new Date().toISOString();
+  const vigenciaFim = addMonths(vigenciaInicio, plano?.vigenciaMeses ?? 12);
 
   const cartaoPagamento = titular?.asaasCardLast4
     ? {
@@ -201,8 +241,10 @@ export const mapTitularToCarteirinha = (
     numeroCarteirinha,
     email: titular?.email ?? undefined,
     telefone: titular?.telefone ?? undefined,
+    dataContratacao: titular?.dataContratacao ?? null,
     pagamentoConfirmadoEm: titular?.pagamentoConfirmadoEm ?? null,
     assinaturasPendentes,
+    assinaturas,
     cartaoPagamento,
     metodoPagamentoAtual,
     plano: {
@@ -210,6 +252,7 @@ export const mapTitularToCarteirinha = (
       nome: plano?.nome ?? "Plano não informado",
       codigo: plano?.codigo ?? `PLN-${plano?.id ?? "N/D"}`,
       status: statusMapped,
+      ativadoEm,
       vigencia: {
         inicio: vigenciaInicio,
         fim: vigenciaFim,

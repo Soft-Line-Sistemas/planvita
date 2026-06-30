@@ -94,6 +94,7 @@ import Image from "next/image";
 import { AsaasWingsMark } from "@/components/ui/AsaasWingsMark";
 import api from "@/utils/api";
 import { formatDatePtBr } from "@/utils/date";
+import { buildPlanoHistorico } from "@/utils/planoHistorico";
 import {
   listarVantagensCliente,
   listarCategoriasCliente,
@@ -2280,30 +2281,20 @@ export default function ConsultaClientePage() {
                       </h2>
                     </div>
                     <div className="relative pl-5 border-l-2 border-[#e8f5e3] space-y-6">
-                      <div className="relative">
-                        <div className="absolute -left-[25px] top-1 h-3.5 w-3.5 rounded-full bg-[#3a9b28] ring-4 ring-white border border-[#c5e3be]" />
-                        <p className="text-sm font-semibold text-slate-800">
-                          Situação Atual
-                        </p>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          {formatDate(new Date().toISOString())}
-                        </p>
-                        <p className="text-xs text-slate-600 mt-1 bg-slate-50 rounded px-2 py-1">
-                          Plano {clienteExibicao.plano.status}
-                        </p>
-                      </div>
-                      <div className="relative">
-                        <div className="absolute -left-[25px] top-1 h-3.5 w-3.5 rounded-full bg-slate-300 ring-4 ring-white" />
-                        <p className="text-sm font-semibold text-slate-800">
-                          Contratação
-                        </p>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          {formatDate(cliente.plano.vigencia.inicio)}
-                        </p>
-                        <p className="text-xs text-slate-600 mt-1 bg-slate-50 rounded px-2 py-1">
-                          Início da vigência do plano {cliente.plano.nome}
-                        </p>
-                      </div>
+                      {buildPlanoHistorico(clienteExibicao).map((item) => (
+                        <div key={item.id} className="relative">
+                          <div className="absolute -left-[25px] top-1 h-3.5 w-3.5 rounded-full bg-[#3a9b28] ring-4 ring-white border border-[#c5e3be]" />
+                          <p className="text-sm font-semibold text-slate-800">
+                            {item.titulo}
+                          </p>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            {formatDate(item.data)}
+                          </p>
+                          <p className="text-xs text-slate-600 mt-1 bg-slate-50 rounded px-2 py-1">
+                            {item.descricao}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
