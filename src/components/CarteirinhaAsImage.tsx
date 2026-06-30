@@ -566,7 +566,7 @@ export default function CarteirinhaAsImage({
                     className="absolute pointer-events-none"
                     style={{
                       right: "12.2%",
-                      top: "-50px",
+                      top: "-11.8%",
                       width: "11.5%",
                       transform: "rotate(-90deg)",
                       transformOrigin: "center",

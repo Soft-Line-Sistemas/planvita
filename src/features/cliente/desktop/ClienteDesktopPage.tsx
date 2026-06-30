@@ -32,6 +32,18 @@ import {
   HeartHandshake,
   BadgeCheck,
   Flower2,
+  Headset,
+  Settings,
+  Gift,
+  BookOpen,
+  Phone,
+  MessageCircle,
+  LogOut,
+  KeyRound,
+  ArrowRight,
+  Tag,
+  Lock,
+  ClipboardList,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,6 +94,19 @@ import Image from "next/image";
 import { AsaasWingsMark } from "@/components/ui/AsaasWingsMark";
 import api from "@/utils/api";
 import { formatDatePtBr } from "@/utils/date";
+import {
+  listarVantagensCliente,
+  listarCategoriasCliente,
+  obterVantagemCliente,
+  registrarResgate,
+} from "@/services/parcerias.service";
+import {
+  alterarPagamentoCliente,
+  type CreditCardPayload,
+  type MetodoPagamentoBillingType,
+} from "@/services/cliente-pagamento.service";
+import { changePassword } from "@/services/auth-cliente.service";
+import type { ParceriaVantagemResumo } from "@/types/Parcerias";
 
 const normalizeCpf = (value: string) => value.replace(/\D/g, "");
 
@@ -259,7 +284,14 @@ export default function ConsultaClientePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [abaAtiva, setAbaAtiva] = useState<
-    "carteirinha" | "plano" | "dependentes" | "financeiro" | "assinaturas"
+    | "carteirinha"
+    | "plano"
+    | "dependentes"
+    | "financeiro"
+    | "assinaturas"
+    | "atendimento"
+    | "parcerias"
+    | "ajustes"
   >("carteirinha");
   const [assinaturaEmProgresso, setAssinaturaEmProgresso] = useState<
     string | null
@@ -1244,12 +1276,15 @@ export default function ConsultaClientePage() {
   // ─── helpers de navegação do dashboard ──────────────────────────
   const navItems = [
     { id: "carteirinha", label: "Carteirinha", Icon: IdCard },
-    { id: "plano", label: "Meu Plano", Icon: FileText },
+    { id: "plano", label: "Meu Plano", Icon: BookOpen },
     ...(cliente?.dependentes && cliente.dependentes.length > 0
       ? [{ id: "dependentes", label: "Dependentes", Icon: Users }]
       : []),
     { id: "financeiro", label: "Financeiro", Icon: CreditCard },
     { id: "assinaturas", label: "Assinaturas", Icon: PenLine },
+    { id: "atendimento", label: "Atendimento", Icon: Headset },
+    { id: "parcerias", label: "Parcerias", Icon: Gift },
+    { id: "ajustes", label: "Ajustes", Icon: Settings },
   ] as { id: typeof abaAtiva; label: string; Icon: React.ElementType }[];
 
   return (
@@ -1949,9 +1984,17 @@ export default function ConsultaClientePage() {
                         : "bg-rose-100 text-rose-700 border-rose-200"
                     }`}
                   >
-                    {clienteExibicao.plano.status === "ativo"
-                      ? "✓ Plano Ativo"
-                      : "⚠ Plano Suspenso"}
+                    <span className="flex items-center gap-1">
+                      {clienteExibicao.plano.status === "ativo" ? (
+                        <>
+                          <CheckCircle className="h-3 w-3" /> Plano Ativo
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="h-3 w-3" /> Plano Suspenso
+                        </>
+                      )}
+                    </span>
                   </Badge>
                 </div>
               )}
@@ -2069,7 +2112,7 @@ export default function ConsultaClientePage() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
                       <div className="h-10 w-10 rounded-xl bg-[#e8f5e3] flex items-center justify-center">
-                        <span className="text-lg">📋</span>
+                        <ClipboardList className="h-5 w-5 text-[#2d7a1f]" />
                       </div>
                       <div>
                         <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">
@@ -2082,7 +2125,7 @@ export default function ConsultaClientePage() {
                     </div>
                     <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
                       <div className="h-10 w-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                        <span className="text-lg">💰</span>
+                        <CreditCard className="h-5 w-5 text-blue-600" />
                       </div>
                       <div>
                         <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">
@@ -2097,11 +2140,11 @@ export default function ConsultaClientePage() {
                       <div
                         className={`h-10 w-10 rounded-xl flex items-center justify-center ${clienteExibicao.plano.status === "ativo" ? "bg-[#e8f5e3]" : "bg-rose-100"}`}
                       >
-                        <span className="text-lg">
-                          {clienteExibicao.plano.status === "ativo"
-                            ? "✅"
-                            : "⚠️"}
-                        </span>
+                        {clienteExibicao.plano.status === "ativo" ? (
+                          <CheckCircle className="h-5 w-5 text-[#2d7a1f]" />
+                        ) : (
+                          <AlertCircle className="h-5 w-5 text-rose-600" />
+                        )}
                       </div>
                       <div>
                         <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">
@@ -2120,7 +2163,8 @@ export default function ConsultaClientePage() {
                   </div>
                   <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
                     <h2 className="text-sm font-semibold text-slate-700 mb-5 flex items-center gap-2">
-                      <span>🪪</span> Carteirinha Digital
+                      <IdCard className="h-4 w-4 text-[#3a9b28]" /> Carteirinha
+                      Digital
                     </h2>
                     <CarteirinhaAsImage
                       cliente={clienteExibicao}
@@ -2274,7 +2318,7 @@ export default function ConsultaClientePage() {
                   <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
                     <div className="flex items-center gap-2 mb-5">
                       <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                        <span className="text-base">👨‍👩‍👧</span>
+                        <Users className="h-4 w-4 text-blue-600" />
                       </div>
                       <div>
                         <h2 className="text-sm font-semibold text-slate-800">
@@ -2352,8 +2396,8 @@ export default function ConsultaClientePage() {
                                   )}
                                 </Badge>
                               ) : (
-                                <Badge className="w-fit bg-[#e8f5e3] text-[#1e5a14] border-[#7cc46e] text-xs">
-                                  ✓ Coberto
+                                <Badge className="w-fit bg-[#e8f5e3] text-[#1e5a14] border-[#7cc46e] text-xs flex items-center gap-1">
+                                  <CheckCircle className="h-3 w-3" /> Coberto
                                 </Badge>
                               )}
                             </div>
@@ -2362,7 +2406,7 @@ export default function ConsultaClientePage() {
                       </div>
                     ) : (
                       <div className="text-center py-12 text-slate-400">
-                        <span className="text-4xl block mb-3">👨‍👩‍👧</span>
+                        <Users className="h-10 w-10 mx-auto mb-3 text-slate-200" />
                         <p className="text-sm">
                           Nenhum dependente cadastrado neste plano.
                         </p>
@@ -2378,59 +2422,66 @@ export default function ConsultaClientePage() {
                   {/* resumo financeiro */}
                   {contasFinanceiras.length > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      {[
-                        {
-                          label: "Total de Faturas",
-                          value: contasFinanceiras.length,
-                          unit: "faturas",
-                          color: "bg-slate-100 text-slate-600",
-                          icon: "📄",
-                        },
-                        {
-                          label: "Pagas",
-                          value: contasFinanceiras.filter((c) =>
-                            ["PAGO", "RECEBIDO"].includes(
-                              c.status.toUpperCase(),
-                            ),
-                          ).length,
-                          unit: "faturas",
-                          color: "bg-[#e8f5e3] text-[#2d7a1f]",
-                          icon: "✅",
-                        },
-                        {
-                          label: "Pendentes / Vencidas",
-                          value: contasFinanceiras.filter((c) =>
-                            ["PENDENTE", "ATRASADO", "VENCIDO"].includes(
-                              c.status.toUpperCase(),
-                            ),
-                          ).length,
-                          unit: "faturas",
-                          color: "bg-rose-100 text-rose-700",
-                          icon: "⚠️",
-                        },
-                      ].map((stat) => (
-                        <div
-                          key={stat.label}
-                          className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4"
-                        >
-                          <div
-                            className={`h-10 w-10 rounded-xl flex items-center justify-center ${stat.color}`}
-                          >
-                            <span className="text-lg">{stat.icon}</span>
-                          </div>
-                          <div>
-                            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">
-                              {stat.label}
-                            </p>
-                            <p className="text-xl font-bold text-slate-800 mt-0.5">
-                              {stat.value}{" "}
-                              <span className="text-xs font-normal text-slate-400">
-                                {stat.unit}
-                              </span>
-                            </p>
-                          </div>
+                      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                          <FileText className="h-5 w-5 text-slate-600" />
                         </div>
-                      ))}
+                        <div>
+                          <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+                            Total de Faturas
+                          </p>
+                          <p className="text-xl font-bold text-slate-800 mt-0.5">
+                            {contasFinanceiras.length}{" "}
+                            <span className="text-xs font-normal text-slate-400">
+                              faturas
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-xl bg-[#e8f5e3] flex items-center justify-center">
+                          <CheckCircle className="h-5 w-5 text-[#2d7a1f]" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+                            Pagas
+                          </p>
+                          <p className="text-xl font-bold text-slate-800 mt-0.5">
+                            {
+                              contasFinanceiras.filter((c) =>
+                                ["PAGO", "RECEBIDO"].includes(
+                                  c.status.toUpperCase(),
+                                ),
+                              ).length
+                            }{" "}
+                            <span className="text-xs font-normal text-slate-400">
+                              faturas
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-xl bg-rose-100 flex items-center justify-center">
+                          <AlertCircle className="h-5 w-5 text-rose-700" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+                            Pendentes / Vencidas
+                          </p>
+                          <p className="text-xl font-bold text-slate-800 mt-0.5">
+                            {
+                              contasFinanceiras.filter((c) =>
+                                ["PENDENTE", "ATRASADO", "VENCIDO"].includes(
+                                  c.status.toUpperCase(),
+                                ),
+                              ).length
+                            }{" "}
+                            <span className="text-xs font-normal text-slate-400">
+                              faturas
+                            </span>
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -2640,7 +2691,7 @@ export default function ConsultaClientePage() {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                       <div className="flex items-center gap-2">
                         <div className="h-8 w-8 rounded-lg bg-violet-100 flex items-center justify-center">
-                          <span className="text-base">✍️</span>
+                          <PenLine className="h-4 w-4 text-violet-700" />
                         </div>
                         <div>
                           <h2 className="text-sm font-semibold text-slate-800">
@@ -2739,6 +2790,44 @@ export default function ConsultaClientePage() {
                   </div>
                 </div>
               )}
+              {/* ── ATENDIMENTO ── */}
+              {abaAtiva === "atendimento" && (
+                <DesktopAtendimentoSection tenantSlug={tenantAtivo} />
+              )}
+
+              {/* ── PARCERIAS ── */}
+              {abaAtiva === "parcerias" && (
+                <DesktopParceriasSection
+                  onGoAtendimento={() => setAbaAtiva("atendimento")}
+                />
+              )}
+
+              {/* ── AJUSTES ── */}
+              {abaAtiva === "ajustes" && cliente && (
+                <DesktopAjustesSection
+                  cliente={cliente}
+                  onLogout={handleReset}
+                  onPagamentoAlterado={(novoMetodo) => {
+                    setCliente((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            metodoPagamentoAtual:
+                              novoMetodo === "CREDIT_CARD" ||
+                              novoMetodo === "PIX" ||
+                              novoMetodo === "BOLETO"
+                                ? novoMetodo
+                                : prev.metodoPagamentoAtual,
+                            cartaoPagamento:
+                              novoMetodo !== "CREDIT_CARD"
+                                ? null
+                                : prev.cartaoPagamento,
+                          }
+                        : prev,
+                    );
+                  }}
+                />
+              )}
             </main>
           </div>
         </div>
@@ -2774,6 +2863,7 @@ export default function ConsultaClientePage() {
 
               <div className="flex justify-center rounded-md border bg-white p-3">
                 {/* Se o Asaas já retornar imagem/base64, usa direto; se retornar payload, gera QR visual */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={getPixQrImageSrc(pixSelecionado.codigo)}
                   alt="QR Code PIX"
@@ -2844,6 +2934,1113 @@ export default function ConsultaClientePage() {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/* =====================================================================
+   DesktopAtendimentoSection
+   ===================================================================== */
+
+const TENANT_ATENDIMENTO_CONFIG: Record<
+  string,
+  { centralNumber: string; sacNumber: string; whatsappNumber: string }
+> = {
+  bosque: {
+    centralNumber: "71 3034-7323",
+    sacNumber: "71 3034-7323",
+    whatsappNumber: "71 3034-7323",
+  },
+  pax: {
+    centralNumber: "71 3034-7323",
+    sacNumber: "71 3034-7323",
+    whatsappNumber: "71 3034-7323",
+  },
+  lider: {
+    centralNumber: "71 3034-7323",
+    sacNumber: "71 3034-7323",
+    whatsappNumber: "71 3034-7323",
+  },
+};
+
+function DesktopAtendimentoSection({
+  tenantSlug,
+}: {
+  tenantSlug: string | null;
+}) {
+  const config =
+    TENANT_ATENDIMENTO_CONFIG[(tenantSlug ?? "").toLowerCase()] ??
+    TENANT_ATENDIMENTO_CONFIG.bosque;
+  const centralTel = config.centralNumber.replace(/\D/g, "");
+  const sacTel = config.sacNumber.replace(/\D/g, "");
+  const whatsappTel = config.whatsappNumber.replace(/\D/g, "");
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Central de Relacionamento */}
+        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="h-9 w-9 rounded-lg bg-[#e8f5e3] flex items-center justify-center flex-shrink-0">
+              <Phone className="h-4 w-4 text-[#2d7a1f]" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-slate-800">
+                Central de Relacionamento
+              </h2>
+              <p className="text-xs text-slate-400">
+                Consultas, informações e serviços
+              </p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+              <div>
+                <p className="text-xs text-slate-400 font-medium">Telefone</p>
+                <p className="text-sm font-semibold text-slate-800">
+                  {config.centralNumber}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs gap-1.5 text-[#2d7a1f] border-[#c5e3be] hover:bg-[#f2faf0]"
+                onClick={() => window.open(`tel:${centralTel}`, "_self")}
+              >
+                <Phone className="h-3 w-3" /> Ligar
+              </Button>
+            </div>
+            <Button
+              className="w-full bg-[#25d366] hover:bg-[#1da851] text-white gap-2"
+              onClick={() =>
+                window.open(`https://wa.me/55${whatsappTel}`, "_blank")
+              }
+            >
+              <MessageCircle className="h-4 w-4" />
+              Iniciar conversa pelo WhatsApp
+            </Button>
+          </div>
+        </div>
+
+        {/* SAC */}
+        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="h-9 w-9 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+              <Headset className="h-4 w-4 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-slate-800">SAC</h2>
+              <p className="text-xs text-slate-400">
+                Reclamações, cancelamentos e informações
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+            <div>
+              <p className="text-xs text-slate-400 font-medium">Telefone SAC</p>
+              <p className="text-sm font-semibold text-slate-800">
+                {config.sacNumber}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50"
+              onClick={() => window.open(`tel:${sacTel}`, "_self")}
+            >
+              <Phone className="h-3 w-3" /> Ligar
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =====================================================================
+   DesktopParceriasSection
+   ===================================================================== */
+
+function DesktopParceriasSection({
+  onGoAtendimento,
+}: {
+  onGoAtendimento: () => void;
+}) {
+  const [q, setQ] = React.useState("");
+  const [categoriaId, setCategoriaId] = React.useState<number | undefined>();
+  const [slugSelecionado, setSlugSelecionado] = React.useState<string | null>(
+    null,
+  );
+
+  const { data: categorias = [] } = useQuery({
+    queryKey: ["parcerias-desktop", "categorias"],
+    queryFn: listarCategoriasCliente,
+  });
+
+  const {
+    data: vantagens = [],
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["parcerias-desktop", "vantagens", q, categoriaId],
+    queryFn: () => listarVantagensCliente({ q, categoriaId }),
+  });
+
+  const { data: detalhe, isLoading: loadingDetalhe } = useQuery({
+    queryKey: ["parcerias-desktop", "detalhe", slugSelecionado],
+    queryFn: () => obterVantagemCliente(String(slugSelecionado)),
+    enabled: Boolean(slugSelecionado),
+  });
+
+  const handleAcao = async (
+    vantagem: ParceriaVantagemResumo,
+    canal: "CUPOM" | "LINK" | "WHATSAPP",
+    url?: string | null,
+  ) => {
+    if (!vantagem.elegivel) return;
+    try {
+      await registrarResgate(vantagem.id, canal);
+    } catch {
+      /* silent */
+    }
+    if (canal === "CUPOM" && detalhe?.codigoCupom) {
+      await navigator.clipboard.writeText(detalhe.codigoCupom);
+    }
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+        <div className="flex items-center gap-2 mb-5">
+          <div className="h-8 w-8 rounded-lg bg-amber-100 flex items-center justify-center">
+            <Gift className="h-4 w-4 text-amber-600" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-slate-800">
+              Parcerias e Vantagens
+            </h2>
+            <p className="text-xs text-slate-400">
+              Descontos e benefícios exclusivos para membros do plano
+            </p>
+          </div>
+        </div>
+
+        {/* Busca + categorias */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-5">
+          <input
+            className="flex-1 h-9 px-3 rounded-lg border border-slate-200 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#3a9b28]/30 focus:border-[#3a9b28]"
+            placeholder="Buscar parceiro ou vantagem..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <div className="flex gap-2 overflow-x-auto">
+            <button
+              type="button"
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition ${!categoriaId ? "bg-[#2d7a1f] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+              onClick={() => setCategoriaId(undefined)}
+            >
+              Todas
+            </button>
+            {categorias.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition ${categoriaId === c.id ? "bg-[#2d7a1f] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                onClick={() => setCategoriaId(c.id)}
+              >
+                {c.nome}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {isLoading && (
+          <div className="flex items-center justify-center py-12 text-slate-400 gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span className="text-sm">Carregando vantagens...</span>
+          </div>
+        )}
+        {isError && (
+          <p className="text-sm text-rose-600 py-4">
+            Falha ao carregar vantagens.
+          </p>
+        )}
+        {!isLoading && !isError && vantagens.length === 0 && (
+          <div className="text-center py-12 text-slate-400">
+            <Gift className="h-10 w-10 mx-auto mb-3 text-slate-200" />
+            <p className="text-sm font-semibold text-slate-600">Em breve!</p>
+            <p className="text-xs mt-1">
+              Estamos preparando parcerias e vantagens exclusivas para os
+              membros do plano.
+            </p>
+          </div>
+        )}
+        {!isLoading && vantagens.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {vantagens.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setSlugSelecionado(item.slug)}
+                className="text-left p-4 rounded-xl border border-slate-100 hover:border-[#c5e3be] hover:bg-[#f2faf0]/50 transition-all"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                    <Tag className="h-4 w-4 text-amber-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 truncate">
+                      {item.titulo}
+                    </p>
+                    <p className="text-xs text-slate-500 truncate">
+                      {item.descricaoCurta || item.parceiro.nome}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {item.parceiro.nome}
+                      {item.parceiro.cidade
+                        ? ` • ${item.parceiro.cidade}/${item.parceiro.uf ?? ""}`
+                        : ""}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mt-3">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                    {item.tipo}
+                  </span>
+                  <span
+                    className={`text-xs ${item.elegivel ? "text-[#2d7a1f]" : "text-rose-600"}`}
+                  >
+                    {item.elegivel
+                      ? "Disponível"
+                      : item.motivoBloqueio || "Indisponível"}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Modal detalhe */}
+      <Dialog
+        open={Boolean(slugSelecionado)}
+        onOpenChange={(open) => {
+          if (!open) setSlugSelecionado(null);
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {detalhe?.titulo ??
+                (loadingDetalhe ? "Carregando..." : "Vantagem")}
+            </DialogTitle>
+          </DialogHeader>
+          {loadingDetalhe ? (
+            <div className="flex items-center gap-2 py-6 text-slate-400 justify-center">
+              <Loader2 className="h-4 w-4 animate-spin" /> Carregando
+              detalhes...
+            </div>
+          ) : detalhe ? (
+            <div className="space-y-4">
+              <p className="text-sm text-slate-600">
+                {detalhe.descricaoCompleta || detalhe.descricaoCurta}
+              </p>
+              {detalhe.regrasUso && (
+                <p className="text-xs text-slate-400 border-t pt-3">
+                  {detalhe.regrasUso}
+                </p>
+              )}
+              {!detalhe.elegivel && detalhe.motivoBloqueio && (
+                <Alert variant="destructive" className="py-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{detalhe.motivoBloqueio}</AlertDescription>
+                </Alert>
+              )}
+              <div className="flex gap-2 flex-wrap">
+                {detalhe.codigoCupom && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-xs"
+                    onClick={() => handleAcao(detalhe, "CUPOM")}
+                    disabled={!detalhe.elegivel}
+                  >
+                    <Copy className="h-3 w-3" /> Copiar cupom
+                  </Button>
+                )}
+                {detalhe.linkResgate && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-xs"
+                    onClick={() =>
+                      handleAcao(detalhe, "LINK", detalhe.linkResgate)
+                    }
+                    disabled={!detalhe.elegivel}
+                  >
+                    <ExternalLink className="h-3 w-3" /> Abrir link
+                  </Button>
+                )}
+                {detalhe.whatsapp && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-xs"
+                    onClick={() =>
+                      handleAcao(
+                        detalhe,
+                        "WHATSAPP",
+                        `https://wa.me/${detalhe.whatsapp?.replace(/\D/g, "")}`,
+                      )
+                    }
+                    disabled={!detalhe.elegivel}
+                  >
+                    <MessageCircle className="h-3 w-3" /> WhatsApp
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-slate-400">
+                Dúvidas?{" "}
+                <button
+                  type="button"
+                  className="text-[#3a9b28] underline font-medium"
+                  onClick={() => {
+                    setSlugSelecionado(null);
+                    onGoAtendimento();
+                  }}
+                >
+                  Fale com nosso atendimento
+                </button>
+              </p>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+/* =====================================================================
+   DesktopAjustesSection
+   ===================================================================== */
+
+type CardDesktopValues = {
+  holderName: string;
+  holderCpf: string;
+  number: string;
+  expiryMonth: string;
+  expiryYear: string;
+  ccv: string;
+};
+
+function formatCardNumDesktop(v: string) {
+  return v
+    .replace(/\D/g, "")
+    .slice(0, 19)
+    .replace(/(.{4})/g, "$1 ")
+    .trim();
+}
+function formatCpfDesktop(v: string) {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  return d
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
+function validateCardDesktop(card: CardDesktopValues) {
+  const errors: Partial<Record<keyof CardDesktopValues, string>> = {};
+  if (!card.holderName.trim() || card.holderName.trim().length < 3)
+    errors.holderName = "Informe o nome impresso no cartão.";
+  if (card.holderCpf.replace(/\D/g, "").length !== 11)
+    errors.holderCpf = "CPF do portador inválido.";
+  const digits = card.number.replace(/\D/g, "");
+  if (digits.length < 13 || digits.length > 19)
+    errors.number = "Número do cartão inválido.";
+  const month = Number(card.expiryMonth.replace(/\D/g, ""));
+  if (!month || month < 1 || month > 12) errors.expiryMonth = "Mês inválido.";
+  if (card.expiryYear.replace(/\D/g, "").length < 2)
+    errors.expiryYear = "Ano inválido.";
+  if (card.ccv.replace(/\D/g, "").length < 3) errors.ccv = "CVV inválido.";
+  return errors;
+}
+
+function emptyCardDesktop(): CardDesktopValues {
+  return {
+    holderName: "",
+    holderCpf: "",
+    number: "",
+    expiryMonth: "",
+    expiryYear: "",
+    ccv: "",
+  };
+}
+
+function DesktopAjustesSection({
+  cliente,
+  onLogout,
+  onPagamentoAlterado,
+}: {
+  cliente: ClientePlano;
+  onLogout: () => void;
+  onPagamentoAlterado?: (novoMetodo: string) => void;
+}) {
+  const [subView, setSubView] = React.useState<
+    "menu" | "senha" | "pagamento-menu" | "trocar-metodo" | "atualizar-cartao"
+  >("menu");
+  const [pwdCurrent, setPwdCurrent] = React.useState("");
+  const [pwdNew, setPwdNew] = React.useState("");
+  const [pwdConfirm, setPwdConfirm] = React.useState("");
+  const [pwdLoading, setPwdLoading] = React.useState(false);
+  const [pwdError, setPwdError] = React.useState<string | null>(null);
+  const [pwdSuccess, setPwdSuccess] = React.useState(false);
+
+  const [card, setCard] = React.useState<CardDesktopValues>(emptyCardDesktop());
+  const [cardErrors, setCardErrors] = React.useState<
+    Partial<Record<keyof CardDesktopValues, string>>
+  >({});
+  const [novoMetodo, setNovoMetodo] =
+    React.useState<MetodoPagamentoBillingType>("PIX");
+  const [pagLoading, setPagLoading] = React.useState(false);
+  const [pagError, setPagError] = React.useState<string | null>(null);
+  const [pagSuccess, setPagSuccess] = React.useState(false);
+
+  const metodoAtual = cliente.metodoPagamentoAtual;
+  const cartao = cliente.cartaoPagamento;
+
+  const labelMetodo = (m?: string | null) => {
+    if (m === "CREDIT_CARD") return "Cartão de crédito";
+    if (m === "PIX") return "PIX";
+    if (m === "BOLETO") return "Boleto";
+    return "—";
+  };
+
+  const handleSenhaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwdError(null);
+    if (!pwdCurrent) {
+      setPwdError("Informe sua senha atual.");
+      return;
+    }
+    const validacao = validatePassword(pwdNew);
+    if (validacao) {
+      setPwdError(validacao);
+      return;
+    }
+    if (pwdNew !== pwdConfirm) {
+      setPwdError("As senhas não conferem.");
+      return;
+    }
+    setPwdLoading(true);
+    try {
+      await changePassword({
+        currentPassword: pwdCurrent,
+        newPassword: pwdNew,
+      });
+      setPwdSuccess(true);
+      setTimeout(() => {
+        setSubView("menu");
+        setPwdSuccess(false);
+        setPwdCurrent("");
+        setPwdNew("");
+        setPwdConfirm("");
+      }, 2000);
+    } catch (err) {
+      const e = err as { response?: { data?: { message?: unknown } } };
+      setPwdError(
+        typeof e?.response?.data?.message === "string"
+          ? e.response.data.message
+          : "Não foi possível alterar a senha.",
+      );
+    } finally {
+      setPwdLoading(false);
+    }
+  };
+
+  const handleAtualizarCartao = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPagError(null);
+    const errs = validateCardDesktop(card);
+    if (Object.keys(errs).length > 0) {
+      setCardErrors(errs);
+      return;
+    }
+    setPagLoading(true);
+    try {
+      const result = await alterarPagamentoCliente({
+        action: "ATUALIZAR_CARTAO",
+        creditCard: card as CreditCardPayload,
+      });
+      setPagSuccess(true);
+      onPagamentoAlterado?.(result.metodoPagamento);
+      setTimeout(() => {
+        setSubView("pagamento-menu");
+        setPagSuccess(false);
+        setCard(emptyCardDesktop());
+      }, 2000);
+    } catch (err) {
+      const e = err as { response?: { data?: { message?: unknown } } };
+      setPagError(
+        typeof e?.response?.data?.message === "string"
+          ? e.response.data.message
+          : "Não foi possível atualizar o cartão.",
+      );
+    } finally {
+      setPagLoading(false);
+    }
+  };
+
+  const handleTrocarMetodo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPagError(null);
+    if (novoMetodo === "CREDIT_CARD") {
+      const errs = validateCardDesktop(card);
+      if (Object.keys(errs).length > 0) {
+        setCardErrors(errs);
+        return;
+      }
+    }
+    setPagLoading(true);
+    try {
+      const result = await alterarPagamentoCliente({
+        action: "TROCAR_METODO",
+        novoMetodo,
+        creditCard:
+          novoMetodo === "CREDIT_CARD"
+            ? (card as CreditCardPayload)
+            : undefined,
+      });
+      setPagSuccess(true);
+      onPagamentoAlterado?.(result.metodoPagamento);
+      setTimeout(() => {
+        setSubView("pagamento-menu");
+        setPagSuccess(false);
+        setCard(emptyCardDesktop());
+      }, 2000);
+    } catch (err) {
+      const e = err as { response?: { data?: { message?: unknown } } };
+      setPagError(
+        typeof e?.response?.data?.message === "string"
+          ? e.response.data.message
+          : "Não foi possível alterar o método.",
+      );
+    } finally {
+      setPagLoading(false);
+    }
+  };
+
+  const cardFormField = (
+    label: string,
+    field: keyof CardDesktopValues,
+    placeholder: string,
+    inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"],
+    autoComplete?: string,
+    formatter?: (v: string) => string,
+  ) => (
+    <div className="space-y-1">
+      <label className="text-xs font-medium text-slate-600">{label}</label>
+      <input
+        className={`w-full h-9 px-3 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[#3a9b28]/30 focus:border-[#3a9b28] ${cardErrors[field] ? "border-rose-400" : "border-slate-200"}`}
+        value={card[field]}
+        inputMode={inputMode}
+        autoComplete={autoComplete}
+        placeholder={placeholder}
+        onChange={(ev) => {
+          const val = formatter ? formatter(ev.target.value) : ev.target.value;
+          setCard((prev) => ({ ...prev, [field]: val }));
+          setCardErrors((prev) => ({ ...prev, [field]: undefined }));
+        }}
+      />
+      {cardErrors[field] && (
+        <p className="text-xs text-rose-600">{cardErrors[field]}</p>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="space-y-5">
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+        {/* Header */}
+        <div className="flex items-center gap-3 p-6 border-b border-slate-100">
+          {subView !== "menu" && (
+            <button
+              type="button"
+              onClick={() => {
+                setSubView("menu");
+                setPwdError(null);
+                setPagError(null);
+                setCardErrors({});
+              }}
+              className="h-8 w-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition"
+            >
+              <ArrowRight className="h-4 w-4 text-slate-500 rotate-180" />
+            </button>
+          )}
+          <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center">
+            <Settings className="h-4 w-4 text-slate-600" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-slate-800">
+              {subView === "menu"
+                ? "Ajustes"
+                : subView === "senha"
+                  ? "Alterar Senha"
+                  : subView === "pagamento-menu"
+                    ? "Pagamento"
+                    : subView === "trocar-metodo"
+                      ? "Trocar Método"
+                      : "Atualizar Cartão"}
+            </h2>
+            <p className="text-xs text-slate-400">
+              {subView === "menu" ? "Gerencie sua conta e configurações" : ""}
+            </p>
+          </div>
+        </div>
+
+        <div className="p-6">
+          {/* MENU */}
+          {subView === "menu" && (
+            <div className="divide-y divide-slate-100">
+              {[
+                {
+                  icon: KeyRound,
+                  label: "Alterar senha",
+                  desc: "Altere sua senha de acesso",
+                  action: () => setSubView("senha"),
+                },
+                {
+                  icon: CreditCard,
+                  label: "Pagamento",
+                  desc: `Método atual: ${labelMetodo(metodoAtual)}`,
+                  action: () => setSubView("pagamento-menu"),
+                },
+                {
+                  icon: Lock,
+                  label: "Política de Privacidade",
+                  desc: "Veja como seus dados são usados",
+                  action: () => window.open("/privacidade", "_blank"),
+                },
+              ].map(({ icon: Icon, label, desc, action }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={action}
+                  className="w-full flex items-center gap-4 py-4 hover:bg-slate-50 -mx-6 px-6 transition-colors text-left"
+                >
+                  <div className="h-9 w-9 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                    <Icon className="h-4 w-4 text-slate-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-800">
+                      {label}
+                    </p>
+                    <p className="text-xs text-slate-400">{desc}</p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-slate-300" />
+                </button>
+              ))}
+              <div className="pt-4">
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 text-rose-600 border-rose-200 hover:bg-rose-50"
+                  onClick={onLogout}
+                >
+                  <LogOut className="h-4 w-4" /> Sair da conta
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* ALTERAR SENHA */}
+          {subView === "senha" && (
+            <form onSubmit={handleSenhaSubmit} className="space-y-4 max-w-sm">
+              {pwdSuccess ? (
+                <div className="flex flex-col items-center gap-3 py-8">
+                  <div className="h-14 w-14 rounded-full bg-[#e8f5e3] flex items-center justify-center">
+                    <CheckCircle className="h-7 w-7 text-[#3a9b28]" />
+                  </div>
+                  <p className="font-semibold text-slate-800">
+                    Senha alterada com sucesso!
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-600">
+                      Senha atual
+                    </label>
+                    <input
+                      type="password"
+                      className="w-full h-9 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#3a9b28]/30 focus:border-[#3a9b28]"
+                      value={pwdCurrent}
+                      onChange={(e) => setPwdCurrent(e.target.value)}
+                      autoComplete="current-password"
+                      placeholder="Senha atual"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-600">
+                      Nova senha
+                    </label>
+                    <input
+                      type="password"
+                      className="w-full h-9 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#3a9b28]/30 focus:border-[#3a9b28]"
+                      value={pwdNew}
+                      onChange={(e) => setPwdNew(e.target.value)}
+                      autoComplete="new-password"
+                      placeholder="Mín. 8 caracteres"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-600">
+                      Confirmar nova senha
+                    </label>
+                    <input
+                      type="password"
+                      className="w-full h-9 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#3a9b28]/30 focus:border-[#3a9b28]"
+                      value={pwdConfirm}
+                      onChange={(e) => setPwdConfirm(e.target.value)}
+                      autoComplete="new-password"
+                      placeholder="Repita a nova senha"
+                    />
+                  </div>
+                  {pwdError && (
+                    <Alert variant="destructive" className="py-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{pwdError}</AlertDescription>
+                    </Alert>
+                  )}
+                  <Button
+                    type="submit"
+                    className="w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
+                    disabled={pwdLoading}
+                  >
+                    {pwdLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
+                        Salvando...
+                      </>
+                    ) : (
+                      "Alterar senha"
+                    )}
+                  </Button>
+                </>
+              )}
+            </form>
+          )}
+
+          {/* PAGAMENTO — MENU */}
+          {subView === "pagamento-menu" && (
+            <div className="space-y-4 max-w-sm">
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-2">
+                  Método atual
+                </p>
+                <div className="flex items-center gap-3">
+                  {metodoAtual === "CREDIT_CARD" && (
+                    <CreditCard className="h-5 w-5 text-[#3a9b28]" />
+                  )}
+                  {metodoAtual === "PIX" && (
+                    <QrCode className="h-5 w-5 text-[#3a9b28]" />
+                  )}
+                  {(metodoAtual === "BOLETO" || !metodoAtual) && (
+                    <Barcode className="h-5 w-5 text-[#3a9b28]" />
+                  )}
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800">
+                      {labelMetodo(metodoAtual)}
+                    </p>
+                    {cartao && (
+                      <p className="text-xs text-slate-500">
+                        {cartao.brand} •••• {cartao.last4} — {cartao.holderName}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {metodoAtual === "CREDIT_CARD" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCard(emptyCardDesktop());
+                      setCardErrors({});
+                      setPagError(null);
+                      setPagSuccess(false);
+                      setSubView("atualizar-cartao");
+                    }}
+                    className="w-full flex items-center gap-4 py-3 hover:bg-slate-50 transition text-left"
+                  >
+                    <CreditCard className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                    <span className="flex-1 text-sm text-slate-700">
+                      Atualizar cartão de crédito
+                    </span>
+                    <ArrowRight className="h-4 w-4 text-slate-300" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCard(emptyCardDesktop());
+                    setCardErrors({});
+                    setPagError(null);
+                    setPagSuccess(false);
+                    setSubView("trocar-metodo");
+                  }}
+                  className="w-full flex items-center gap-4 py-3 hover:bg-slate-50 transition text-left"
+                >
+                  <ArrowRight className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                  <span className="flex-1 text-sm text-slate-700">
+                    Trocar método de pagamento
+                  </span>
+                  <ArrowRight className="h-4 w-4 text-slate-300" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ATUALIZAR CARTÃO */}
+          {subView === "atualizar-cartao" && (
+            <form
+              onSubmit={handleAtualizarCartao}
+              className="space-y-4 max-w-sm"
+            >
+              {pagSuccess ? (
+                <div className="flex flex-col items-center gap-3 py-8">
+                  <div className="h-14 w-14 rounded-full bg-[#e8f5e3] flex items-center justify-center">
+                    <CheckCircle className="h-7 w-7 text-[#3a9b28]" />
+                  </div>
+                  <p className="font-semibold text-slate-800">
+                    Cartão atualizado!
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs text-slate-500">
+                    O novo cartão substituirá o atual na recorrência mensal.
+                  </p>
+                  {cardFormField(
+                    "Nome no cartão",
+                    "holderName",
+                    "Como está no cartão",
+                    "text",
+                    "cc-name",
+                  )}
+                  {cardFormField(
+                    "CPF do portador",
+                    "holderCpf",
+                    "000.000.000-00",
+                    "numeric",
+                    "off",
+                    formatCpfDesktop,
+                  )}
+                  {cardFormField(
+                    "Número do cartão",
+                    "number",
+                    "0000 0000 0000 0000",
+                    "numeric",
+                    "cc-number",
+                    formatCardNumDesktop,
+                  )}
+                  <div className="grid grid-cols-3 gap-3">
+                    {cardFormField(
+                      "Mês",
+                      "expiryMonth",
+                      "MM",
+                      "numeric",
+                      "cc-exp-month",
+                      (v) => v.replace(/\D/g, "").slice(0, 2),
+                    )}
+                    {cardFormField(
+                      "Ano",
+                      "expiryYear",
+                      "AAAA",
+                      "numeric",
+                      "cc-exp-year",
+                      (v) => v.replace(/\D/g, "").slice(0, 4),
+                    )}
+                    {cardFormField(
+                      "CVV",
+                      "ccv",
+                      "CVV",
+                      "numeric",
+                      "cc-csc",
+                      (v) => v.replace(/\D/g, "").slice(0, 4),
+                    )}
+                  </div>
+                  {pagError && (
+                    <Alert variant="destructive" className="py-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{pagError}</AlertDescription>
+                    </Alert>
+                  )}
+                  <Button
+                    type="submit"
+                    className="w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
+                    disabled={pagLoading}
+                  >
+                    {pagLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
+                        Salvando...
+                      </>
+                    ) : (
+                      "Salvar novo cartão"
+                    )}
+                  </Button>
+                </>
+              )}
+            </form>
+          )}
+
+          {/* TROCAR MÉTODO */}
+          {subView === "trocar-metodo" && (
+            <form onSubmit={handleTrocarMetodo} className="space-y-4 max-w-sm">
+              {pagSuccess ? (
+                <div className="flex flex-col items-center gap-3 py-8">
+                  <div className="h-14 w-14 rounded-full bg-[#e8f5e3] flex items-center justify-center">
+                    <CheckCircle className="h-7 w-7 text-[#3a9b28]" />
+                  </div>
+                  <p className="font-semibold text-slate-800">
+                    Método atualizado!
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    {(
+                      [
+                        "PIX",
+                        "BOLETO",
+                        "CREDIT_CARD",
+                      ] as MetodoPagamentoBillingType[]
+                    ).map((opt) => {
+                      const isAtual = opt === metodoAtual;
+                      const labels: Record<string, string> = {
+                        PIX: "PIX",
+                        BOLETO: "Boleto bancário",
+                        CREDIT_CARD: "Cartão de crédito",
+                      };
+                      const descs: Record<string, string> = {
+                        PIX: "Cobrança instantânea com QR Code.",
+                        BOLETO: "Pagamento por boleto mensal.",
+                        CREDIT_CARD: "Recorrência automática no cartão.",
+                      };
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          disabled={isAtual}
+                          onClick={() => {
+                            setNovoMetodo(opt);
+                            setCardErrors({});
+                          }}
+                          className={`w-full flex items-center gap-3 p-3 rounded-xl border transition ${novoMetodo === opt ? "border-[#3a9b28] bg-[#f2faf0]" : "border-slate-200 hover:border-slate-300"} ${isAtual ? "opacity-50 cursor-not-allowed" : ""}`}
+                        >
+                          <div
+                            className={`h-5 w-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${novoMetodo === opt ? "border-[#3a9b28]" : "border-slate-300"}`}
+                          >
+                            {novoMetodo === opt && (
+                              <div className="h-2.5 w-2.5 rounded-full bg-[#3a9b28]" />
+                            )}
+                          </div>
+                          <div className="text-left">
+                            <p className="text-sm font-medium text-slate-800">
+                              {labels[opt]}
+                              {isAtual && (
+                                <span className="text-xs text-slate-400 ml-2">
+                                  (atual)
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-xs text-slate-400">
+                              {descs[opt]}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {novoMetodo === "CREDIT_CARD" && (
+                    <div className="space-y-3 pt-2 border-t border-slate-100">
+                      {cardFormField(
+                        "Nome no cartão",
+                        "holderName",
+                        "Como está no cartão",
+                        "text",
+                        "cc-name",
+                      )}
+                      {cardFormField(
+                        "CPF do portador",
+                        "holderCpf",
+                        "000.000.000-00",
+                        "numeric",
+                        "off",
+                        formatCpfDesktop,
+                      )}
+                      {cardFormField(
+                        "Número do cartão",
+                        "number",
+                        "0000 0000 0000 0000",
+                        "numeric",
+                        "cc-number",
+                        formatCardNumDesktop,
+                      )}
+                      <div className="grid grid-cols-3 gap-3">
+                        {cardFormField(
+                          "Mês",
+                          "expiryMonth",
+                          "MM",
+                          "numeric",
+                          "cc-exp-month",
+                          (v) => v.replace(/\D/g, "").slice(0, 2),
+                        )}
+                        {cardFormField(
+                          "Ano",
+                          "expiryYear",
+                          "AAAA",
+                          "numeric",
+                          "cc-exp-year",
+                          (v) => v.replace(/\D/g, "").slice(0, 4),
+                        )}
+                        {cardFormField(
+                          "CVV",
+                          "ccv",
+                          "CVV",
+                          "numeric",
+                          "cc-csc",
+                          (v) => v.replace(/\D/g, "").slice(0, 4),
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {pagError && (
+                    <Alert variant="destructive" className="py-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{pagError}</AlertDescription>
+                    </Alert>
+                  )}
+                  <Button
+                    type="submit"
+                    className="w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
+                    disabled={pagLoading || novoMetodo === metodoAtual}
+                  >
+                    {pagLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
+                        Salvando...
+                      </>
+                    ) : (
+                      "Confirmar troca"
+                    )}
+                  </Button>
+                </>
+              )}
+            </form>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

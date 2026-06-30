@@ -2,27 +2,37 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSubdomainFromHost } from "@/lib/getSubdomain";
 
+const SUBDOMAIN_ONLY_ROUTING_ENABLED =
+  process.env.NEXT_PUBLIC_ENABLE_SUBDOMAIN_ONLY_ROUTING === "true";
+
+function getBaseDomain(hostname: string): string {
+  if (hostname === "localhost" || hostname.endsWith(".localhost")) {
+    return "localhost";
+  }
+
+  const parts = hostname.split(".");
+
+  if (SUBDOMAIN_ONLY_ROUTING_ENABLED) {
+    if (parts.length >= 3 && parts.slice(-2).join(".") === "com.br") {
+      return parts.slice(-3).join(".");
+    }
+    return parts.slice(-2).join(".");
+  }
+
+  if (parts.slice(-3).join(".") === "planvita.com.br") {
+    return "planvita.com.br";
+  }
+
+  return parts.slice(-2).join(".");
+}
+
 function getAppHost(req: NextRequest): string {
   const host =
     req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
   const portMatch = host.match(/(:\d+)$/);
   const port = portMatch ? portMatch[1] : "";
   const hostname = host.split(":")[0].toLowerCase();
-
-  // Determine the base domain (without any subdomain)
-  let base: string;
-  if (hostname === "localhost" || hostname.endsWith(".localhost")) {
-    base = "localhost";
-  } else {
-    // production: planvita.com.br is 3 parts; strip any leading subdomain
-    const parts = hostname.split(".");
-    if (parts.slice(-3).join(".") === "planvita.com.br") {
-      base = "planvita.com.br";
-    } else {
-      // fallback genérico: remove um nível de subdomínio
-      base = parts.slice(-2).join(".");
-    }
-  }
+  const base = getBaseDomain(hostname);
 
   return `app.${base}${port}`;
 }
@@ -33,7 +43,15 @@ function isAppSubdomain(host: string): boolean {
   if (hostname === "app.localhost") return true;
   // production: app.planvita.com.br
   if (hostname === "app.planvita.com.br") return true;
+  if (SUBDOMAIN_ONLY_ROUTING_ENABLED) {
+    return hostname.startsWith(`app.${getBaseDomain(hostname)}`);
+  }
   return false;
+}
+
+function isApexHost(host: string): boolean {
+  const hostname = host.split(":")[0].toLowerCase();
+  return hostname === getBaseDomain(hostname);
 }
 
 export function proxy(req: NextRequest) {
@@ -43,11 +61,21 @@ export function proxy(req: NextRequest) {
 
   const subdomain = getSubdomainFromHost(host);
   const onAppSubdomain = isAppSubdomain(host);
+  const onApexHost = isApexHost(host);
 
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
     pathname.match(/\.(.*)$/)
+  ) {
+    return NextResponse.next();
+  }
+
+  if (
+    SUBDOMAIN_ONLY_ROUTING_ENABLED &&
+    onApexHost &&
+    !subdomain &&
+    !onAppSubdomain
   ) {
     return NextResponse.next();
   }

@@ -2,12 +2,32 @@ export default function getTenantFromHost(): string | null {
   if (typeof window === "undefined") return null;
 
   const host = window.location.hostname.toLowerCase();
+  const subdomainOnlyRoutingEnabled =
+    process.env.NEXT_PUBLIC_ENABLE_SUBDOMAIN_ONLY_ROUTING === "true";
+
+  const getBaseDomain = () => {
+    const parts = host.split(".");
+    if (parts.length >= 3 && parts.slice(-2).join(".") === "com.br") {
+      return parts.slice(-3).join(".");
+    }
+    return parts.slice(-2).join(".");
+  };
 
   // localhost com subdomínio (ex: lider.localhost) — ignora app.localhost
   if (host.endsWith(".localhost")) {
     const parts = host.split(".");
     const sub = parts[0] || null;
     return sub === "app" ? null : sub;
+  }
+
+  if (subdomainOnlyRoutingEnabled) {
+    const baseDomain = getBaseDomain();
+    if (host === baseDomain || !host.endsWith(`.${baseDomain}`)) {
+      return null;
+    }
+
+    const subdomain = host.slice(0, -(baseDomain.length + 1));
+    return subdomain === "www" || subdomain === "app" ? null : subdomain;
   }
 
   // domínio principal de produção (ex: lider.planvita.com.br) — ignora app.planvita.com.br
