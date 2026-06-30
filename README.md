@@ -18,6 +18,16 @@ Open [http://localhost:61347](http://localhost:61347) with your browser to see t
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## Domain Routing Flag
+
+Set `NEXT_PUBLIC_ENABLE_SUBDOMAIN_ONLY_ROUTING=true` to enable subdomain-only routing.
+
+When enabled:
+- the frontend stops redirecting the apex domain `/` to `/login/redirecionamento`
+- subdomain detection accepts custom domains such as `campodobosque.com.br`
+
+When disabled or unset, the current `planvita.com.br` behavior remains unchanged.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More
