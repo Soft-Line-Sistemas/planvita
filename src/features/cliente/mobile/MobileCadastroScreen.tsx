@@ -2963,7 +2963,7 @@ export default function MobileCadastroScreen() {
   useEffect(() => {
     let alive = true;
     api
-      .get("/consultor/public", { params: { scope: "global" } })
+      .get("/consultor/public")
       .then((res) => {
         if (!alive) return;
         const list = Array.isArray(res.data) ? res.data : [];

@@ -147,9 +147,7 @@ describe("CadastroClienteWizard consultor link flow", () => {
     render(<CadastroClienteWizard variant="public" />);
 
     await waitFor(() => {
-      expect(apiMock.get).toHaveBeenCalledWith("/consultor/public", {
-        params: { scope: "global" },
-      });
+      expect(apiMock.get).toHaveBeenCalledWith("/consultor/public");
     });
 
     for (let step = 0; step < 5; step += 1) {
