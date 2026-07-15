@@ -4,6 +4,7 @@ import { getSubdomainFromHost } from "@/lib/getSubdomain";
 
 const SUBDOMAIN_ONLY_ROUTING_ENABLED =
   process.env.NEXT_PUBLIC_ENABLE_SUBDOMAIN_ONLY_ROUTING === "true";
+const PRODUCTION_BASE_DOMAINS = ["planvita.com.br", "campodobosque.com.br"];
 
 function getBaseDomain(hostname: string): string {
   if (hostname === "localhost" || hostname.endsWith(".localhost")) {
@@ -19,8 +20,11 @@ function getBaseDomain(hostname: string): string {
     return parts.slice(-2).join(".");
   }
 
-  if (parts.slice(-3).join(".") === "planvita.com.br") {
-    return "planvita.com.br";
+  const matchingProductionDomain = PRODUCTION_BASE_DOMAINS.find(
+    (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
+  );
+  if (matchingProductionDomain) {
+    return matchingProductionDomain;
   }
 
   return parts.slice(-2).join(".");
@@ -41,8 +45,9 @@ function isAppSubdomain(host: string): boolean {
   const hostname = host.split(":")[0].toLowerCase();
   // localhost: app.localhost
   if (hostname === "app.localhost") return true;
-  // production: app.planvita.com.br
-  if (hostname === "app.planvita.com.br") return true;
+  if (PRODUCTION_BASE_DOMAINS.some((domain) => hostname === `app.${domain}`)) {
+    return true;
+  }
   if (SUBDOMAIN_ONLY_ROUTING_ENABLED) {
     return hostname.startsWith(`app.${getBaseDomain(hostname)}`);
   }

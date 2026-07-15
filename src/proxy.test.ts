@@ -38,6 +38,19 @@ describe("proxy with subdomain-only routing", () => {
     );
   });
 
+  it("redirects custom app subdomain root to /cliente without the custom routing flag", async () => {
+    vi.stubEnv("NEXT_PUBLIC_ENABLE_SUBDOMAIN_ONLY_ROUTING", "false");
+    const { proxy } = await import("./proxy");
+
+    const request = buildRequest("https://app.campodobosque.com.br/");
+    const response = proxy(request);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "https://app.campodobosque.com.br/cliente",
+    );
+  });
+
   it("does not intercept /cliente on the apex host", async () => {
     vi.stubEnv("NEXT_PUBLIC_ENABLE_SUBDOMAIN_ONLY_ROUTING", "true");
     const { proxy } = await import("./proxy");

@@ -4,6 +4,7 @@ export default function getTenantFromHost(): string | null {
   const host = window.location.hostname.toLowerCase();
   const subdomainOnlyRoutingEnabled =
     process.env.NEXT_PUBLIC_ENABLE_SUBDOMAIN_ONLY_ROUTING === "true";
+  const productionBaseDomains = ["planvita.com.br", "campodobosque.com.br"];
 
   const getBaseDomain = () => {
     const parts = host.split(".");
@@ -30,11 +31,14 @@ export default function getTenantFromHost(): string | null {
     return subdomain === "www" || subdomain === "app" ? null : subdomain;
   }
 
-  // domínio principal de produção (ex: lider.planvita.com.br) — ignora app.planvita.com.br
-  if (host.endsWith(".planvita.com.br")) {
+  const matchingProductionDomain = productionBaseDomains.find(
+    (domain) => host === domain || host.endsWith(`.${domain}`),
+  );
+  if (matchingProductionDomain) {
+    const suffixLength = matchingProductionDomain.split(".").length;
     const parts = host.split(".");
-    if (parts.length > 3) {
-      const subdomain = parts.slice(0, -3).join(".");
+    if (parts.length > suffixLength) {
+      const subdomain = parts.slice(0, -suffixLength).join(".");
       return subdomain === "www" || subdomain === "app" ? null : subdomain;
     }
   }

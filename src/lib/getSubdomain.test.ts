@@ -26,4 +26,11 @@ describe("getSubdomainFromHost with subdomain-only routing", () => {
 
     expect(getSubdomainFromHost("app.campodobosque.com.br")).toBeNull();
   });
+
+  it("ignores the app subdomain on the custom production domain without the routing flag", async () => {
+    vi.stubEnv("NEXT_PUBLIC_ENABLE_SUBDOMAIN_ONLY_ROUTING", "false");
+    const { getSubdomainFromHost } = await import("./getSubdomain");
+
+    expect(getSubdomainFromHost("app.campodobosque.com.br")).toBeNull();
+  });
 });
