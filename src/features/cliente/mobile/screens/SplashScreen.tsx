@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import {
+  fetchPlanoPublicSummary,
+  type PlanoPublicSummary,
+} from "@/services/planoSuggestion";
 
 const SLIDES = [
   {
@@ -15,11 +19,17 @@ const SLIDES = [
     bg: "/cliente-mobile/carrossel-2.jpg",
   },
   {
-    title: "Tudo em um só lugar",
-    body: "Consulte faturas, acompanhe dependentes e gerencie seu plano Campo do Bosque com facilidade pelo celular.",
+    title: "Planos para toda a família",
+    body: "Encontre o plano ideal para você e quem você ama, com preços que cabem no seu bolso.",
     bg: "/cliente-mobile/carrossel-2.jpg",
+    isPlanSlide: true,
   },
 ] as const;
+
+const currencyFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
 
 type Props = {
   onComplete: () => void;
@@ -30,6 +40,10 @@ const UNIQUE_BG_IMAGES = [...new Set(SLIDES.map((s) => s.bg))];
 export default function SplashScreen({ onComplete }: Props) {
   const [phase, setPhase] = useState<"splash" | "carousel">("splash");
   const [slideIndex, setSlideIndex] = useState(0);
+  const [planoSummary, setPlanoSummary] = useState<PlanoPublicSummary | null>(
+    null,
+  );
+  const [planoLoading, setPlanoLoading] = useState(true);
 
   const goToCarousel = useCallback(() => setPhase("carousel"), []);
 
@@ -44,6 +58,23 @@ export default function SplashScreen({ onComplete }: Props) {
     });
     return () => {
       links.forEach((l) => document.head.removeChild(l));
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchPlanoPublicSummary()
+      .then((summary) => {
+        if (!cancelled) setPlanoSummary(summary);
+      })
+      .catch(() => {
+        if (!cancelled) setPlanoSummary(null);
+      })
+      .finally(() => {
+        if (!cancelled) setPlanoLoading(false);
+      });
+    return () => {
+      cancelled = true;
     };
   }, []);
 
@@ -116,6 +147,24 @@ export default function SplashScreen({ onComplete }: Props) {
       <div className="cm-carousel-content">
         <h1 className="cm-carousel-title">{slide.title}</h1>
         <p className="cm-carousel-body">{slide.body}</p>
+        {"isPlanSlide" in slide &&
+          slide.isPlanSlide &&
+          (planoLoading ? (
+            <div className="cm-carousel-plan-card cm-carousel-plan-card-loading" />
+          ) : planoSummary ? (
+            <div className="cm-carousel-plan-card">
+              <span className="cm-carousel-plan-card-label">
+                {planoSummary.nome}
+              </span>
+              <div className="cm-carousel-plan-card-price-row">
+                <span className="cm-carousel-plan-card-from">a partir de</span>
+                <span className="cm-carousel-plan-card-price">
+                  {currencyFormatter.format(planoSummary.valorMensal)}
+                  <span className="cm-carousel-plan-card-period">/mês</span>
+                </span>
+              </div>
+            </div>
+          ) : null)}
       </div>
 
       {/* Dots */}

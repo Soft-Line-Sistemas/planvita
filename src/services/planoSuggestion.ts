@@ -31,6 +31,24 @@ const sortPlanos = (planos: Plano[]) =>
     return a.nome.localeCompare(b.nome);
   });
 
+export type PlanoPublicSummary = {
+  nome: string;
+  valorMensal: number;
+};
+
+export async function fetchPlanoPublicSummary(): Promise<PlanoPublicSummary | null> {
+  try {
+    const resp = await api.get("/plano/public/summary");
+    return resp.data as PlanoPublicSummary;
+  } catch (err) {
+    const axiosError = err as AxiosError;
+    if (axiosError.response?.status === 404) {
+      return null;
+    }
+    throw err;
+  }
+}
+
 export async function fetchSuggestedPlanosWithRetry(
   participantes: ParticipantePayload[],
   options: FetchSuggestedPlanosOptions = {},

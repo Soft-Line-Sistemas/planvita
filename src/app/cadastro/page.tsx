@@ -1,5 +1,5 @@
-import { CadastroClienteWizard } from "@/components/CadastroClienteWizard";
+import PublicCadastroPage from "@/components/PublicCadastroPage";
 
 export default function CadastroPublicoClientePage() {
-  return <CadastroClienteWizard variant="public" />;
+  return <PublicCadastroPage />;
 }
