@@ -59,22 +59,33 @@ const sexoField = requiredText("Sexo é obrigatório").refine(
   { message: "Selecione uma opção válida para sexo" },
 );
 
-const dadosPessoaisSchema = z.object({
-  nomeCompleto: requiredText("Nome completo é obrigatório", 1000),
-  cpf: requiredDigits(11, "CPF inválido"),
-  dataNascimento: requiredText("Data de nascimento é obrigatória"),
-  sexo: sexoField,
-  rg: optionalText(50),
-  naturalidade: requiredText("Naturalidade é obrigatória", 191),
-  situacaoConjugal: requiredText("Situação conjugal é obrigatória", 191),
-  profissao: requiredText("Profissão é obrigatória", 191),
-  telefone: requiredDigits(10, "Telefone inválido"),
-  whatsapp: requiredDigits(10, "WhatsApp inválido"),
-  email: requiredText("E-mail é obrigatório", 1000).refine(
-    (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
-    { message: "E-mail inválido" },
-  ),
-});
+const dadosPessoaisSchema = z
+  .object({
+    nomeCompleto: requiredText("Nome completo é obrigatório", 1000),
+    cpf: requiredDigits(11, "CPF inválido"),
+    dataNascimento: requiredText("Data de nascimento é obrigatória"),
+    sexo: sexoField,
+    rg: optionalText(50),
+    naturalidade: requiredText("Naturalidade é obrigatória", 191),
+    situacaoConjugal: requiredText("Situação conjugal é obrigatória", 191),
+    profissao: requiredText("Profissão é obrigatória", 191),
+    telefone: requiredDigits(10, "Telefone inválido"),
+    whatsapp: requiredDigits(10, "WhatsApp inválido"),
+    email: requiredText("E-mail é obrigatório", 1000).refine(
+      (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+      { message: "E-mail inválido" },
+    ),
+  })
+  .superRefine((data, ctx) => {
+    const idade = calcularIdade(data.dataNascimento);
+    if (idade === null || idade < 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Data de nascimento inválida",
+        path: ["dataNascimento"],
+      });
+    }
+  });
 
 const enderecoSchema = z.object({
   cep: requiredDigits(8, "CEP é obrigatório"),
