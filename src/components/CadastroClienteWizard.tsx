@@ -101,6 +101,8 @@ export function CadastroClienteWizard({
   const [consultores, setConsultores] = useState<ConsultorOption[]>([]);
   const [isLoadingConsultores, setIsLoadingConsultores] = useState(true);
   const [consultorError, setConsultorError] = useState<string | null>(null);
+  const [planoStepError, setPlanoStepError] = useState<string | null>(null);
+  const [hasCompatiblePlans, setHasCompatiblePlans] = useState(true);
   const [selectedConsultorKey, setSelectedConsultorKey] = useState<
     string | undefined
   >();
@@ -260,13 +262,21 @@ export function CadastroClienteWizard({
         if (!ativo) return;
         const regra = Array.isArray(res.data) ? res.data[0] : null;
         const limite = Number(regra?.limiteBeneficiarios);
-        const idadeMaxima = Number(regra?.idadeMaximaDependente);
+        const idadeMaximaRaw = regra?.idadeMaximaDependente;
+        const idadeMaxima =
+          idadeMaximaRaw === null || idadeMaximaRaw === undefined
+            ? null
+            : Number(idadeMaximaRaw);
         if (Number.isFinite(limite) && limite > 0) {
           setLimiteBeneficiarios(Math.min(limite, MAX_DEPENDENTES_POR_TITULAR));
         } else {
           setLimiteBeneficiarios(MAX_DEPENDENTES_POR_TITULAR);
         }
-        if (Number.isFinite(idadeMaxima) && idadeMaxima >= 0) {
+        if (
+          idadeMaxima !== null &&
+          Number.isFinite(idadeMaxima) &&
+          idadeMaxima >= 0
+        ) {
           setIdadeMaximaDependente(idadeMaxima);
         } else {
           setIdadeMaximaDependente(null);
@@ -334,9 +344,21 @@ export function CadastroClienteWizard({
           shouldFocus: true,
         });
         if (!isValid) return false;
+        const step5Values = planoForm.getValues();
+        if (!hasCompatiblePlans) {
+          setPlanoStepError(
+            "Nenhum plano compatível está disponível para o perfil cadastrado.",
+          );
+          return false;
+        }
+        if (!step5Values.planoId || !step5Values.plano) {
+          setPlanoStepError("Selecione um plano compatível para continuar.");
+          return false;
+        }
+        setPlanoStepError(null);
         setFormData((prev) => ({
           ...prev,
-          step5: planoForm.getValues(),
+          step5: step5Values,
         }));
         return true;
       }
@@ -558,7 +580,11 @@ export function CadastroClienteWizard({
                   planoSelecionado={null}
                   participantes={participantesList}
                   modoCliente={isPublic}
-                  ignorarComposicaoNaSugestao
+                  errorMessage={planoStepError}
+                  onCompatibilityChange={(hasPlans) => {
+                    setHasCompatiblePlans(hasPlans);
+                    if (hasPlans) setPlanoStepError(null);
+                  }}
                 />
               );
             }

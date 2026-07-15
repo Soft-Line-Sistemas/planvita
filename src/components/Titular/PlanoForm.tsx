@@ -26,6 +26,8 @@ interface PlanoFormProps {
   participantes: ParticipanteMin[];
   modoCliente?: boolean;
   ignorarComposicaoNaSugestao?: boolean;
+  errorMessage?: string | null;
+  onCompatibilityChange?: (hasCompatiblePlans: boolean) => void;
 }
 
 export function PlanoForm({
@@ -34,6 +36,8 @@ export function PlanoForm({
   participantes,
   modoCliente = false,
   ignorarComposicaoNaSugestao = false,
+  errorMessage,
+  onCompatibilityChange,
 }: PlanoFormProps) {
   // ----- Helpers -----
   const formatCurrency = (n: number) =>
@@ -186,6 +190,10 @@ export function PlanoForm({
     return selecionarPlanosCompativeis(elegiveis, participantes);
   }, [elegiveis, modoCliente, participantes]);
 
+  useEffect(() => {
+    onCompatibilityChange?.(planosCompativeis.length > 0);
+  }, [onCompatibilityChange, planosCompativeis.length]);
+
   const planosLiberados = useMemo(
     () => new Set<string>(planosCompativeis.map((p) => String(p.id))),
     [planosCompativeis],
@@ -298,6 +306,7 @@ export function PlanoForm({
             participantes e tente novamente.
           </p>
         )}
+        {errorMessage && <p className="text-red-600">{errorMessage}</p>}
 
         {planosCompativeis.length > 0 ? (
           <div className="space-y-3">

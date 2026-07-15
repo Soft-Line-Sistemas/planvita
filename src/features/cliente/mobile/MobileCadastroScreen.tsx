@@ -54,6 +54,7 @@ import type { Dependente } from "@/types/DependentesType";
 import type { Plano } from "@/types/PlanType";
 import api from "@/utils/api";
 import { fetchSuggestedPlanosWithRetry } from "@/services/planoSuggestion";
+import { extractApiError } from "@/utils/httpError";
 
 /* ================================================================
    Types
@@ -2884,10 +2885,7 @@ export default function MobileCadastroScreen() {
     Plano[]
   >({
     queryKey: ["planos-mobile-cad", participantesPayload],
-    queryFn: () =>
-      fetchSuggestedPlanosWithRetry(participantesPayload, {
-        ignorarComposicao: true,
-      }),
+    queryFn: () => fetchSuggestedPlanosWithRetry(participantesPayload),
     enabled: canSuggestPlanos,
     retry: false,
     staleTime: 60_000,
@@ -2925,11 +2923,19 @@ export default function MobileCadastroScreen() {
         const regra = Array.isArray(res.data) ? res.data[0] : null;
         const limite = Number(regra?.limiteBeneficiarios);
         const valorAdicional = Number(regra?.valorAdicionalDependenteForaGrade);
-        const idadeMaxima = Number(regra?.idadeMaximaDependente);
+        const idadeMaximaRaw = regra?.idadeMaximaDependente;
+        const idadeMaxima =
+          idadeMaximaRaw === null || idadeMaximaRaw === undefined
+            ? null
+            : Number(idadeMaximaRaw);
         if (Number.isFinite(limite) && limite > 0) {
           setLimiteBeneficiarios(Math.min(limite, MAX_DEP));
         }
-        if (Number.isFinite(idadeMaxima) && idadeMaxima >= 0) {
+        if (
+          idadeMaxima !== null &&
+          Number.isFinite(idadeMaxima) &&
+          idadeMaxima >= 0
+        ) {
           setIdadeMaximaDependente(idadeMaxima);
         } else {
           setIdadeMaximaDependente(null);
@@ -3206,8 +3212,14 @@ export default function MobileCadastroScreen() {
         return true;
       }
       case 6:
+        if (planosCompativeis.length === 0) {
+          setPlanoError(
+            "Nenhum plano compatível está disponível para o perfil cadastrado.",
+          );
+          return false;
+        }
         if (!selectedPlano) {
-          setPlanoError("Selecione um plano para continuar.");
+          setPlanoError("Selecione um plano compatível para continuar.");
           return false;
         }
         return true;
@@ -3340,9 +3352,8 @@ export default function MobileCadastroScreen() {
       };
       await mutateAsync(payload);
     } catch (err: unknown) {
-      setSubmitError(
-        err instanceof Error ? err.message : "Erro ao finalizar cadastro.",
-      );
+      const { message } = extractApiError(err);
+      setSubmitError(message ?? "Erro ao finalizar cadastro.");
     }
   };
 
