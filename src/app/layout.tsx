@@ -11,13 +11,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Planvita",
-  description: "Sistema Planvita",
+  title: "Campo do Bosque",
+  description: "Sistema Campo do Bosque",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/cliente-mobile/Icone app.png",
-    shortcut: "/cliente-mobile/Icone app.png",
-    apple: "/cliente-mobile/Icone app.png",
+    icon: "/logo-icone.ico",
+    shortcut: "/logo-icone.ico",
+    apple: "/logo-icone.ico",
   },
 };
 
