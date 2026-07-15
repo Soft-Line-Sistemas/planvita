@@ -186,9 +186,7 @@ export function CadastroClienteWizard({
     let ativo = true;
     setIsLoadingConsultores(true);
     api
-      .get("/consultor/public", {
-        params: isPublic ? { scope: "global" } : undefined,
-      })
+      .get("/consultor/public")
       .then((res) => {
         if (!ativo) return;
         const data = Array.isArray(res.data) ? res.data : [];
