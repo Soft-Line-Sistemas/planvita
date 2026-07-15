@@ -150,15 +150,13 @@ function validateCreditCard(card: CreditCardValues): CreditCardErrors {
 }
 
 const DIRECT_PARENTESCOS_GRADE_FAMILIAR = new Set<string>([
-  "Cônjuge",
-  "Filho(a)",
-  "Enteado(a)",
-  "Pai",
-  "Mãe",
-  "Sogro(a)",
-  "Neto(a)",
+  "1° Grau",
+  "2° Grau",
 ]);
-const RESPONSAVEL_FINANCEIRO_CONTA_NO_PLANO = new Set<string>(["Cônjuge"]);
+const RESPONSAVEL_FINANCEIRO_CONTA_NO_PLANO = new Set<string>([
+  "1° Grau",
+  "2° Grau",
+]);
 const PRIVACY_POLICY_VERSION = "2025-06";
 const SERVICE_CONTRACT_VERSION = "2025-06";
 const CADASTRO_CONSENT_ORIGIN = "cliente_mobile_cadastro_publico";
@@ -2914,6 +2912,18 @@ export default function MobileCadastroScreen() {
       return selecionarPlanoPorMaiorIdade(planosCompativeis, maiorIdade);
     });
   }, [planosCompativeis, participantesPayload]);
+
+  useEffect(() => {
+    if (isLoadingPlanos) return;
+    if (planosCompativeis.length > 0) {
+      setPlanoError((prev) =>
+        prev ===
+        "Nenhum plano compatível está disponível para o perfil cadastrado."
+          ? null
+          : prev,
+      );
+    }
+  }, [isLoadingPlanos, planosCompativeis]);
 
   /* Fetch regras */
   useEffect(() => {

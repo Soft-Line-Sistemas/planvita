@@ -252,8 +252,11 @@ function normalizeText(value?: string | null) {
 
 function normalizeRelationship(value?: string | null) {
   const normalized = normalizeText(value);
-  if (
-    [
+  const aliases: Record<string, string[]> = {
+    titular: ["titular", "responsavel", "contratante"],
+    primeiro_grau: ["1 grau", "1o grau"],
+    segundo_grau: ["2 grau", "2o grau"],
+    conjuge: [
       "conjuge",
       "esposa",
       "esposo",
@@ -262,23 +265,52 @@ function normalizeRelationship(value?: string | null) {
       "companheiro",
       "parceira",
       "parceiro",
-    ].includes(normalized)
-  ) {
-    return "conjuge";
+    ],
+    filho: [
+      "filho",
+      "filha",
+      "filho a",
+      "enteado",
+      "enteada",
+      "enteado a",
+      "menor",
+      "crianca",
+    ],
+    pai: ["pai", "genitor", "padrasto", "sogro", "sogro a"],
+    mae: ["mae", "genitora", "madrasta", "sogra"],
+    irmao: ["irmao", "irma", "irmao a"],
+    avo: ["avo", "avo avo", "avos", "bisavo", "bisavoa"],
+    neto: ["neto", "neta", "neto a", "bisneto", "bisneta"],
+    genro: ["genro", "nora", "genro nora"],
+    cunhado: ["cunhado", "cunhada", "cunhado a"],
+    outro: [
+      "outro",
+      "outra",
+      "agregado",
+      "amigo",
+      "amiga",
+      "vizinho",
+      "vizinha",
+      "sem parentesco",
+      "nao familiar",
+      "tio",
+      "tia",
+      "tio a",
+      "sobrinho",
+      "sobrinha",
+      "sobrinho a",
+      "primo",
+      "prima",
+      "primo a",
+    ],
+  };
+
+  for (const [canonical, values] of Object.entries(aliases)) {
+    if (values.includes(normalized)) {
+      return canonical;
+    }
   }
-  if (
-    ["filho", "filha", "enteado", "enteada", "crianca", "menor"].includes(
-      normalized,
-    )
-  ) {
-    return "filho";
-  }
-  if (["neto", "neta", "bisneto", "bisneta"].includes(normalized)) {
-    return "neto";
-  }
-  if (normalized === "titular") {
-    return "titular";
-  }
+
   return normalized;
 }
 
@@ -331,34 +363,40 @@ export function selecionarPlanosCompativeis(
     );
   });
 
-  const planosComFaixa = planosOrdenados.filter(
-    (plano) =>
-      typeof plano.idadeMaxima === "number" &&
-      Number.isFinite(plano.idadeMaxima),
-  );
-  const faixaCompativel = planosComFaixa.find(
-    (plano) => maiorIdadeParticipantes <= (plano.idadeMaxima as number),
-  );
-
-  let compativeis =
-    faixaCompativel != null
-      ? planosOrdenados.filter(
-          (plano) => plano.idadeMaxima === faixaCompativel.idadeMaxima,
-        )
-      : planosOrdenados.filter((plano) => plano.idadeMaxima == null);
-
   if (permitirSocialEssencial) {
     const socialEssencial = planosOrdenados.filter(
       (plano) => isPlanoSocial(plano.nome) || isPlanoEssencial(plano.nome),
     );
     if (socialEssencial.length > 0) {
-      compativeis = socialEssencial;
+      return socialEssencial;
     }
   }
 
-  if (!permitirSocialEssencial) {
-    compativeis = compativeis.filter((plano) => !isPlanoSocial(plano.nome));
+  const candidatosPorFaixa = planosOrdenados.filter((plano) => {
+    if (plano.idadeMaxima == null) return true;
+    return maiorIdadeParticipantes <= plano.idadeMaxima;
+  });
+
+  const candidatosSemSocial = permitirSocialEssencial
+    ? candidatosPorFaixa
+    : candidatosPorFaixa.filter((plano) => !isPlanoSocial(plano.nome));
+
+  if (candidatosSemSocial.length === 0) {
+    return [];
   }
 
-  return compativeis;
+  const menorFaixaCompativel =
+    candidatosSemSocial.find(
+      (plano) =>
+        typeof plano.idadeMaxima === "number" &&
+        Number.isFinite(plano.idadeMaxima),
+    )?.idadeMaxima ?? null;
+
+  if (menorFaixaCompativel == null) {
+    return candidatosSemSocial.filter((plano) => plano.idadeMaxima == null);
+  }
+
+  return candidatosSemSocial.filter(
+    (plano) => plano.idadeMaxima === menorFaixaCompativel,
+  );
 }

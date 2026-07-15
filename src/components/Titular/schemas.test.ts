@@ -40,7 +40,7 @@ const validResponsavel = {
   dataNascimento: "1990-06-18",
   sexo: "Feminino",
   naturalidade: "Salvador",
-  parentesco: "Cônjuge",
+  parentesco: "1° Grau",
   email: "responsavel@teste.com",
   telefone: "(71) 98888-7777",
   whatsapp: "(71) 98888-7777",
@@ -61,7 +61,7 @@ const validDependentes = {
     {
       nome: "Dependente Teste",
       idade: "10",
-      parentesco: "Filho(a)",
+      parentesco: "1° Grau",
       telefone: "(71) 98888-7777",
       cpf: "123.456.789-01",
     },
@@ -251,7 +251,7 @@ describe("dependentesSchema", () => {
         {
           nome: "Dependente Teste",
           idade: "10",
-          parentesco: "Filho(a)",
+          parentesco: "1° Grau",
           telefone: "   ",
           cpf: "   ",
         },
