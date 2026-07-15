@@ -47,6 +47,11 @@ import {
   type ParticipanteMin,
 } from "@/utils/planos";
 import {
+  obterMatrizTarifacaoDependente,
+  obterValorAdicionalDependentePorIdade,
+  type FaixaTarifacaoDependente,
+} from "@/utils/dependenteTarifacao";
+import {
   useCreateTitular,
   type CreateTitularInput,
 } from "@/hooks/mutations/useCreateTitular";
@@ -160,13 +165,6 @@ const RESPONSAVEL_FINANCEIRO_CONTA_NO_PLANO = new Set<string>([
 const PRIVACY_POLICY_VERSION = "2025-06";
 const SERVICE_CONTRACT_VERSION = "2025-06";
 const CADASTRO_CONSENT_ORIGIN = "cliente_mobile_cadastro_publico";
-const VALORES_ADICIONAL_POR_IDADE = [
-  { ate: 60, valor: 9.9 },
-  { ate: 70, valor: 19.9 },
-  { ate: 80, valor: 29.9 },
-  { ate: Number.POSITIVE_INFINITY, valor: 49 },
-] as const;
-
 function formatAdicionalMensal(valor: number): string {
   const n = Number(valor);
   if (!Number.isFinite(n)) return "R$ —";
@@ -177,6 +175,7 @@ function formatAdicionalMensal(valor: number): string {
 
 function getAdicionalPillText(
   dep: Dependente,
+  matrizTarifacaoDependente: FaixaTarifacaoDependente[],
   valorAdicionalDependenteForaGrade?: number | null,
 ): string | null {
   const parentesco = dep.parentesco?.trim();
@@ -194,7 +193,7 @@ function getAdicionalPillText(
       ? valorRealDependente
       : valorRegra > 0
         ? valorRegra
-        : getValorAdicionalPorIdade(dep);
+        : getValorAdicionalPorIdade(dep, matrizTarifacaoDependente);
 
   const valorFmt = formatAdicionalMensal(valor);
   if (valorFmt === "R$ —") return "Adicional";
@@ -202,20 +201,18 @@ function getAdicionalPillText(
   return `Adicional: ${valorFmt}`;
 }
 
-function getValorAdicionalPorIdade(dep: Dependente): number {
+function getValorAdicionalPorIdade(
+  dep: Dependente,
+  matrizTarifacaoDependente: FaixaTarifacaoDependente[],
+): number {
   const idade =
     typeof dep.idade === "number" && Number.isFinite(dep.idade)
       ? dep.idade
       : calcularIdade(dep.dataNascimento ?? null);
-
-  for (const faixa of VALORES_ADICIONAL_POR_IDADE) {
-    if (idade === null || idade <= faixa.ate) {
-      return faixa.valor;
-    }
-  }
-
-  return VALORES_ADICIONAL_POR_IDADE[VALORES_ADICIONAL_POR_IDADE.length - 1]
-    .valor;
+  return obterValorAdicionalDependentePorIdade(
+    idade,
+    matrizTarifacaoDependente,
+  );
 }
 
 interface ConsultorOption {
@@ -1055,6 +1052,7 @@ function Step4Form({
   onDepAdded,
   onDepRemoved,
   onInvalidateDepConfirm,
+  matrizTarifacaoDependente,
   valorAdicionalDependenteForaGrade,
   vagasJaConsumidas,
 }: {
@@ -1070,6 +1068,7 @@ function Step4Form({
   onDepAdded: () => void;
   onDepRemoved: (idx: number) => void;
   onInvalidateDepConfirm: (idx: number) => void;
+  matrizTarifacaoDependente: FaixaTarifacaoDependente[];
   valorAdicionalDependenteForaGrade?: number | null;
   vagasJaConsumidas: number;
 }) {
@@ -1143,7 +1142,8 @@ function Step4Form({
 
   const getDepAdicionalValor = (dep: Dependente): number => {
     const parentesco = dep.parentesco?.trim();
-    if (!parentesco) return getValorAdicionalPorIdade(dep);
+    if (!parentesco)
+      return getValorAdicionalPorIdade(dep, matrizTarifacaoDependente);
     const isDirectInGrade = DIRECT_PARENTESCOS_GRADE_FAMILIAR.has(parentesco);
     const foraGradeFamiliar = dep.foraGradeFamiliar ?? !isDirectInGrade;
     if (!foraGradeFamiliar || dep.excluirCobrancaAdicional) return 0;
@@ -1151,7 +1151,7 @@ function Step4Form({
     const valorRegra = Number(valorAdicionalDependenteForaGrade ?? 0);
     if (valorRealDependente > 0) return valorRealDependente;
     if (valorRegra > 0) return valorRegra;
-    return getValorAdicionalPorIdade(dep);
+    return getValorAdicionalPorIdade(dep, matrizTarifacaoDependente);
   };
 
   useEffect(() => {
@@ -1235,6 +1235,7 @@ function Step4Form({
       {dependentes.map((dep, idx) => {
         const adicionalTexto = getAdicionalPillText(
           dep,
+          matrizTarifacaoDependente,
           valorAdicionalDependenteForaGrade,
         );
         return (
@@ -2119,6 +2120,7 @@ function Step7Pagamento({
 function Step8Confirmacao({
   step1,
   dependentes,
+  matrizTarifacaoDependente,
   valorAdicionalDependenteForaGrade,
   plano,
   metodoPagamento,
@@ -2138,6 +2140,7 @@ function Step8Confirmacao({
 }: {
   step1: Partial<Step1Values>;
   dependentes: Dependente[];
+  matrizTarifacaoDependente: FaixaTarifacaoDependente[];
   valorAdicionalDependenteForaGrade?: number | null;
   plano: Plano | null;
   metodoPagamento: MetodoPagamento | "";
@@ -2180,7 +2183,7 @@ function Step8Confirmacao({
         ? valorRealDependente
         : valorRegra > 0
           ? valorRegra
-          : getValorAdicionalPorIdade(dep);
+          : getValorAdicionalPorIdade(dep, matrizTarifacaoDependente);
     return acc + valor;
   }, 0);
 
@@ -2309,6 +2312,7 @@ function Step8Confirmacao({
                   : null;
             const adicionalTexto = getAdicionalPillText(
               dep,
+              matrizTarifacaoDependente,
               valorAdicionalDependenteForaGrade,
             );
             return (
@@ -2682,6 +2686,9 @@ export default function MobileCadastroScreen() {
     valorAdicionalDependenteForaGrade,
     setValorAdicionalDependenteForaGrade,
   ] = useState<number | null>(null);
+  const [matrizTarifacaoDependente, setMatrizTarifacaoDependente] = useState<
+    FaixaTarifacaoDependente[]
+  >(obterMatrizTarifacaoDependente(null, null));
   const [idadeMaximaDependente, setIdadeMaximaDependente] = useState<
     number | null
   >(null);
@@ -2933,6 +2940,10 @@ export default function MobileCadastroScreen() {
         const regra = Array.isArray(res.data) ? res.data[0] : null;
         const limite = Number(regra?.limiteBeneficiarios);
         const valorAdicional = Number(regra?.valorAdicionalDependenteForaGrade);
+        const matrizTarifacao = obterMatrizTarifacaoDependente(
+          regra?.valorAdicionalDependenteForaGradeFaixasJson ?? null,
+          valorAdicional,
+        );
         const idadeMaximaRaw = regra?.idadeMaximaDependente;
         const idadeMaxima =
           idadeMaximaRaw === null || idadeMaximaRaw === undefined
@@ -2955,6 +2966,7 @@ export default function MobileCadastroScreen() {
         } else {
           setValorAdicionalDependenteForaGrade(null);
         }
+        setMatrizTarifacaoDependente(matrizTarifacao);
 
         // Regras de redirecionamento WhatsApp por idade
         if (regra?.redirecionamentoWhatsappAtivo) {
@@ -3438,6 +3450,7 @@ export default function MobileCadastroScreen() {
                 return next;
               })
             }
+            matrizTarifacaoDependente={matrizTarifacaoDependente}
             valorAdicionalDependenteForaGrade={
               valorAdicionalDependenteForaGrade
             }
@@ -3489,6 +3502,7 @@ export default function MobileCadastroScreen() {
           <Step8Confirmacao
             step1={step1Form.getValues()}
             dependentes={dependentes}
+            matrizTarifacaoDependente={matrizTarifacaoDependente}
             valorAdicionalDependenteForaGrade={
               valorAdicionalDependenteForaGrade
             }
