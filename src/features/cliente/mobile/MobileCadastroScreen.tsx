@@ -176,7 +176,6 @@ function formatAdicionalMensal(valor: number): string {
 function getAdicionalPillText(
   dep: Dependente,
   matrizTarifacaoDependente: FaixaTarifacaoDependente[],
-  valorAdicionalDependenteForaGrade?: number | null,
 ): string | null {
   const parentesco = dep.parentesco?.trim();
   if (!parentesco) return null;
@@ -187,13 +186,10 @@ function getAdicionalPillText(
   if (dep.excluirCobrancaAdicional) return null;
 
   const valorRealDependente = Number(dep.valorAdicionalMensal ?? 0);
-  const valorRegra = Number(valorAdicionalDependenteForaGrade ?? 0);
   const valor =
     valorRealDependente > 0
       ? valorRealDependente
-      : valorRegra > 0
-        ? valorRegra
-        : getValorAdicionalPorIdade(dep, matrizTarifacaoDependente);
+      : getValorAdicionalPorIdade(dep, matrizTarifacaoDependente);
 
   const valorFmt = formatAdicionalMensal(valor);
   if (valorFmt === "R$ —") return "Adicional";
@@ -1053,7 +1049,6 @@ function Step4Form({
   onDepRemoved,
   onInvalidateDepConfirm,
   matrizTarifacaoDependente,
-  valorAdicionalDependenteForaGrade,
   vagasJaConsumidas,
 }: {
   dependentes: Dependente[];
@@ -1069,7 +1064,6 @@ function Step4Form({
   onDepRemoved: (idx: number) => void;
   onInvalidateDepConfirm: (idx: number) => void;
   matrizTarifacaoDependente: FaixaTarifacaoDependente[];
-  valorAdicionalDependenteForaGrade?: number | null;
   vagasJaConsumidas: number;
 }) {
   const canAdd = dependentes.length + vagasJaConsumidas < limiteBeneficiarios;
@@ -1148,9 +1142,7 @@ function Step4Form({
     const foraGradeFamiliar = dep.foraGradeFamiliar ?? !isDirectInGrade;
     if (!foraGradeFamiliar || dep.excluirCobrancaAdicional) return 0;
     const valorRealDependente = Number(dep.valorAdicionalMensal ?? 0);
-    const valorRegra = Number(valorAdicionalDependenteForaGrade ?? 0);
     if (valorRealDependente > 0) return valorRealDependente;
-    if (valorRegra > 0) return valorRegra;
     return getValorAdicionalPorIdade(dep, matrizTarifacaoDependente);
   };
 
@@ -1236,7 +1228,6 @@ function Step4Form({
         const adicionalTexto = getAdicionalPillText(
           dep,
           matrizTarifacaoDependente,
-          valorAdicionalDependenteForaGrade,
         );
         return (
           <div key={idx} className="cm-cad-dep-resumo-card">
@@ -2121,7 +2112,6 @@ function Step8Confirmacao({
   step1,
   dependentes,
   matrizTarifacaoDependente,
-  valorAdicionalDependenteForaGrade,
   plano,
   metodoPagamento,
   servicosAdicionais,
@@ -2141,7 +2131,6 @@ function Step8Confirmacao({
   step1: Partial<Step1Values>;
   dependentes: Dependente[];
   matrizTarifacaoDependente: FaixaTarifacaoDependente[];
-  valorAdicionalDependenteForaGrade?: number | null;
   plano: Plano | null;
   metodoPagamento: MetodoPagamento | "";
   servicosAdicionais: string[];
@@ -2177,13 +2166,10 @@ function Step8Confirmacao({
     if (!foraGradeFamiliar || dep.excluirCobrancaAdicional) return acc;
 
     const valorRealDependente = Number(dep.valorAdicionalMensal ?? 0);
-    const valorRegra = Number(valorAdicionalDependenteForaGrade ?? 0);
     const valor =
       valorRealDependente > 0
         ? valorRealDependente
-        : valorRegra > 0
-          ? valorRegra
-          : getValorAdicionalPorIdade(dep, matrizTarifacaoDependente);
+        : getValorAdicionalPorIdade(dep, matrizTarifacaoDependente);
     return acc + valor;
   }, 0);
 
@@ -2313,7 +2299,6 @@ function Step8Confirmacao({
             const adicionalTexto = getAdicionalPillText(
               dep,
               matrizTarifacaoDependente,
-              valorAdicionalDependenteForaGrade,
             );
             return (
               <div
@@ -2682,10 +2667,6 @@ export default function MobileCadastroScreen() {
   const [editingDepIndex, setEditingDepIndex] = useState<number | null>(null);
   const [depConfirmados, setDepConfirmados] = useState<boolean[]>([]);
   const [limiteBeneficiarios, setLimiteBeneficiarios] = useState(MAX_DEP);
-  const [
-    valorAdicionalDependenteForaGrade,
-    setValorAdicionalDependenteForaGrade,
-  ] = useState<number | null>(null);
   const [matrizTarifacaoDependente, setMatrizTarifacaoDependente] = useState<
     FaixaTarifacaoDependente[]
   >(obterMatrizTarifacaoDependente(null, null));
@@ -2960,11 +2941,6 @@ export default function MobileCadastroScreen() {
           setIdadeMaximaDependente(idadeMaxima);
         } else {
           setIdadeMaximaDependente(null);
-        }
-        if (Number.isFinite(valorAdicional) && valorAdicional > 0) {
-          setValorAdicionalDependenteForaGrade(valorAdicional);
-        } else {
-          setValorAdicionalDependenteForaGrade(null);
         }
         setMatrizTarifacaoDependente(matrizTarifacao);
 
@@ -3451,9 +3427,6 @@ export default function MobileCadastroScreen() {
               })
             }
             matrizTarifacaoDependente={matrizTarifacaoDependente}
-            valorAdicionalDependenteForaGrade={
-              valorAdicionalDependenteForaGrade
-            }
             vagasJaConsumidas={usarMesmosDados ? 0 : 1}
           />
         );
@@ -3503,9 +3476,6 @@ export default function MobileCadastroScreen() {
             step1={step1Form.getValues()}
             dependentes={dependentes}
             matrizTarifacaoDependente={matrizTarifacaoDependente}
-            valorAdicionalDependenteForaGrade={
-              valorAdicionalDependenteForaGrade
-            }
             plano={selectedPlano}
             metodoPagamento={metodoPagamento}
             servicosAdicionais={servicosAdicionais}
