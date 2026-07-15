@@ -42,4 +42,13 @@ describe("getTenantFromHost with subdomain-only routing", () => {
 
     expect(getTenantFromHost()).toBe("bosque");
   });
+
+  it("returns bosque on the generic app host for Campo do Bosque", async () => {
+    vi.stubEnv("NEXT_PUBLIC_ENABLE_SUBDOMAIN_ONLY_ROUTING", "true");
+    setHostname("app.campodobosque.com.br");
+
+    const { default: getTenantFromHost } = await import("./getTenantFromHost");
+
+    expect(getTenantFromHost()).toBe("bosque");
+  });
 });

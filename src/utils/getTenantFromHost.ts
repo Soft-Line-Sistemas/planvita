@@ -2,9 +2,16 @@ export default function getTenantFromHost(): string | null {
   if (typeof window === "undefined") return null;
 
   const host = window.location.hostname.toLowerCase();
+  const explicitHostTenantMap: Record<string, string> = {
+    "app.campodobosque.com.br": "bosque",
+  };
   const subdomainOnlyRoutingEnabled =
     process.env.NEXT_PUBLIC_ENABLE_SUBDOMAIN_ONLY_ROUTING === "true";
   const productionBaseDomains = ["planvita.com.br", "campodobosque.com.br"];
+
+  if (explicitHostTenantMap[host]) {
+    return explicitHostTenantMap[host];
+  }
 
   const getBaseDomain = () => {
     const parts = host.split(".");
