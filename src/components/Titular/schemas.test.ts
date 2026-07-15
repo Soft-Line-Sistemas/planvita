@@ -123,6 +123,21 @@ describe("dadosPessoaisSchema", () => {
     expect(errors.email?.[0]).toBe("E-mail inválido");
     expect(errors.sexo?.[0]).toBe("Selecione uma opção válida para sexo");
   });
+
+  it("rejeita data de nascimento futura", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-18T12:00:00.000Z"));
+
+    const result = dadosPessoaisSchema.safeParse({
+      ...validDadosPessoais,
+      dataNascimento: "2999-01-01",
+    });
+
+    expect(result.success).toBe(false);
+    expect(getFieldErrors(result).dataNascimento?.[0]).toBe(
+      "Data de nascimento inválida",
+    );
+  });
 });
 
 describe("enderecoSchema", () => {

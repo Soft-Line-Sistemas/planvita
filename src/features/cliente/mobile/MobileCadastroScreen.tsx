@@ -83,9 +83,13 @@ interface DepErrors {
 
 function validateSingleDependente(dep: Dependente): DepErrors {
   const err: DepErrors = {};
+  const idade = dep.dataNascimento ? calcularIdade(dep.dataNascimento) : null;
   if (!dep.nome?.trim()) err.nome = "Nome é obrigatório";
-  if (!dep.dataNascimento)
+  if (!dep.dataNascimento) {
     err.dataNascimento = "Data de nascimento é obrigatória";
+  } else if (idade === null || idade < 0) {
+    err.dataNascimento = "Data de nascimento inválida";
+  }
   if (!dep.parentesco) err.parentesco = "Parentesco é obrigatório";
   if (dep.telefone && dep.telefone.replace(/\D/g, "").length < 10)
     err.telefone = "Telefone inválido";
@@ -2679,6 +2683,9 @@ export default function MobileCadastroScreen() {
     valorAdicionalDependenteForaGrade,
     setValorAdicionalDependenteForaGrade,
   ] = useState<number | null>(null);
+  const [idadeMaximaDependente, setIdadeMaximaDependente] = useState<
+    number | null
+  >(null);
 
   /* Redirecionamento WhatsApp por idade */
   const [waRedirectAtivo, setWaRedirectAtivo] = useState(false);
@@ -2918,8 +2925,14 @@ export default function MobileCadastroScreen() {
         const regra = Array.isArray(res.data) ? res.data[0] : null;
         const limite = Number(regra?.limiteBeneficiarios);
         const valorAdicional = Number(regra?.valorAdicionalDependenteForaGrade);
+        const idadeMaxima = Number(regra?.idadeMaximaDependente);
         if (Number.isFinite(limite) && limite > 0) {
           setLimiteBeneficiarios(Math.min(limite, MAX_DEP));
+        }
+        if (Number.isFinite(idadeMaxima) && idadeMaxima >= 0) {
+          setIdadeMaximaDependente(idadeMaxima);
+        } else {
+          setIdadeMaximaDependente(null);
         }
         if (Number.isFinite(valorAdicional) && valorAdicional > 0) {
           setValorAdicionalDependenteForaGrade(valorAdicional);
@@ -3074,7 +3087,24 @@ export default function MobileCadastroScreen() {
 
   /* Dependentes validation */
   const validateDependentes = (deps: Dependente[]) => {
-    const errors = deps.map((dep) => validateSingleDependente(dep));
+    const errors = deps.map((dep) => {
+      const current = validateSingleDependente(dep);
+      const idade =
+        typeof dep.idade === "number" && Number.isFinite(dep.idade)
+          ? dep.idade
+          : calcularIdade(dep.dataNascimento ?? null);
+
+      if (
+        current.dataNascimento === undefined &&
+        idade !== null &&
+        idadeMaximaDependente !== null &&
+        idade > idadeMaximaDependente
+      ) {
+        current.dataNascimento = `Dependente excede a idade máxima permitida de ${idadeMaximaDependente} anos`;
+      }
+
+      return current;
+    });
     return {
       isValid: errors.every((e) => Object.keys(e).length === 0),
       errors,

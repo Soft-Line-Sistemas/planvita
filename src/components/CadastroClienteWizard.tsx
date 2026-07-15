@@ -94,6 +94,9 @@ export function CadastroClienteWizard({
   const [limiteBeneficiarios, setLimiteBeneficiarios] = useState<number | null>(
     null,
   );
+  const [idadeMaximaDependente, setIdadeMaximaDependente] = useState<
+    number | null
+  >(null);
   const [usarMesmosDados, setUsarMesmosDados] = useState(false);
   const [consultores, setConsultores] = useState<ConsultorOption[]>([]);
   const [isLoadingConsultores, setIsLoadingConsultores] = useState(true);
@@ -147,8 +150,14 @@ export function CadastroClienteWizard({
     if (!nome) errors.nome = "Nome do dependente é obrigatório";
     else if (nome.length > 1000)
       errors.nome = "Nome do dependente deve ter no máximo 1000 caracteres";
+    const idade = dataNascimento ? calcularIdade(dataNascimento) : null;
     if (!dataNascimento)
       errors.dataNascimento = "Data de nascimento é obrigatória";
+    else if (idade === null || idade < 0)
+      errors.dataNascimento = "Data de nascimento inválida";
+    else if (idadeMaximaDependente !== null && idade > idadeMaximaDependente) {
+      errors.dataNascimento = `Dependente excede a idade máxima permitida de ${idadeMaximaDependente} anos`;
+    }
     if (!parentesco) errors.parentesco = "Parentesco é obrigatório";
     else if (parentesco.length > 1000)
       errors.parentesco = "Parentesco deve ter no máximo 1000 caracteres";
@@ -251,14 +260,23 @@ export function CadastroClienteWizard({
         if (!ativo) return;
         const regra = Array.isArray(res.data) ? res.data[0] : null;
         const limite = Number(regra?.limiteBeneficiarios);
+        const idadeMaxima = Number(regra?.idadeMaximaDependente);
         if (Number.isFinite(limite) && limite > 0) {
           setLimiteBeneficiarios(Math.min(limite, MAX_DEPENDENTES_POR_TITULAR));
         } else {
           setLimiteBeneficiarios(MAX_DEPENDENTES_POR_TITULAR);
         }
+        if (Number.isFinite(idadeMaxima) && idadeMaxima >= 0) {
+          setIdadeMaximaDependente(idadeMaxima);
+        } else {
+          setIdadeMaximaDependente(null);
+        }
       })
       .catch(() => {
-        if (ativo) setLimiteBeneficiarios(MAX_DEPENDENTES_POR_TITULAR);
+        if (ativo) {
+          setLimiteBeneficiarios(MAX_DEPENDENTES_POR_TITULAR);
+          setIdadeMaximaDependente(null);
+        }
       });
 
     return () => {
