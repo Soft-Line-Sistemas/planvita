@@ -29,7 +29,11 @@ import {
   enderecoSchema,
   responsavelFinanceiroSchema,
 } from "@/components/Titular/schemas";
-import { RELATIONSHIP_OPTIONS } from "@/constants/relationshipOptions";
+import {
+  RELATIONSHIP_OPTIONS,
+  isDirectFamilyRelationship,
+  isResponsibleFinancialRelationshipInPlan,
+} from "@/constants/relationshipOptions";
 import { BRAZIL_STATES, normalizeUfCode } from "@/constants/brazilStates";
 import {
   formatCPF,
@@ -154,14 +158,6 @@ function validateCreditCard(card: CreditCardValues): CreditCardErrors {
   return errors;
 }
 
-const DIRECT_PARENTESCOS_GRADE_FAMILIAR = new Set<string>([
-  "1° Grau",
-  "2° Grau",
-]);
-const RESPONSAVEL_FINANCEIRO_CONTA_NO_PLANO = new Set<string>([
-  "1° Grau",
-  "2° Grau",
-]);
 const PRIVACY_POLICY_VERSION = "2025-06";
 const SERVICE_CONTRACT_VERSION = "2025-06";
 const CADASTRO_CONSENT_ORIGIN = "cliente_mobile_cadastro_publico";
@@ -180,7 +176,7 @@ function getAdicionalPillText(
   const parentesco = dep.parentesco?.trim();
   if (!parentesco) return null;
 
-  const isDirectInGrade = DIRECT_PARENTESCOS_GRADE_FAMILIAR.has(parentesco);
+  const isDirectInGrade = isDirectFamilyRelationship(parentesco);
   const foraGradeFamiliar = dep.foraGradeFamiliar ?? !isDirectInGrade;
   if (!foraGradeFamiliar) return null;
   if (dep.excluirCobrancaAdicional) return null;
@@ -1129,16 +1125,14 @@ function Step4Form({
     const parentesco = dep.parentesco?.trim();
     if (!parentesco) return "Indireto";
     if (parentesco.toLowerCase() === "outro") return "Outros";
-    return DIRECT_PARENTESCOS_GRADE_FAMILIAR.has(parentesco)
-      ? "Direto"
-      : "Indireto";
+    return isDirectFamilyRelationship(parentesco) ? "Direto" : "Indireto";
   };
 
   const getDepAdicionalValor = (dep: Dependente): number => {
     const parentesco = dep.parentesco?.trim();
     if (!parentesco)
       return getValorAdicionalPorIdade(dep, matrizTarifacaoDependente);
-    const isDirectInGrade = DIRECT_PARENTESCOS_GRADE_FAMILIAR.has(parentesco);
+    const isDirectInGrade = isDirectFamilyRelationship(parentesco);
     const foraGradeFamiliar = dep.foraGradeFamiliar ?? !isDirectInGrade;
     if (!foraGradeFamiliar || dep.excluirCobrancaAdicional) return 0;
     const valorRealDependente = Number(dep.valorAdicionalMensal ?? 0);
@@ -2161,7 +2155,7 @@ function Step8Confirmacao({
   const adicionalDependentesTotal = dependentes.reduce((acc, dep) => {
     const parentesco = dep.parentesco?.trim();
     if (!parentesco) return acc;
-    const isDirectInGrade = DIRECT_PARENTESCOS_GRADE_FAMILIAR.has(parentesco);
+    const isDirectInGrade = isDirectFamilyRelationship(parentesco);
     const foraGradeFamiliar = dep.foraGradeFamiliar ?? !isDirectInGrade;
     if (!foraGradeFamiliar || dep.excluirCobrancaAdicional) return acc;
 
@@ -2830,7 +2824,7 @@ export default function MobileCadastroScreen() {
   ).trim();
   const incluirResponsavelNaComposicaoPlano =
     !usarMesmosDados &&
-    RESPONSAVEL_FINANCEIRO_CONTA_NO_PLANO.has(parentescoResponsavelParaPlano);
+    isResponsibleFinancialRelationshipInPlan(parentescoResponsavelParaPlano);
   const participantesPayload = (() => {
     const list: ParticipanteMin[] = [
       {

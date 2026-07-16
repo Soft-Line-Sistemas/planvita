@@ -33,7 +33,10 @@ import {
   DependentesForm,
   type DependenteFieldErrors,
 } from "@/components/Titular/DependentesForm";
-import { RELATIONSHIP_OPTIONS } from "@/constants/relationshipOptions";
+import {
+  RELATIONSHIP_OPTIONS,
+  isResponsibleFinancialRelationshipInPlan,
+} from "@/constants/relationshipOptions";
 import { Dependente } from "@/types/DependentesType";
 import { PlanoForm } from "@/components/Titular/PlanoForm";
 import { Confirmacao } from "@/components/Titular/Confirmacao";
@@ -50,7 +53,6 @@ interface CadastroClienteWizardProps {
   variant?: CadastroClienteWizardVariant;
 }
 const MAX_DEPENDENTES_POR_TITULAR = 8;
-const RESPONSAVEL_FINANCEIRO_CONTA_NO_PLANO = new Set<string>(["Cônjuge"]);
 
 type Step1Values = z.infer<typeof dadosPessoaisSchema>;
 type Step2Values = z.infer<typeof enderecoSchema>;
@@ -541,9 +543,7 @@ export function CadastroClienteWizard({
               ).trim();
               const incluirResponsavelNaComposicaoPlano =
                 !usarMesmosDados &&
-                RESPONSAVEL_FINANCEIRO_CONTA_NO_PLANO.has(
-                  parentescoResponsavel,
-                );
+                isResponsibleFinancialRelationshipInPlan(parentescoResponsavel);
 
               const participantesList: ParticipanteMin[] = [
                 {
