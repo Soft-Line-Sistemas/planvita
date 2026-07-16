@@ -76,15 +76,26 @@ describe("selecionarPlanosCompativeis", () => {
     expect(result.map((plano) => plano.nome)).toEqual(["Bosque Plus"]);
   });
 
-  it("mantem compatibilidade para as categorias resumidas da interface", () => {
+  it("mantem compatibilidade para os parentescos diretos e adicionais da interface", () => {
     const titular: ParticipanteMin = {
       dataNascimento: "2000-07-16",
       parentesco: "Titular",
     };
 
     const expectedPlanByRelationship = new Map<string, string[]>([
-      ["1° Grau", ["Bosque Essencial"]],
-      ["2° Grau", ["Bosque Essencial"]],
+      ["Cônjuge", ["Bosque Social", "Bosque Essencial"]],
+      ["Companheiro(a)", ["Bosque Social", "Bosque Essencial"]],
+      ["Filho(a)", ["Bosque Social", "Bosque Essencial"]],
+      ["Enteado(a)", ["Bosque Social", "Bosque Essencial"]],
+      ["Pai", ["Bosque Essencial"]],
+      ["Mãe", ["Bosque Essencial"]],
+      ["Padrasto", ["Bosque Essencial"]],
+      ["Madrasta", ["Bosque Essencial"]],
+      ["Sogro(a)", ["Bosque Essencial"]],
+      ["Irmão(ã)", ["Bosque Essencial"]],
+      ["Avô/Avó", ["Bosque Essencial"]],
+      ["Neto(a)", ["Bosque Social", "Bosque Essencial"]],
+      ["Tio(a)", ["Bosque Essencial"]],
       ["Outro", ["Bosque Essencial"]],
     ]);
 
