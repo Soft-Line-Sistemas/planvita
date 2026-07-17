@@ -824,6 +824,7 @@ function CadastroRedirectView({
         style={{ alignItems: "center", textAlign: "center" }}
       >
         <div
+          className="cm-login-flow-icon"
           style={{
             width: 64,
             height: 64,
@@ -832,7 +833,7 @@ function CadastroRedirectView({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            margin: "8px auto 4px",
+            margin: "0 auto 4px",
           }}
         >
           <AlertCircle color="#fff" size={32} />
@@ -921,6 +922,7 @@ function PaymentPendingView({
 
       <div className="cm-login-content" style={{ gap: 16 }}>
         <div
+          className="cm-login-flow-icon"
           style={{
             width: 64,
             height: 64,
