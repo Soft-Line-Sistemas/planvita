@@ -1042,6 +1042,10 @@
   background: rgba(255, 255, 255, 0.95);
 }
 
+.cm-login-flow-icon {
+  margin-top: max(env(safe-area-inset-top, 0px), 12px);
+}
+
 .cm-login-flow-title {
   margin: 0 0 6px;
   padding: 0 18px;

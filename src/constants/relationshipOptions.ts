@@ -51,6 +51,13 @@ const DIRECT_FAMILY_RELATIONSHIP_ALIASES = new Set<string>([
   "1o grau",
 ]);
 
+const RESPONSAVEL_FINANCEIRO_SEM_ADICIONAL_ALIASES = new Set<string>([
+  "conjuge",
+  "companheiro",
+  "companheira",
+  "companheiro a",
+]);
+
 export const isDirectFamilyRelationship = (value?: string | null): boolean =>
   DIRECT_FAMILY_RELATIONSHIP_ALIASES.has(normalizeRelationshipText(value));
 
@@ -60,3 +67,10 @@ export const isResponsibleFinancialRelationshipInPlan = (
   const normalized = normalizeRelationshipText(value);
   return normalized.length > 0 && normalized !== "titular";
 };
+
+export const isResponsibleFinancialRelationshipWithoutAdditional = (
+  value?: string | null,
+): boolean =>
+  RESPONSAVEL_FINANCEIRO_SEM_ADICIONAL_ALIASES.has(
+    normalizeRelationshipText(value),
+  );

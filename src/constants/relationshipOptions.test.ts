@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   isDirectFamilyRelationship,
   isResponsibleFinancialRelationshipInPlan,
+  isResponsibleFinancialRelationshipWithoutAdditional,
 } from "@/constants/relationshipOptions";
 
 describe("isDirectFamilyRelationship", () => {
@@ -38,5 +39,23 @@ describe("isDirectFamilyRelationship", () => {
     expect(isResponsibleFinancialRelationshipInPlan("Outro")).toBe(true);
     expect(isResponsibleFinancialRelationshipInPlan("Titular")).toBe(false);
     expect(isResponsibleFinancialRelationshipInPlan("")).toBe(false);
+  });
+
+  it("aplica isencao de adicional do corresponsavel apenas para conjuges e companheiros", () => {
+    expect(isResponsibleFinancialRelationshipWithoutAdditional("Cônjuge")).toBe(
+      true,
+    );
+    expect(
+      isResponsibleFinancialRelationshipWithoutAdditional("Companheiro(a)"),
+    ).toBe(true);
+    expect(isResponsibleFinancialRelationshipWithoutAdditional("Pai")).toBe(
+      false,
+    );
+    expect(isResponsibleFinancialRelationshipWithoutAdditional("Mãe")).toBe(
+      false,
+    );
+    expect(isResponsibleFinancialRelationshipWithoutAdditional("Outro")).toBe(
+      false,
+    );
   });
 });
