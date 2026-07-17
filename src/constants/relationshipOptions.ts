@@ -44,22 +44,11 @@ const DIRECT_FAMILY_RELATIONSHIP_ALIASES = new Set<string>([
   "sogro",
   "sogra",
   "sogro a",
-  "irmao",
-  "irma",
-  "irmao a",
-  "avo",
-  "avos",
-  "avo avo",
   "neto",
   "neta",
   "neto a",
-  "tio",
-  "tia",
-  "tio a",
   "1 grau",
   "1o grau",
-  "2 grau",
-  "2o grau",
 ]);
 
 const RESPONSAVEL_FINANCEIRO_RELATIONSHIP_ALIASES = new Set<string>([
