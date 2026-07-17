@@ -3,7 +3,7 @@ import { ReactNode, useEffect, useMemo, useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
-import logoPlanvita from "@/assets/logo-planvita.png";
+import logoCampoDoBosque from "@/assets/logo-planvita.png";
 import { PanelLeftOpen } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,7 +32,7 @@ export default function SidebarWrapper({ children }: { children: ReactNode }) {
   useEffect(() => {
     const storedState =
       typeof window !== "undefined"
-        ? window.localStorage.getItem("planvita:sidebar:collapsed")
+        ? window.localStorage.getItem("campo-do-bosque:sidebar:collapsed")
         : null;
     if (storedState !== null) {
       setIsDesktopCollapsed(storedState === "true");
@@ -47,7 +47,7 @@ export default function SidebarWrapper({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window !== "undefined") {
       window.localStorage.setItem(
-        "planvita:sidebar:collapsed",
+        "campo-do-bosque:sidebar:collapsed",
         String(isDesktopCollapsed),
       );
     }
@@ -101,11 +101,15 @@ export default function SidebarWrapper({ children }: { children: ReactNode }) {
               className={`hidden lg:flex items-center justify-between gap-2 pl-6 ${isDesktopCollapsed ? "w-20" : "w-64"}`}
             >
               <Image
-                src={isDesktopCollapsed ? "/adm-pc/logo-min.svg" : logoPlanvita}
+                src={
+                  isDesktopCollapsed
+                    ? "/adm-pc/logo-min.svg"
+                    : logoCampoDoBosque
+                }
                 alt={
                   isDesktopCollapsed
-                    ? "Logo Planvita reduzida"
-                    : "Logo Planvita"
+                    ? "Logo Campo do Bosque reduzida"
+                    : "Logo Campo do Bosque"
                 }
                 width={isDesktopCollapsed ? 40 : 120}
                 height={40}

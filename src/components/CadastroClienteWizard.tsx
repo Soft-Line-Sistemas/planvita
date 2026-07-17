@@ -18,7 +18,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import logoPlanvita from "@/assets/logo-planvita.png";
+import logoCampoDoBosque from "@/assets/logo-planvita.png";
 
 import {
   dadosPessoaisSchema,
@@ -634,11 +634,11 @@ export function CadastroClienteWizard({
   };
 
   const headingTitle = isPublic
-    ? "Cadastre-se na Planvita"
+    ? "Cadastre-se na Campo do Bosque"
     : "Cadastro de Cliente";
 
   const headingSubtitle =
-    "Complete os passos abaixo para contratar o seu plano Planvita de forma rápida e segura.";
+    "Complete os passos abaixo para contratar o seu plano Campo do Bosque de forma rápida e segura.";
 
   const containerClasses = isPublic
     ? "min-h-screen bg-gradient-to-br from-emerald-50 via-white to-slate-100 py-10 md:py-16"
@@ -650,10 +650,10 @@ export function CadastroClienteWizard({
         <div className={`mb-8 ${isPublic ? "text-center" : "text-left"}`}>
           {isPublic && (
             <Image
-              src={logoPlanvita}
+              src={logoCampoDoBosque}
               width={140}
               height={70}
-              alt="Logo Planvita"
+              alt="Logo Campo do Bosque"
               className="mx-auto mb-4"
             />
           )}

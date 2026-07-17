@@ -104,7 +104,7 @@ export default function ContaPage() {
           <CardHeader>
             <CardTitle>Dados do usuário</CardTitle>
             <CardDescription>
-              Informações básicas do seu acesso no Planvita.
+              Informações básicas do seu acesso no Campo do Bosque.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">

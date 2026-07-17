@@ -127,7 +127,7 @@ export default function CarteirinhaAsImage({
                 display:inline-flex;align-items:center;background:rgba(171,240,12,1);border-radius:22px;
                 padding:6px 14px;color:#1E5A14;font-size:16px;font-weight:700;
               ">Plano: <strong style="margin-left:4px;">${planoNome}</strong></span>
-              <span style="font-size:13px;letter-spacing:.3px;color:#111111;">Agora você faz parte da rede Planvita</span>
+              <span style="font-size:13px;letter-spacing:.3px;color:#111111;">Agora você faz parte da rede Campo do Bosque</span>
             </div>
           </div>
         </div>

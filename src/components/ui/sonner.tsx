@@ -18,7 +18,7 @@ export const Toaster: React.FC<SonnerProps> = ({ ...props }) => {
       richColors
       style={
         {
-          // Cores suaves no tema Planvita
+          // Cores suaves no tema Campo do Bosque
           "--normal-bg": "#f0fdf4", // fundo verde claro
           "--normal-text": "#14532d", // verde escuro texto
           "--normal-border": "#86efac", // verde médio borda

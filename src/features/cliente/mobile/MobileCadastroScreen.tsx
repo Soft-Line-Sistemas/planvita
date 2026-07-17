@@ -169,6 +169,16 @@ function formatAdicionalMensal(valor: number): string {
   return `R$ ${v}`;
 }
 
+function formatCoberturaFamiliar(coberturaMaxima?: number | null): string {
+  const quantidadeNormalizada = Number(coberturaMaxima ?? NaN);
+  const quantidade =
+    Number.isFinite(quantidadeNormalizada) && quantidadeNormalizada > 0
+      ? quantidadeNormalizada
+      : 8;
+  const label = quantidade === 1 ? "beneficiário" : "beneficiários";
+  return `Até ${quantidade} ${label}`;
+}
+
 function getAdicionalPillText(
   dep: Dependente,
   matrizTarifacaoDependente: FaixaTarifacaoDependente[],
@@ -2432,8 +2442,10 @@ function Step8Confirmacao({
                     Vigência: <strong>{plano.vigenciaMeses} meses</strong>
                   </p>
                   <p>
-                    Cobertura máxima:{" "}
-                    <strong>{fmt(plano.coberturaMaxima)}</strong>
+                    Cobertura familiar:{" "}
+                    <strong>
+                      {formatCoberturaFamiliar(plano.coberturaMaxima)}
+                    </strong>
                   </p>
                   {plano.idadeMaxima != null ? (
                     <p>
