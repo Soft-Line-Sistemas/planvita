@@ -42,4 +42,44 @@ describe("mapTitularToCarteirinha", () => {
     expect(cliente.assinaturasPendentes).toBe(false);
     expect(cliente.plano.status).toBe("ativo");
   });
+
+  it("mantém bloqueio de assinaturas quando a atualização cadastral estiver pendente", () => {
+    const cliente = mapTitularToCarteirinha({
+      id: 957,
+      nome: "Cliente Atualização",
+      cpf: "12345678901",
+      statusPlano: "PENDENTE_ASSINATURA",
+      dataContratacao: "2026-07-01T10:00:00.000Z",
+      pagamentoConfirmadoEm: "2026-07-01T10:05:00.000Z",
+      atualizacaoCadastralPendenteAssinatura: true,
+      assinaturas: [
+        {
+          tipo: "TITULAR_ASSINATURA_1",
+          createdAt: "2026-07-01T11:00:00.000Z",
+        },
+        {
+          tipo: "TITULAR_ASSINATURA_2",
+          createdAt: "2026-07-01T11:01:00.000Z",
+        },
+        {
+          tipo: "CORRESPONSAVEL_ASSINATURA_1",
+          createdAt: "2026-07-01T11:02:00.000Z",
+        },
+        {
+          tipo: "CORRESPONSAVEL_ASSINATURA_2",
+          createdAt: "2026-07-01T11:03:00.000Z",
+        },
+      ],
+      plano: {
+        id: 1,
+        nome: "Bosque Essencial",
+        valorMensal: 100,
+        vigenciaMeses: 60,
+        coberturas: [{ descricao: "Benefícios complementares" }],
+      },
+    });
+
+    expect(cliente.assinaturasPendentes).toBe(true);
+    expect(cliente.plano.status).toBe("pendente_assinatura");
+  });
 });

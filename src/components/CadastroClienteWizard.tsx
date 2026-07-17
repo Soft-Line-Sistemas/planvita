@@ -590,28 +590,15 @@ export function CadastroClienteWizard({
             case 6: {
               const titularData =
                 formData.step1 ?? dadosPessoaisForm.getValues();
-              const titularResumo: ParticipanteMin = {
-                nome: titularData?.nomeCompleto ?? "",
-                dataNascimento: titularData?.dataNascimento ?? null,
-              };
-
-              const dependentesResumo: ParticipanteMin[] = dependentes.map(
-                (d) => ({
-                  nome: d.nome,
-                  dataNascimento: d.dataNascimento ?? null,
-                  idade:
-                    typeof d.idade === "number" && !Number.isNaN(d.idade)
-                      ? d.idade
-                      : calcularIdade(d.dataNascimento ?? null),
-                }),
-              );
-
               return (
                 <Confirmacao
                   dados={{
-                    titular: titularResumo,
-                    dependentes: dependentesResumo,
                     planoSelecionado: planoForm.getValues().plano,
+                    titularDetalhes: titularData,
+                    endereco: formData.step2 ?? enderecoForm.getValues(),
+                    responsavelFinanceiro:
+                      formData.step3 ?? responsavelForm.getValues(),
+                    usarMesmosDados,
                   }}
                   consultores={consultores}
                   selectedConsultorKey={selectedConsultorKey}

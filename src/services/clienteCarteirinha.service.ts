@@ -39,6 +39,7 @@ type TitularResponse = {
   statusPlano?: string | null;
   dataContratacao?: string | null;
   pagamentoConfirmadoEm?: string | null;
+  atualizacaoCadastralPendenteAssinatura?: boolean | null;
   formaPagamentoAdesao?: string | null;
   asaasCardLast4?: string | null;
   asaasCardBrand?: string | null;
@@ -197,9 +198,9 @@ export const mapTitularToCarteirinha = (
   const tiposAssinados = new Map(
     assinaturas.map((assinatura) => [assinatura.tipo, assinatura]),
   );
-  const assinaturasPendentes = ASSINATURAS_OBRIGATORIAS.some(
-    (tipo) => !tiposAssinados.has(tipo),
-  );
+  const assinaturasPendentes =
+    titular?.atualizacaoCadastralPendenteAssinatura === true ||
+    ASSINATURAS_OBRIGATORIAS.some((tipo) => !tiposAssinados.has(tipo));
   const ultimaAssinaturaObrigatoriaEm = assinaturasPendentes
     ? null
     : getLatestDate(
