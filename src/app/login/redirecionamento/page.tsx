@@ -9,7 +9,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import logoPlanvita from "@/assets/logo-planvita.png";
+import logoCampoDoBosque from "@/assets/logo-planvita.png";
 
 export default function SelectTenantPage() {
   const handleSelectTenant = (tenant: string) => {
@@ -19,7 +19,7 @@ export default function SelectTenantPage() {
     // Salva o tenant em um cookie para persistência (útil na Vercel)
     document.cookie = `tenant=${tenant}; path=/; max-age=31536000; SameSite=Lax`;
 
-    // Se estivermos na Vercel (domínio .vercel.app), subdomínios como lider.planvita-lilac.vercel.app
+    // Se estivermos na Vercel (domínio .vercel.app), subdomínios dedicados
     // geralmente não funcionam sem configuração de Wildcard.
     if (hostname.includes("vercel.app")) {
       window.location.href = `/login?tenant=${tenant}`;
@@ -63,8 +63,8 @@ export default function SelectTenantPage() {
           <CardHeader className="text-center space-y-4">
             <div className="flex justify-center">
               <Image
-                src={logoPlanvita}
-                alt="Logo Planvita"
+                src={logoCampoDoBosque}
+                alt="Logo Campo do Bosque"
                 className="h-auto w-44"
                 priority
               />
@@ -95,7 +95,7 @@ export default function SelectTenantPage() {
               onClick={() => handleSelectTenant("bosque")}
               className="w-full rounded-[16px] border border-[#D5D5D5] bg-white py-3 font-semibold text-[#121317] transition-all hover:bg-gray-50"
             >
-              Campo do bosque
+              Campo do Bosque
             </Button>
             <p className="mt-6 text-center text-sm text-[#6E6E6E]">
               Área reservada para funcionários autorizados

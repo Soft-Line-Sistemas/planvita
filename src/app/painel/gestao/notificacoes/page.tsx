@@ -353,7 +353,7 @@ export default function NotificacoesRecorrentesPage() {
   const [isRefreshingQr, setIsRefreshingQr] = useState(false);
   const [whatsappTestPhone, setWhatsappTestPhone] = useState("");
   const [whatsappTestMessage, setWhatsappTestMessage] = useState(
-    "Mensagem de teste do WhatsApp próprio do Planvita.",
+    "Mensagem de teste do WhatsApp próprio do Campo do Bosque.",
   );
   const logsRef = useRef<HTMLDivElement | null>(null);
 

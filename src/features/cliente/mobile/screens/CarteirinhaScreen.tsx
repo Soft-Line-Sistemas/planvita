@@ -198,7 +198,7 @@ export default function CarteirinhaScreen({ cliente, onBack }: Props) {
                 </div>
               </div>
               <span className="cm-carteirinha-vertical-note">
-                Agora você faz parte da rede Planvita
+                Agora você faz parte da rede Campo do Bosque
               </span>
             </div>
             {leftLogoSrc ? (

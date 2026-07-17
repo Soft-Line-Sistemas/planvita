@@ -88,7 +88,7 @@ function LogoCard() {
     <div className="cm-login-logo-card">
       <Image
         src="/cliente-mobile/logo.svg"
-        alt="Planvita"
+        alt="Campo do Bosque"
         width={241}
         height={78}
         priority

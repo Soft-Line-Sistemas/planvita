@@ -136,7 +136,7 @@ export default function HomeScreen({
           <div className="cm-home-logo">
             <Image
               src="/cliente-mobile/Camada 1.svg"
-              alt="Planvita"
+              alt="Campo do Bosque"
               width={113}
               height={34}
               priority
