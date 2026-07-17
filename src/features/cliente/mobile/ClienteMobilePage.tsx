@@ -667,6 +667,21 @@ export default function ClienteMobilePage() {
         ?.status;
       const code = extractServerCode(err);
       const msg = extractServerMessage(err);
+      const login = faLogin.trim();
+
+      if (status === 402 && code === "PAYMENT_REQUIRED") {
+        setLoginValue(login);
+        setAuthView("payment-pending");
+        try {
+          await loadPaymentPending(login);
+        } catch {
+          setPpError(
+            "Nao foi possivel carregar os dados da cobranca. Voce ainda pode reenviar o link abaixo.",
+          );
+        }
+        return;
+      }
+
       const precisaCadastro =
         code === "FIRST_ACCESS_CONTACT_REQUIRED" ||
         status === 404 ||
