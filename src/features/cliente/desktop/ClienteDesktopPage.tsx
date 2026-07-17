@@ -747,6 +747,14 @@ export default function ConsultaClientePage() {
           ? errorObject.response.data.code
           : null;
 
+      if (status === 402 && code === "PAYMENT_REQUIRED") {
+        setFirstAccessError(
+          serverMessage ||
+            "Pagamento pendente. Entre pelo fluxo de login para abrir a tela de pagamento.",
+        );
+        return;
+      }
+
       const precisaRedirecionarParaCadastro =
         code === "FIRST_ACCESS_CONTACT_REQUIRED" ||
         status === 404 ||

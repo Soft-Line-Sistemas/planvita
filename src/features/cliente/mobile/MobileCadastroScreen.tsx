@@ -217,6 +217,34 @@ function getValorAdicionalPorIdade(
   );
 }
 
+function getAdicionalParticipantePorParentesco(
+  participante: Pick<
+    Dependente,
+    | "parentesco"
+    | "dataNascimento"
+    | "idade"
+    | "foraGradeFamiliar"
+    | "excluirCobrancaAdicional"
+    | "valorAdicionalMensal"
+  >,
+  matrizTarifacaoDependente: FaixaTarifacaoDependente[],
+): number {
+  const parentesco = participante.parentesco?.trim();
+  if (!parentesco) return 0;
+
+  const isDirectInGrade = isDirectFamilyRelationship(parentesco);
+  const foraGradeFamiliar = participante.foraGradeFamiliar ?? !isDirectInGrade;
+  if (!foraGradeFamiliar || participante.excluirCobrancaAdicional) return 0;
+
+  const valorReal = Number(participante.valorAdicionalMensal ?? 0);
+  if (valorReal > 0) return valorReal;
+
+  return getValorAdicionalPorIdade(
+    participante as Dependente,
+    matrizTarifacaoDependente,
+  );
+}
+
 interface ConsultorOption {
   id: number;
   nome: string;
@@ -2114,6 +2142,8 @@ function Step7Pagamento({
 
 function Step8Confirmacao({
   step1,
+  step3,
+  usarMesmosDados,
   dependentes,
   matrizTarifacaoDependente,
   plano,
@@ -2133,6 +2163,8 @@ function Step8Confirmacao({
   termosRef,
 }: {
   step1: Partial<Step1Values>;
+  step3: Partial<Step3Values>;
+  usarMesmosDados: boolean;
   dependentes: Dependente[];
   matrizTarifacaoDependente: FaixaTarifacaoDependente[];
   plano: Plano | null;
@@ -2162,23 +2194,35 @@ function Step8Confirmacao({
     ? METODO_PAGAMENTO_LABELS[metodoPagamento]
     : "Não informado";
 
-  const adicionalDependentesTotal = dependentes.reduce((acc, dep) => {
-    const parentesco = dep.parentesco?.trim();
-    if (!parentesco) return acc;
-    const isDirectInGrade = isDirectFamilyRelationship(parentesco);
-    const foraGradeFamiliar = dep.foraGradeFamiliar ?? !isDirectInGrade;
-    if (!foraGradeFamiliar || dep.excluirCobrancaAdicional) return acc;
+  const adicionalCorresponsavel = useMemo(() => {
+    if (usarMesmosDados) return 0;
+    return getAdicionalParticipantePorParentesco(
+      {
+        parentesco: step3.parentesco ?? "",
+        dataNascimento: step3.dataNascimento ?? null,
+        idade: step3.dataNascimento
+          ? calcularIdade(step3.dataNascimento)
+          : null,
+      },
+      matrizTarifacaoDependente,
+    );
+  }, [
+    matrizTarifacaoDependente,
+    step3.dataNascimento,
+    step3.parentesco,
+    usarMesmosDados,
+  ]);
 
-    const valorRealDependente = Number(dep.valorAdicionalMensal ?? 0);
-    const valor =
-      valorRealDependente > 0
-        ? valorRealDependente
-        : getValorAdicionalPorIdade(dep, matrizTarifacaoDependente);
-    return acc + valor;
-  }, 0);
+  const adicionalDependentesTotal = dependentes.reduce(
+    (acc, dep) =>
+      acc +
+      getAdicionalParticipantePorParentesco(dep, matrizTarifacaoDependente),
+    0,
+  );
 
-  const totalMensalPlano =
-    (plano?.valorMensal ?? 0) + adicionalDependentesTotal;
+  const adicionalTotal = adicionalCorresponsavel + adicionalDependentesTotal;
+
+  const totalMensalPlano = (plano?.valorMensal ?? 0) + adicionalTotal;
 
   useEffect(() => {
     if (!planoModalOpen || typeof document === "undefined") return;
@@ -2258,9 +2302,7 @@ function Step8Confirmacao({
                 </p>
                 <p className="cm-cad-dep-resumo-line">
                   Adicionais:{" "}
-                  {adicionalDependentesTotal > 0
-                    ? fmt(adicionalDependentesTotal)
-                    : "R$ 0,00"}
+                  {adicionalTotal > 0 ? fmt(adicionalTotal) : "R$ 0,00"}
                 </p>
                 <p className="cm-cad-dep-resumo-line cm-cad-plan-total-line">
                   Total mensal:{" "}
@@ -2426,9 +2468,7 @@ function Step8Confirmacao({
                   <p>
                     Adicionais de dependentes:{" "}
                     <strong>
-                      {adicionalDependentesTotal > 0
-                        ? fmt(adicionalDependentesTotal)
-                        : "R$ 0,00"}
+                      {adicionalTotal > 0 ? fmt(adicionalTotal) : "R$ 0,00"}
                     </strong>
                   </p>
                   <p>
@@ -3480,6 +3520,8 @@ export default function MobileCadastroScreen() {
         return (
           <Step8Confirmacao
             step1={step1Form.getValues()}
+            step3={step3Form.getValues()}
+            usarMesmosDados={usarMesmosDados}
             dependentes={dependentes}
             matrizTarifacaoDependente={matrizTarifacaoDependente}
             plano={selectedPlano}

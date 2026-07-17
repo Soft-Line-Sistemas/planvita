@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { isDirectFamilyRelationship } from "@/constants/relationshipOptions";
+import {
+  isDirectFamilyRelationship,
+  isResponsibleFinancialRelationshipInPlan,
+} from "@/constants/relationshipOptions";
 
 describe("isDirectFamilyRelationship", () => {
   it("mantem como diretos apenas os parentescos da grade sem adicional", () => {
@@ -23,5 +26,17 @@ describe("isDirectFamilyRelationship", () => {
     expect(isDirectFamilyRelationship("Tio(a)")).toBe(false);
     expect(isDirectFamilyRelationship("2° Grau")).toBe(false);
     expect(isDirectFamilyRelationship("Outro")).toBe(false);
+  });
+
+  it("inclui o corresponsavel na composicao do plano para qualquer parentesco valido diferente de titular", () => {
+    expect(isResponsibleFinancialRelationshipInPlan("Cônjuge")).toBe(true);
+    expect(isResponsibleFinancialRelationshipInPlan("Companheiro(a)")).toBe(
+      true,
+    );
+    expect(isResponsibleFinancialRelationshipInPlan("Pai")).toBe(true);
+    expect(isResponsibleFinancialRelationshipInPlan("Irmão(ã)")).toBe(true);
+    expect(isResponsibleFinancialRelationshipInPlan("Outro")).toBe(true);
+    expect(isResponsibleFinancialRelationshipInPlan("Titular")).toBe(false);
+    expect(isResponsibleFinancialRelationshipInPlan("")).toBe(false);
   });
 });
