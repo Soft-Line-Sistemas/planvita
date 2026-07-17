@@ -33,6 +33,7 @@ import {
   RELATIONSHIP_OPTIONS,
   isDirectFamilyRelationship,
   isResponsibleFinancialRelationshipInPlan,
+  isResponsibleFinancialRelationshipWithoutAdditional,
 } from "@/constants/relationshipOptions";
 import { BRAZIL_STATES, normalizeUfCode } from "@/constants/brazilStates";
 import {
@@ -2196,6 +2197,9 @@ function Step8Confirmacao({
 
   const adicionalCorresponsavel = useMemo(() => {
     if (usarMesmosDados) return 0;
+    if (isResponsibleFinancialRelationshipWithoutAdditional(step3.parentesco)) {
+      return 0;
+    }
     return getAdicionalParticipantePorParentesco(
       {
         parentesco: step3.parentesco ?? "",
@@ -2207,9 +2211,9 @@ function Step8Confirmacao({
       matrizTarifacaoDependente,
     );
   }, [
+    step3.parentesco,
     matrizTarifacaoDependente,
     step3.dataNascimento,
-    step3.parentesco,
     usarMesmosDados,
   ]);
 

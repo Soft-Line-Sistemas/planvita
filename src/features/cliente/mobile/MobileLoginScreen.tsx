@@ -904,6 +904,17 @@ function PaymentPendingView({
     return d.toLocaleDateString("pt-BR");
   };
 
+  const shouldShowResend = (() => {
+    if (!ppPaymentUrl) return true;
+    if (!ppVencimento) return false;
+    const dueDate = new Date(ppVencimento);
+    if (isNaN(dueDate.getTime())) return false;
+    const today = new Date();
+    dueDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    return dueDate < today;
+  })();
+
   return (
     <>
       <BackButton onClick={() => setAuthView("login")} />
@@ -973,7 +984,7 @@ function PaymentPendingView({
           )}
         </div>
 
-        {ppPaymentUrl && !ppSucesso && (
+        {ppPaymentUrl && (
           <a
             href={ppPaymentUrl}
             target="_blank"
@@ -981,40 +992,30 @@ function PaymentPendingView({
             className="cm-login-btn-primary"
             style={{ textDecoration: "none", textAlign: "center" }}
           >
-            Pagar agora (link ativo)
+            Pagar agora
           </a>
         )}
 
-        {ppSucesso ? (
+        {ppSucesso && (
           <SuccessBox message="Novo link de pagamento enviado! Verifique seu e-mail ou WhatsApp." />
-        ) : (
-          <>
-            <p
-              style={{
-                color: "rgba(255,255,255,0.7)",
-                fontSize: 13,
-                textAlign: "center",
-                margin: 0,
-              }}
-            >
-              Não recebeu o link? Reenvie um novo:
-            </p>
-            <button
-              type="button"
-              className="cm-login-btn-primary"
-              disabled={ppLoading}
-              onClick={onReenviarPagamento}
-            >
-              {ppLoading ? (
-                <>
-                  <Loader2 size={18} className="cm-spinner" />
-                  Enviando...
-                </>
-              ) : (
-                "Reenviar link de pagamento"
-              )}
-            </button>
-          </>
+        )}
+
+        {shouldShowResend && (
+          <button
+            type="button"
+            className="cm-login-btn-secondary"
+            disabled={ppLoading}
+            onClick={onReenviarPagamento}
+          >
+            {ppLoading ? (
+              <>
+                <Loader2 size={18} className="cm-spinner" />
+                Enviando...
+              </>
+            ) : (
+              "Reenviar link"
+            )}
+          </button>
         )}
 
         <button

@@ -168,6 +168,17 @@ const formatDate = (value: string) => {
   });
 };
 
+const isPastDueDate = (value?: string | null) => {
+  if (!value) return false;
+  const dueDate = new Date(value);
+  if (Number.isNaN(dueDate.getTime())) return false;
+
+  const today = new Date();
+  dueDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  return dueDate < today;
+};
+
 const formatBirthDate = (isoDate?: string | null) => {
   if (!isoDate) return "—";
   return formatDatePtBr(isoDate);
@@ -330,6 +341,32 @@ export default function ConsultaClientePage() {
   >(null);
   const [firstAccessError, setFirstAccessError] = useState<string | null>(null);
   const [firstAccessLoading, setFirstAccessLoading] = useState(false);
+  const [paymentPendingOpen, setPaymentPendingOpen] = useState(false);
+  const [paymentPendingNome, setPaymentPendingNome] = useState<string | null>(
+    null,
+  );
+  const [paymentPendingEmail, setPaymentPendingEmail] = useState<string | null>(
+    null,
+  );
+  const [paymentPendingTelefone, setPaymentPendingTelefone] = useState<
+    string | null
+  >(null);
+  const [paymentPendingUrl, setPaymentPendingUrl] = useState<string | null>(
+    null,
+  );
+  const [paymentPendingVencimento, setPaymentPendingVencimento] = useState<
+    string | null
+  >(null);
+  const [paymentPendingValor, setPaymentPendingValor] = useState<number | null>(
+    null,
+  );
+  const [paymentPendingLoading, setPaymentPendingLoading] = useState(false);
+  const [paymentPendingError, setPaymentPendingError] = useState<string | null>(
+    null,
+  );
+  const [paymentPendingSuccess, setPaymentPendingSuccess] = useState(false);
+  const shouldShowPaymentResend =
+    !paymentPendingUrl || isPastDueDate(paymentPendingVencimento);
   const [cadastroRedirectOpen, setCadastroRedirectOpen] = useState(false);
   const [cadastroRedirectMessage, setCadastroRedirectMessage] = useState(
     "Não encontramos CPF ou e-mail cadastrado para concluir o primeiro acesso. Finalize seu cadastro para continuar.",
@@ -404,6 +441,42 @@ export default function ConsultaClientePage() {
     setFirstAccessInfo(null);
     setFirstAccessError(null);
   }, []);
+
+  const populatePaymentPending = useCallback(
+    (data: {
+      nome?: string | null;
+      emailMasked?: string | null;
+      telefoneMasked?: string | null;
+      paymentUrl?: string | null;
+      vencimento?: string | null;
+      valor?: number | null;
+    }) => {
+      setPaymentPendingNome(data.nome ?? null);
+      setPaymentPendingEmail(data.emailMasked ?? null);
+      setPaymentPendingTelefone(data.telefoneMasked ?? null);
+      setPaymentPendingUrl(data.paymentUrl ?? null);
+      setPaymentPendingVencimento(data.vencimento ?? null);
+      setPaymentPendingValor(data.valor ?? null);
+    },
+    [],
+  );
+
+  const loadPaymentPending = useCallback(
+    async (login: string, markSuccess = false) => {
+      setPaymentPendingNome(null);
+      setPaymentPendingEmail(null);
+      setPaymentPendingTelefone(null);
+      setPaymentPendingUrl(null);
+      setPaymentPendingVencimento(null);
+      setPaymentPendingValor(null);
+      setPaymentPendingError(null);
+      setPaymentPendingSuccess(markSuccess);
+
+      const { data } = await api.post("/auth/pagamento/reenviar", { login });
+      populatePaymentPending(data);
+    },
+    [populatePaymentPending],
+  );
 
   const clearFirstAccessQueryParams = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -748,10 +821,16 @@ export default function ConsultaClientePage() {
           : null;
 
       if (status === 402 && code === "PAYMENT_REQUIRED") {
-        setFirstAccessError(
-          serverMessage ||
-            "Pagamento pendente. Entre pelo fluxo de login para abrir a tela de pagamento.",
-        );
+        setFirstAccessOpen(false);
+        setPaymentPendingOpen(true);
+        setLoginValue(firstAccessLogin.trim());
+        try {
+          await loadPaymentPending(firstAccessLogin.trim());
+        } catch {
+          setPaymentPendingError(
+            "Nao foi possivel carregar os dados da cobranca. Voce ainda pode reenviar o link abaixo.",
+          );
+        }
         return;
       }
 
@@ -775,6 +854,101 @@ export default function ConsultaClientePage() {
       setFirstAccessLoading(false);
     }
   };
+
+  const handleResendPaymentLink = useCallback(async () => {
+    const login = firstAccessLogin.trim() || loginValue.trim();
+    if (!login) {
+      setPaymentPendingError(
+        "Informe CPF ou e-mail para localizar a cobranca.",
+      );
+      return;
+    }
+
+    setPaymentPendingLoading(true);
+    try {
+      await loadPaymentPending(login, true);
+    } catch (err: unknown) {
+      const errorObject = err as {
+        response?: { data?: { message?: unknown } };
+      };
+      const serverMessage =
+        typeof errorObject?.response?.data?.message === "string"
+          ? errorObject.response.data.message
+          : null;
+      setPaymentPendingError(
+        serverMessage || "Nao foi possivel reenviar o link de pagamento.",
+      );
+    } finally {
+      setPaymentPendingLoading(false);
+    }
+  }, [firstAccessLogin, loadPaymentPending, loginValue]);
+
+  const handleVerifyPendingPayment = useCallback(async () => {
+    const login = firstAccessLogin.trim() || loginValue.trim();
+    if (!login) {
+      setPaymentPendingError(
+        "Informe CPF ou e-mail para verificar o pagamento.",
+      );
+      return;
+    }
+
+    setPaymentPendingLoading(true);
+    setPaymentPendingError(null);
+    setPaymentPendingSuccess(false);
+    try {
+      const { data } = await api.post("/auth/first-access", { login });
+      const destination =
+        data?.start?.destinationMasked || data?.start?.channel || "seu contato";
+      setFirstAccessLogin(login);
+      setFirstAccessDestination(destination);
+      setFirstAccessChannel(
+        data?.start?.channel === "whatsapp" ? "whatsapp" : "email",
+      );
+      const devOtp = data?.start?.dev?.otp;
+      setFirstAccessInfo(
+        devOtp
+          ? `Pagamento confirmado. Codigo (dev): ${devOtp}`
+          : "Pagamento confirmado. Enviamos um codigo para validar seu primeiro acesso.",
+      );
+      setFirstAccessStep("verify");
+      setPaymentPendingOpen(false);
+      setFirstAccessOpen(true);
+    } catch (err: unknown) {
+      const errorObject = err as {
+        response?: {
+          status?: number;
+          data?: { message?: unknown; code?: unknown };
+        };
+      };
+      const status = errorObject?.response?.status;
+      const code =
+        typeof errorObject?.response?.data?.code === "string"
+          ? errorObject.response.data.code
+          : null;
+      const serverMessage =
+        typeof errorObject?.response?.data?.message === "string"
+          ? errorObject.response.data.message
+          : null;
+
+      if (status === 402 && code === "PAYMENT_REQUIRED") {
+        setPaymentPendingError(
+          "O pagamento ainda nao foi confirmado. Assim que o webhook atualizar, este botao liberara o primeiro acesso.",
+        );
+        try {
+          await loadPaymentPending(login);
+        } catch {
+          // mantem o estado atual
+        }
+        return;
+      }
+
+      setPaymentPendingError(
+        serverMessage || "Nao foi possivel verificar o pagamento agora.",
+      );
+    } finally {
+      setPaymentPendingLoading(false);
+    }
+  }, [firstAccessLogin, loadPaymentPending, loginValue]);
 
   const verifyFirstAccessOtp = async () => {
     setFirstAccessError(null);
@@ -1640,6 +1814,103 @@ export default function ConsultaClientePage() {
                 </Button>
               </>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={paymentPendingOpen} onOpenChange={setPaymentPendingOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pagamento pendente</DialogTitle>
+            <DialogDescription>
+              O pagamento da adesao ainda nao foi confirmado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {(paymentPendingNome ||
+              paymentPendingEmail ||
+              paymentPendingTelefone ||
+              paymentPendingValor ||
+              paymentPendingVencimento) && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 space-y-1">
+                {paymentPendingNome && <p>{paymentPendingNome}</p>}
+                {paymentPendingEmail && <p>Contato: {paymentPendingEmail}</p>}
+                {paymentPendingTelefone && (
+                  <p>WhatsApp: {paymentPendingTelefone}</p>
+                )}
+                {paymentPendingValor !== null && (
+                  <p>Valor: {formatCurrency(paymentPendingValor)}</p>
+                )}
+                {paymentPendingVencimento && (
+                  <p>Vencimento: {formatDate(paymentPendingVencimento)}</p>
+                )}
+              </div>
+            )}
+
+            {paymentPendingSuccess && (
+              <Alert>
+                <AlertTitle>Link reenviado</AlertTitle>
+                <AlertDescription>
+                  Atualizamos os dados da cobranca pendente.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {paymentPendingError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Erro</AlertTitle>
+                <AlertDescription>{paymentPendingError}</AlertDescription>
+              </Alert>
+            )}
+
+            {paymentPendingUrl && (
+              <Button
+                className="w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
+                onClick={() =>
+                  window.open(
+                    paymentPendingUrl,
+                    "_blank",
+                    "noopener,noreferrer",
+                  )
+                }
+              >
+                Pagar agora
+              </Button>
+            )}
+
+            {shouldShowPaymentResend && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  void handleResendPaymentLink();
+                }}
+                disabled={paymentPendingLoading}
+              >
+                {paymentPendingLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  "Reenviar link"
+                )}
+              </Button>
+            )}
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                void handleVerifyPendingPayment();
+              }}
+              disabled={paymentPendingLoading}
+            >
+              Ja paguei, liberar primeiro acesso
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
