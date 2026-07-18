@@ -43,6 +43,7 @@ export interface MobileLoginProps {
   faInfo: string | null;
   faDestination: string | null;
   faChannel: "email" | "whatsapp" | null;
+  faWhatsappAvailable: boolean;
   onStartFirstAccess: (channel?: "email" | "whatsapp") => void;
   onVerifyFirstAccess: () => void;
   onCompleteFirstAccess: () => void;
@@ -326,6 +327,7 @@ function FirstAccessView({
   | "faInfo"
   | "faDestination"
   | "faChannel"
+  | "faWhatsappAvailable"
   | "onStartFirstAccess"
   | "onVerifyFirstAccess"
   | "onCompleteFirstAccess"
@@ -374,7 +376,9 @@ function FirstAccessView({
               <p className="cm-alterar-senha-criteria-title">Como funciona:</p>
               <ul className="cm-alterar-senha-criteria-list">
                 <li>Informe seu CPF ou e-mail cadastrado;</li>
-                <li>Enviaremos um código de verificação;</li>
+                <li>
+                  Escolha se deseja receber o código por e-mail ou WhatsApp;
+                </li>
                 <li>Valide o código e crie sua senha de acesso.</li>
               </ul>
             </div>
@@ -395,9 +399,13 @@ function FirstAccessView({
 
               <button
                 type="button"
-                className="cm-btn-solid cm-alterar-senha-submit"
+                className={
+                  faWhatsappAvailable
+                    ? "cm-btn-outline"
+                    : "cm-btn-solid cm-alterar-senha-submit"
+                }
                 disabled={faLoading}
-                onClick={() => onStartFirstAccess()}
+                onClick={() => onStartFirstAccess("email")}
               >
                 {faLoading ? (
                   <>
@@ -405,9 +413,27 @@ function FirstAccessView({
                     Enviando...
                   </>
                 ) : (
-                  "Enviar código"
+                  "Receber por e-mail"
                 )}
               </button>
+
+              {faWhatsappAvailable && (
+                <button
+                  type="button"
+                  className="cm-btn-solid cm-alterar-senha-submit"
+                  disabled={faLoading}
+                  onClick={() => onStartFirstAccess("whatsapp")}
+                >
+                  {faLoading ? (
+                    <>
+                      <Loader2 size={18} className="cm-spinner" />
+                      Enviando...
+                    </>
+                  ) : (
+                    "Receber por WhatsApp"
+                  )}
+                </button>
+              )}
             </div>
           </>
         )}

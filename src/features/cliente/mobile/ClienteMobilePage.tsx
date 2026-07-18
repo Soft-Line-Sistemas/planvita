@@ -234,6 +234,7 @@ export default function ClienteMobilePage() {
   const [faInfo, setFaInfo] = useState<string | null>(null);
   const [faDestination, setFaDestination] = useState<string | null>(null);
   const [faChannel, setFaChannel] = useState<"email" | "whatsapp" | null>(null);
+  const [faWhatsappAvailable, setFaWhatsappAvailable] = useState(false);
 
   /* --- Forgot password --- */
   const [fgStep, setFgStep] = useState<ForgotStep>("request");
@@ -337,6 +338,21 @@ export default function ClienteMobilePage() {
       document.cookie = `tenant=${tenant}; path=/; max-age=31536000; SameSite=Lax`;
     }
   }, []);
+
+  const loadFirstAccessChannels = useCallback(async () => {
+    setFaWhatsappAvailable(false);
+    try {
+      const { data } = await api.get("/auth/first-access/channels");
+      setFaWhatsappAvailable(Boolean(data?.whatsapp));
+    } catch {
+      setFaWhatsappAvailable(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (authView !== "first-access") return;
+    void loadFirstAccessChannels();
+  }, [authView, loadFirstAccessChannels]);
 
   /* --- URL params handled ref --- */
   const urlParamsHandledRef = useRef(false);
@@ -1266,6 +1282,7 @@ export default function ClienteMobilePage() {
           faInfo={faInfo}
           faDestination={faDestination}
           faChannel={faChannel}
+          faWhatsappAvailable={faWhatsappAvailable}
           onStartFirstAccess={onStartFirstAccess}
           onVerifyFirstAccess={onVerifyFirstAccess}
           onCompleteFirstAccess={onCompleteFirstAccess}
