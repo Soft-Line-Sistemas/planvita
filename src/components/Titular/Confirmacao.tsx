@@ -153,12 +153,61 @@ const buildCheck = (checked: boolean, extraClass = "") =>
 const buildRuledLine = (value?: string | null, tick = false) =>
   `<div class="ruled-line${tick ? " tick" : ""}"><span class="filled-text">${escapeHtml(value)}</span></div>`;
 
+type SegmentedValueMode = "digits" | "alphanumeric" | "raw";
+
+const normalizeSegmentedValue = (
+  value: string | undefined,
+  maxLength: number,
+  mode: SegmentedValueMode = "digits",
+) => {
+  const rawValue = String(value ?? "")
+    .trim()
+    .toUpperCase();
+
+  if (!rawValue) return [];
+
+  const normalized =
+    mode === "digits"
+      ? rawValue.replace(/\D/g, "")
+      : mode === "alphanumeric"
+        ? rawValue.replace(/[^0-9A-Z]/g, "")
+        : rawValue;
+
+  return normalized.slice(0, maxLength).split("");
+};
+
 const buildSegmentedLine = (
   value: string | undefined,
-  spansMarkup: string,
+  groups: number[],
   className = "",
-) =>
-  `<div class="segmented ${className}">${spansMarkup}<span class="filled-text">${escapeHtml(value)}</span></div>`;
+  options?: {
+    mode?: SegmentedValueMode;
+  },
+) => {
+  const totalSlots = groups.reduce((sum, groupSize) => sum + groupSize, 0);
+  const characters = normalizeSegmentedValue(
+    value,
+    totalSlots,
+    options?.mode ?? "digits",
+  );
+  let cursor = 0;
+
+  const groupsMarkup = groups
+    .map((groupSize, index) => {
+      const slots = Array.from({ length: groupSize }, () => {
+        const character = characters[cursor] ?? "&nbsp;";
+        cursor += 1;
+        return `<span class="slot"><span class="slot-char">${character === "&nbsp;" ? character : escapeHtml(character)}</span></span>`;
+      }).join("");
+
+      return `<div class="segmented-group" style="grid-template-columns:repeat(${groupSize}, minmax(0, 1fr)); flex:${groupSize} 1 0;">${slots}</div>${
+        index < groups.length - 1 ? '<span class="group-separator"></span>' : ""
+      }`;
+    })
+    .join("");
+
+  return `<div class="segmented ${className}"><div class="segmented-content">${groupsMarkup}</div></div>`;
+};
 
 const buildAdesaoHtml = ({
   titular,
@@ -325,10 +374,10 @@ const buildAdesaoHtml = ({
   }
   .segmented{
     display:inline-flex;
-    align-items:flex-end;
+    align-items:stretch;
     align-self:flex-start;
     border-bottom:1.4px solid var(--cinza-linha);
-    height:6mm;
+    height:6.2mm;
     position:relative;
     width:100%;
   }
@@ -342,20 +391,41 @@ const buildAdesaoHtml = ({
     background:var(--verde-claro);
   }
   .segmented.no-tick::before{content:none;}
-  .segmented span.seg{
-    flex:0 0 auto;
-    width:8mm;
-    align-self:flex-end;
+  .segmented-content{
+    display:flex;
+    align-items:stretch;
+    width:100%;
+    height:100%;
+  }
+  .segmented.end-bar .segmented-content{border-right:1.6px solid var(--cinza-linha);}
+  .segmented.start-bar .segmented-content{border-left:1.6px solid var(--cinza-linha);}
+  .segmented-group{
+    display:grid;
+    align-items:stretch;
+    min-width:0;
+    height:100%;
+  }
+  .slot{
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    min-width:0;
+    height:100%;
     border-right:1.2px solid var(--cinza-linha);
-    height:12%;
+    padding:0 0.2mm 0.45mm;
   }
-  .segmented span.grp{
-    border-right-width:1.6px;
-    height:85%;
+  .segmented-group .slot:last-child{border-right:none;}
+  .slot-char{
+    display:block;
+    font-size:10pt;
+    font-weight:800;
+    line-height:1;
   }
-  .segmented span.seg:last-of-type{border-right:none;}
-  .segmented.end-bar span.seg:last-of-type{border-right:1.6px solid var(--cinza-linha);}
-  .segmented.start-bar span.seg:first-of-type{border-left:1.6px solid var(--cinza-linha); height:85%;}
+  .group-separator{
+    flex:0 0 1.1mm;
+    height:100%;
+    border-right:1.6px solid var(--cinza-linha);
+  }
   .checks-row{
     display:flex;
     gap:4mm;
@@ -611,11 +681,7 @@ const buildAdesaoHtml = ({
       </div>
       <div class="field">
         <span class="field-label">DATA DA ADESÃO</span>
-        ${buildSegmentedLine(
-          today,
-          '<span class="seg"></span><span class="seg grp"></span><span class="seg"></span><span class="seg grp"></span><span class="seg"></span><span class="seg grp"></span>',
-          "end-bar",
-        )}
+        ${buildSegmentedLine(today, [2, 2, 4], "end-bar")}
       </div>
       <div class="field">
         <span class="field-label">PROMOTOR (A) COMERCIAL</span>
@@ -669,7 +735,7 @@ const buildAdesaoHtml = ({
         <span class="field-label">DATA DE NASCIMENTO</span>
         ${buildSegmentedLine(
           formatDateBr(titular?.dataNascimento),
-          '<span class="seg"></span><span class="seg grp"></span><span class="seg"></span><span class="seg grp"></span><span class="seg"></span><span class="seg grp"></span>',
+          [2, 2, 4],
           "end-bar",
         )}
       </div>
@@ -683,18 +749,15 @@ const buildAdesaoHtml = ({
       </div>
       <div class="field" style="flex:0 0 auto; min-width:48mm;">
         <span class="field-label">CPF</span>
-        ${buildSegmentedLine(
-          titular?.cpf,
-          '<span class="seg"></span><span class="seg"></span><span class="seg grp"></span><span class="seg"></span><span class="seg"></span><span class="seg grp"></span><span class="seg"></span><span class="seg"></span><span class="seg grp"></span>',
-          "end-bar",
-        )}
+        ${buildSegmentedLine(titular?.cpf, [3, 3, 3, 2], "end-bar")}
       </div>
       <div class="field" style="flex:0 0 auto; min-width:24mm;">
         <span class="field-label">RG</span>
         ${buildSegmentedLine(
           titular?.rg,
-          '<span class="seg"></span><span class="seg"></span><span class="seg grp"></span>',
+          [2, 3, 2],
           "no-tick end-bar start-bar",
+          { mode: "alphanumeric" },
         )}
       </div>
     </div>
@@ -709,11 +772,7 @@ const buildAdesaoHtml = ({
       </div>
       <div style="flex:0 0 auto; min-width:58mm;">
         <span class="field-label">TELEFONE</span>
-        ${buildSegmentedLine(
-          phone,
-          '<span class="seg"></span><span class="seg grp"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg grp"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg grp"></span>',
-          "end-bar",
-        )}
+        ${buildSegmentedLine(phone, [2, 5, 4], "end-bar")}
       </div>
       <div style="flex:1;">
         <span class="field-label">PREFERÊNCIA DE TRATAMENTO / COMO É CONHECIDO</span>
@@ -753,11 +812,7 @@ const buildAdesaoHtml = ({
     <div class="row-grid g4">
       <div class="field">
         <span class="field-label">CEP</span>
-        ${buildSegmentedLine(
-          endereco?.cep,
-          '<span class="seg"></span><span class="seg grp"></span><span class="seg"></span><span class="seg"></span><span class="seg grp"></span><span class="seg"></span><span class="seg"></span><span class="seg grp"></span>',
-          "end-bar",
-        )}
+        ${buildSegmentedLine(endereco?.cep, [5, 3], "end-bar")}
       </div>
       <div class="field">
         <span class="field-label">BAIRRO / DISTRITO</span>
@@ -846,12 +901,8 @@ const buildAdesaoHtml = ({
       ${buildRuledLine(planValue, true)}
     </div>
     <div class="field">
-      <span class="field-label">DATA PRIMEIRO PAGTO / ADESÃO</span>
-      ${buildSegmentedLine(
-        today,
-        '<span class="seg"></span><span class="seg grp"></span><span class="seg"></span><span class="seg grp"></span><span class="seg"></span><span class="seg grp"></span>',
-        "end-bar",
-      )}
+        <span class="field-label">DATA PRIMEIRO PAGTO / ADESÃO</span>
+      ${buildSegmentedLine(today, [2, 2, 4], "end-bar")}
     </div>
     <div class="pay-checks">
       <span class="checkbox">${buildCheck(billingType === "PIX", "round")}PIX</span>
@@ -876,7 +927,7 @@ const buildAdesaoHtml = ({
     </div>
     <div class="field cpf">
       <span class="field-label">CPF</span>
-      ${buildRuledLine(effectiveResponsavel?.cpf, true)}
+      ${buildSegmentedLine(effectiveResponsavel?.cpf, [3, 3, 3, 2], "end-bar")}
     </div>
   </div>
 </div>
