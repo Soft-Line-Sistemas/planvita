@@ -740,7 +740,7 @@ const buildAdesaoHtml = ({
       </div>
     </div>
     <div class="header-contact">
-      <img class="qr-img" src="/adesao-cb/qr-code.png" alt="QR WhatsApp">
+      <img class="qr-img" src="/adesao-cb/qr-whatsapp.png" alt="QR WhatsApp">
       <div class="contact-text">
         <p class="ct-title">Central de Atendimento</p>
         <p class="ct-phone">71<br>3266 0787</p>
@@ -1044,7 +1044,7 @@ const buildAdesaoHtml = ({
   <div class="rs-row">
     <span style="font-size:11pt; font-weight:700;">R$</span>
     <div class="rs-box">${escapeHtml(planValue.replace("R$", "").trim())}</div>
-    <img class="qr-img" style="margin-left:10mm;" src="/adesao-cb/qr-code.png" alt="QR Pix">
+    <img class="qr-img" style="margin-left:10mm;" src="/adesao-cb/qr-pix.png" alt="QR Pix">
     <img class="pix-logo" src="/adesao-cb/pix-banco-central.svg" alt="Pix">
     <div class="bb-logo" style="margin-left:2mm;"><img class="bb-logo-img" src="/adesao-cb/banco-do-brasil.png" alt="Banco do Brasil"></div>
     <div class="bank-info" style="margin-left:2mm;">
