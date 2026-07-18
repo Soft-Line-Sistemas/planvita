@@ -313,19 +313,12 @@ const buildAdesaoHtml = ({
     gap:2mm;
     margin-top:1mm;
   }
-  .qr-placeholder{
+  .qr-img{
     width:16mm;
     height:16mm;
-    border:1px solid #1a1a1a;
-    border-radius:1mm;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    text-align:center;
-    font-size:6pt;
-    font-weight:700;
-    color:#1a1a1a;
-    padding:1mm;
+    object-fit:contain;
+    image-rendering:pixelated;
+    flex-shrink:0;
   }
   .contact-text .ct-title{
     font-size:8.5pt;
@@ -396,9 +389,24 @@ const buildAdesaoHtml = ({
     align-items:stretch;
     width:100%;
     height:100%;
+    position:relative;
   }
-  .segmented.end-bar .segmented-content{border-right:1.6px solid var(--cinza-linha);}
-  .segmented.start-bar .segmented-content{border-left:1.6px solid var(--cinza-linha);}
+  .segmented.end-bar .segmented-content::after{
+    content:"";
+    position:absolute;
+    right:0;
+    bottom:0;
+    height:85%;
+    border-right:1.6px solid var(--cinza-linha);
+  }
+  .segmented.start-bar .segmented-content::before{
+    content:"";
+    position:absolute;
+    left:0;
+    bottom:0;
+    height:85%;
+    border-left:1.6px solid var(--cinza-linha);
+  }
   .segmented-group{
     display:grid;
     align-items:stretch;
@@ -411,10 +419,18 @@ const buildAdesaoHtml = ({
     justify-content:center;
     min-width:0;
     height:100%;
-    border-right:1.2px solid var(--cinza-linha);
     padding:0 0.2mm 0.45mm;
+    position:relative;
   }
-  .segmented-group .slot:last-child{border-right:none;}
+  .slot::after{
+    content:"";
+    position:absolute;
+    right:0;
+    bottom:0;
+    height:12%;
+    border-right:1.2px solid var(--cinza-linha);
+  }
+  .segmented-group .slot:last-child::after{content:none;}
   .slot-char{
     display:block;
     font-size:10pt;
@@ -423,7 +439,8 @@ const buildAdesaoHtml = ({
   }
   .group-separator{
     flex:0 0 1.1mm;
-    height:100%;
+    height:85%;
+    align-self:flex-end;
     border-right:1.6px solid var(--cinza-linha);
   }
   .checks-row{
@@ -628,9 +645,33 @@ const buildAdesaoHtml = ({
     align-items:center;
     gap:4mm;
   }
+  .sindef-img{
+    height:9mm;
+    width:auto;
+    filter:grayscale(1) brightness(0.4);
+  }
+  .pax-img{
+    height:9mm;
+    width:auto;
+    filter:grayscale(1) brightness(0.35);
+  }
   .pix-logo{
     height:7mm;
     width:auto;
+  }
+  .bank-info{
+    font-size:7pt;
+    line-height:1.4;
+    font-weight:700;
+  }
+  .bb-logo{
+    display:flex;
+    align-items:center;
+  }
+  .bb-logo-img{
+    height:9mm;
+    width:auto;
+    filter:grayscale(1) brightness(0.4);
   }
   .contact-footer{
     text-align:right;
@@ -699,7 +740,7 @@ const buildAdesaoHtml = ({
       </div>
     </div>
     <div class="header-contact">
-      <div class="qr-placeholder">QR<br>WhatsApp</div>
+      <img class="qr-img" src="/adesao-cb/qr-code.png" alt="QR WhatsApp">
       <div class="contact-text">
         <p class="ct-title">Central de Atendimento</p>
         <p class="ct-phone">71<br>3266 0787</p>
@@ -1003,13 +1044,22 @@ const buildAdesaoHtml = ({
   <div class="rs-row">
     <span style="font-size:11pt; font-weight:700;">R$</span>
     <div class="rs-box">${escapeHtml(planValue.replace("R$", "").trim())}</div>
-    <div class="qr-placeholder" style="margin-left:10mm;">QR<br>Pix</div>
+    <img class="qr-img" style="margin-left:10mm;" src="/adesao-cb/qr-code.png" alt="QR Pix">
     <img class="pix-logo" src="/adesao-cb/pix-banco-central.svg" alt="Pix">
+    <div class="bb-logo" style="margin-left:2mm;"><img class="bb-logo-img" src="/adesao-cb/banco-do-brasil.png" alt="Banco do Brasil"></div>
+    <div class="bank-info" style="margin-left:2mm;">
+      AG:3439-5<br>
+      C/c 53245-2<br>
+      CHAVE PIX: 51121484000168<br>
+      PLANO FAMILIAR CAMPO DO BOSQUE LTDA
+    </div>
   </div>
 
   <div class="brand-footer">
     <div class="brands">
-      <img class="logo-img" src="/adesao-cb/logo.png" alt="Campo do Bosque" style="height:9mm;">
+      <img class="logo-img" src="/adesao-cb/logo.svg" alt="Campo do Bosque" style="height:9mm;">
+      <img class="sindef-img" src="/adesao-cb/sindef.png" alt="Sindef BA">
+      <img class="pax-img" src="/adesao-cb/pax.png" alt="Pax">
     </div>
     <div class="contact-footer">
       <span class="icon-box">📍</span> AV. CENTENÁRIO, 21 - CEP: 40.100-180 - GARCIA &nbsp; <span class="icon-box">📞</span> 71 3266-0787<br>
