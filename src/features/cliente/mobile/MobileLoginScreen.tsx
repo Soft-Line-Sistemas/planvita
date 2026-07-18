@@ -307,6 +307,7 @@ function FirstAccessView({
   faInfo,
   faDestination,
   faChannel,
+  faWhatsappAvailable,
   onStartFirstAccess,
   onVerifyFirstAccess,
   onCompleteFirstAccess,
