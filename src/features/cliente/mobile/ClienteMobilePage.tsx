@@ -246,6 +246,12 @@ export default function ClienteMobilePage() {
   const [fgError, setFgError] = useState<string | null>(null);
   const [fgInfo, setFgInfo] = useState<string | null>(null);
   const [fgDestination, setFgDestination] = useState<string | null>(null);
+  const faStartInFlightRef = useRef(false);
+  const faVerifyInFlightRef = useRef(false);
+  const faCompleteInFlightRef = useRef(false);
+  const fgStartInFlightRef = useRef(false);
+  const fgVerifyInFlightRef = useRef(false);
+  const fgCompleteInFlightRef = useRef(false);
 
   /* --- Cadastro redirect --- */
   const [cadastroMessage, setCadastroMessage] = useState(
@@ -640,11 +646,14 @@ export default function ClienteMobilePage() {
      First access handlers
      ================================================================ */
   const onStartFirstAccess = async (channel?: "email" | "whatsapp") => {
+    if (faStartInFlightRef.current) return;
+    faStartInFlightRef.current = true;
     setFaError(null);
     setFaInfo(null);
     setFaDestination(null);
     const loginErr = validarLoginCliente(faLogin);
     if (loginErr) {
+      faStartInFlightRef.current = false;
       setFaError(loginErr);
       return;
     }
@@ -697,14 +706,18 @@ export default function ClienteMobilePage() {
       }
       setFaError(msg || "Não foi possível enviar o código.");
     } finally {
+      faStartInFlightRef.current = false;
       setFaLoading(false);
     }
   };
 
   const onVerifyFirstAccess = async () => {
+    if (faVerifyInFlightRef.current) return;
+    faVerifyInFlightRef.current = true;
     setFaError(null);
     setFaInfo(null);
     if (!faOtp.trim()) {
+      faVerifyInFlightRef.current = false;
       setFaError("Informe o código recebido.");
       return;
     }
@@ -726,19 +739,24 @@ export default function ClienteMobilePage() {
     } catch (err) {
       setFaError(extractServerMessage(err) || "Código inválido ou expirado.");
     } finally {
+      faVerifyInFlightRef.current = false;
       setFaLoading(false);
     }
   };
 
   const onCompleteFirstAccess = async () => {
+    if (faCompleteInFlightRef.current) return;
+    faCompleteInFlightRef.current = true;
     setFaError(null);
     setFaInfo(null);
     const pwdErr = validatePassword(faPassword);
     if (pwdErr) {
+      faCompleteInFlightRef.current = false;
       setFaError(pwdErr);
       return;
     }
     if (faPassword !== faPasswordConfirm) {
+      faCompleteInFlightRef.current = false;
       setFaError("As senhas não conferem.");
       return;
     }
@@ -779,6 +797,7 @@ export default function ClienteMobilePage() {
           "Não foi possível concluir o primeiro acesso.",
       );
     } finally {
+      faCompleteInFlightRef.current = false;
       setFaLoading(false);
     }
   };
@@ -787,11 +806,14 @@ export default function ClienteMobilePage() {
      Forgot password handlers
      ================================================================ */
   const onStartForgot = async () => {
+    if (fgStartInFlightRef.current) return;
+    fgStartInFlightRef.current = true;
     setFgError(null);
     setFgInfo(null);
     setFgDestination(null);
     const loginErr = validarLoginCliente(fgLogin);
     if (loginErr) {
+      fgStartInFlightRef.current = false;
       setFgError(loginErr);
       return;
     }
@@ -814,14 +836,18 @@ export default function ClienteMobilePage() {
         extractServerMessage(err) || "Não foi possível iniciar a recuperação.",
       );
     } finally {
+      fgStartInFlightRef.current = false;
       setFgLoading(false);
     }
   };
 
   const onVerifyForgot = async () => {
+    if (fgVerifyInFlightRef.current) return;
+    fgVerifyInFlightRef.current = true;
     setFgError(null);
     setFgInfo(null);
     if (!fgOtp.trim()) {
+      fgVerifyInFlightRef.current = false;
       setFgError("Informe o código recebido.");
       return;
     }
@@ -843,19 +869,24 @@ export default function ClienteMobilePage() {
     } catch (err) {
       setFgError(extractServerMessage(err) || "Código inválido ou expirado.");
     } finally {
+      fgVerifyInFlightRef.current = false;
       setFgLoading(false);
     }
   };
 
   const onCompleteForgot = async () => {
+    if (fgCompleteInFlightRef.current) return;
+    fgCompleteInFlightRef.current = true;
     setFgError(null);
     setFgInfo(null);
     const pwdErr = validatePassword(fgPassword);
     if (pwdErr) {
+      fgCompleteInFlightRef.current = false;
       setFgError(pwdErr);
       return;
     }
     if (fgPassword !== fgPasswordConfirm) {
+      fgCompleteInFlightRef.current = false;
       setFgError("As senhas não conferem.");
       return;
     }
@@ -875,6 +906,7 @@ export default function ClienteMobilePage() {
         extractServerMessage(err) || "Não foi possível alterar a senha.",
       );
     } finally {
+      fgCompleteInFlightRef.current = false;
       setFgLoading(false);
     }
   };
