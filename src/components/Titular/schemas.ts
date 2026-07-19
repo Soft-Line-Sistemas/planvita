@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { RELATIONSHIP_OPTIONS } from "@/constants/relationshipOptions";
+import { validateCPF } from "@/helpers/formHelpers";
 import { calculateAgeFromBirthDate } from "@/utils/date";
 
 const calcularIdade = (dataNascimento?: string): number | null => {
@@ -49,6 +50,29 @@ const optionalDigits = (minDigits: number, message: string) =>
       .optional(),
   );
 
+const requiredCpf = (message: string) =>
+  z.preprocess(
+    normalizeString,
+    z.string().refine((value) => validateCPF(value), {
+      message,
+    }),
+  );
+
+const optionalCpf = (message: string) =>
+  z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return undefined;
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : undefined;
+    },
+    z
+      .string()
+      .refine((value) => validateCPF(value), {
+        message,
+      })
+      .optional(),
+  );
+
 const optionalEmail = optionalText(1000).refine(
   (value) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
   { message: "E-mail inválido" },
@@ -62,7 +86,7 @@ const sexoField = requiredText("Sexo é obrigatório").refine(
 const dadosPessoaisSchema = z
   .object({
     nomeCompleto: requiredText("Nome completo é obrigatório", 1000),
-    cpf: requiredDigits(11, "CPF inválido"),
+    cpf: requiredCpf("CPF inválido"),
     dataNascimento: requiredText("Data de nascimento é obrigatória"),
     sexo: sexoField,
     rg: optionalText(50),
@@ -247,7 +271,7 @@ const responsavelFinanceiroSchema = z
       }
     });
 
-    if (data.cpf && data.cpf.replace(/\D/g, "").length < 11) {
+    if (data.cpf && !validateCPF(data.cpf)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "CPF do corresponsável inválido",
@@ -325,7 +349,7 @@ const dependentesSchema = z.object({
       idade: requiredText("Idade é obrigatória", 3),
       parentesco: requiredText("Parentesco é obrigatório", 1000),
       telefone: optionalDigits(10, "Telefone inválido"),
-      cpf: optionalDigits(11, "CPF inválido"),
+      cpf: optionalCpf("CPF inválido"),
     }),
   ),
 });
