@@ -343,6 +343,12 @@ export default function ConsultaClientePage() {
     useState(false);
   const [firstAccessError, setFirstAccessError] = useState<string | null>(null);
   const [firstAccessLoading, setFirstAccessLoading] = useState(false);
+  const [firstAccessSendingChannel, setFirstAccessSendingChannel] = useState<
+    "email" | "whatsapp" | null
+  >(null);
+  const [firstAccessCooldownUntil, setFirstAccessCooldownUntil] = useState<
+    number | null
+  >(null);
   const [paymentPendingOpen, setPaymentPendingOpen] = useState(false);
   const [paymentPendingNome, setPaymentPendingNome] = useState<string | null>(
     null,
@@ -397,6 +403,13 @@ export default function ConsultaClientePage() {
   const [forgotWhatsappAvailable, setForgotWhatsappAvailable] = useState(false);
   const [forgotError, setForgotError] = useState<string | null>(null);
   const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSendingChannel, setForgotSendingChannel] = useState<
+    "email" | "whatsapp" | null
+  >(null);
+  const [forgotCooldownUntil, setForgotCooldownUntil] = useState<number | null>(
+    null,
+  );
+  const [otpCooldownNow, setOtpCooldownNow] = useState(() => Date.now());
 
   // Filtros Financeiro
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
@@ -449,6 +462,8 @@ export default function ConsultaClientePage() {
     setFirstAccessChannel(null);
     setFirstAccessInfo(null);
     setFirstAccessError(null);
+    setFirstAccessSendingChannel(null);
+    setFirstAccessCooldownUntil(null);
   }, []);
 
   const resetForgotState = useCallback(() => {
@@ -462,6 +477,8 @@ export default function ConsultaClientePage() {
     setForgotChannel(null);
     setForgotInfo(null);
     setForgotError(null);
+    setForgotSendingChannel(null);
+    setForgotCooldownUntil(null);
   }, []);
 
   const populatePaymentPending = useCallback(
@@ -549,6 +566,20 @@ export default function ConsultaClientePage() {
     if (!forgotOpen || forgotStep !== "request") return;
     void loadForgotChannels();
   }, [forgotOpen, forgotStep, loadForgotChannels]);
+
+  useEffect(() => {
+    const hasCooldown =
+      (firstAccessCooldownUntil !== null &&
+        firstAccessCooldownUntil > otpCooldownNow) ||
+      (forgotCooldownUntil !== null && forgotCooldownUntil > otpCooldownNow);
+    if (!hasCooldown) return;
+
+    const interval = window.setInterval(() => {
+      setOtpCooldownNow(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [firstAccessCooldownUntil, forgotCooldownUntil, otpCooldownNow]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -758,6 +789,29 @@ export default function ConsultaClientePage() {
     return "Informe um CPF válido (11 dígitos) ou um e-mail válido.";
   };
 
+  const getCooldownRemainingSeconds = (cooldownUntil: number | null) =>
+    cooldownUntil
+      ? Math.max(0, Math.ceil((cooldownUntil - otpCooldownNow) / 1000))
+      : 0;
+
+  const firstAccessCooldownRemaining = getCooldownRemainingSeconds(
+    firstAccessCooldownUntil,
+  );
+  const forgotCooldownRemaining =
+    getCooldownRemainingSeconds(forgotCooldownUntil);
+  const firstAccessCooldownActive = firstAccessCooldownRemaining > 0;
+  const forgotCooldownActive = forgotCooldownRemaining > 0;
+  const buildCooldownLabel = (
+    channel: "email" | "whatsapp",
+    idleLabel: string,
+    sendingChannel: "email" | "whatsapp" | null,
+    cooldownRemaining: number,
+  ) => {
+    if (sendingChannel === channel) return "Enviando...";
+    if (cooldownRemaining > 0) return `Aguarde ${cooldownRemaining}s`;
+    return idleLabel;
+  };
+
   const carregarClienteAutenticado = async () => {
     const { data } = await api.get("/titular/me");
     const mapped = mapTitularToCarteirinha(data);
@@ -843,22 +897,30 @@ export default function ConsultaClientePage() {
   };
 
   const startFirstAccess = async (channel?: "email" | "whatsapp") => {
+    const targetChannel = channel === "whatsapp" ? "whatsapp" : "email";
     setFirstAccessError(null);
     if (firstAccessStep === "verify") {
       setFirstAccessInfo(null);
     }
     setFirstAccessDestination(null);
+    if (firstAccessCooldownActive) {
+      setFirstAccessError(
+        `Aguarde ${firstAccessCooldownRemaining}s antes de solicitar um novo código.`,
+      );
+      return;
+    }
     const loginError = validarLoginCliente(firstAccessLogin);
     if (loginError) {
       setFirstAccessError(loginError);
       return;
     }
 
+    setFirstAccessSendingChannel(targetChannel);
     setFirstAccessLoading(true);
     try {
       const { data } = await api.post("/auth/first-access", {
         login: firstAccessLogin.trim(),
-        ...(channel ? { channel } : {}),
+        channel: targetChannel,
       });
       const destination =
         data?.start?.destinationMasked || data?.start?.channel || "seu contato";
@@ -868,12 +930,17 @@ export default function ConsultaClientePage() {
       );
       const devOtp = data?.start?.dev?.otp;
       setFirstAccessInfo(devOtp ? `Código (dev): ${devOtp}` : null);
+      setFirstAccessCooldownUntil(Date.now() + 60 * 1000);
       setFirstAccessStep("verify");
     } catch (err: unknown) {
       const errorObject = err as {
         response?: {
           status?: number;
-          data?: { message?: unknown; code?: unknown };
+          data?: {
+            message?: unknown;
+            code?: unknown;
+            retryAfterSeconds?: unknown;
+          };
         };
       };
       const status = errorObject?.response?.status;
@@ -884,6 +951,10 @@ export default function ConsultaClientePage() {
       const code =
         typeof errorObject?.response?.data?.code === "string"
           ? errorObject.response.data.code
+          : null;
+      const retryAfterSeconds =
+        typeof errorObject?.response?.data?.retryAfterSeconds === "number"
+          ? errorObject.response.data.retryAfterSeconds
           : null;
 
       if (status === 402 && code === "PAYMENT_REQUIRED") {
@@ -898,6 +969,11 @@ export default function ConsultaClientePage() {
           );
         }
         return;
+      }
+
+      if (status === 429 && code === "OTP_RESEND_COOLDOWN") {
+        const remaining = retryAfterSeconds ?? 60;
+        setFirstAccessCooldownUntil(Date.now() + remaining * 1000);
       }
 
       const precisaRedirecionarParaCadastro =
@@ -917,6 +993,7 @@ export default function ConsultaClientePage() {
 
       setFirstAccessError(serverMessage || "Não foi possível enviar o código.");
     } finally {
+      setFirstAccessSendingChannel(null);
       setFirstAccessLoading(false);
     }
   };
@@ -1106,15 +1183,23 @@ export default function ConsultaClientePage() {
   };
 
   const startForgotPassword = async (channel?: "email" | "whatsapp") => {
+    const targetChannel = channel === "whatsapp" ? "whatsapp" : "email";
     setForgotError(null);
     setForgotInfo(null);
     setForgotDestination(null);
+    if (forgotCooldownActive) {
+      setForgotError(
+        `Aguarde ${forgotCooldownRemaining}s antes de solicitar um novo código.`,
+      );
+      return;
+    }
     const loginError = validarLoginCliente(forgotLogin);
     if (loginError) {
       setForgotError(loginError);
       return;
     }
 
+    setForgotSendingChannel(targetChannel);
     setForgotLoading(true);
     try {
       const endpoint =
@@ -1123,7 +1208,7 @@ export default function ConsultaClientePage() {
           : "/auth/forgot-password";
       const { data } = await api.post(endpoint, {
         login: forgotLogin.trim(),
-        ...(channel ? { channel } : {}),
+        channel: targetChannel,
       });
       const destination =
         data?.start?.destinationMasked || data?.start?.channel || "seu contato";
@@ -1137,19 +1222,43 @@ export default function ConsultaClientePage() {
           ? `Enviamos um código para validar o acesso em ${destination}.`
           : `Enviamos um código para ${destination}.`;
       setForgotInfo(`${prefixo}${devOtp ? ` Código (dev): ${devOtp}` : ""}`);
+      setForgotCooldownUntil(Date.now() + 60 * 1000);
       setForgotStep("verify");
     } catch (err: unknown) {
       const errorObject = err as {
-        response?: { data?: { message?: unknown } };
+        response?: {
+          status?: number;
+          data?: {
+            message?: unknown;
+            code?: unknown;
+            retryAfterSeconds?: unknown;
+          };
+        };
       };
       const serverMessage =
         typeof errorObject?.response?.data?.message === "string"
           ? errorObject.response.data.message
           : null;
+      const code =
+        typeof errorObject?.response?.data?.code === "string"
+          ? errorObject.response.data.code
+          : null;
+      const retryAfterSeconds =
+        typeof errorObject?.response?.data?.retryAfterSeconds === "number"
+          ? errorObject.response.data.retryAfterSeconds
+          : null;
+      if (
+        errorObject?.response?.status === 429 &&
+        code === "OTP_RESEND_COOLDOWN"
+      ) {
+        const remaining = retryAfterSeconds ?? 60;
+        setForgotCooldownUntil(Date.now() + remaining * 1000);
+      }
       setForgotError(
         serverMessage || "Não foi possível iniciar a recuperação.",
       );
     } finally {
+      setForgotSendingChannel(null);
       setForgotLoading(false);
     }
   };
@@ -1606,20 +1715,53 @@ export default function ConsultaClientePage() {
                 )}
                 <Button
                   onClick={() => {
-                    void startFirstAccess();
+                    void startFirstAccess("email");
                   }}
-                  className="w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
-                  disabled={firstAccessLoading}
+                  variant={firstAccessWhatsappAvailable ? "outline" : "default"}
+                  className={
+                    firstAccessWhatsappAvailable
+                      ? "w-full"
+                      : "w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
+                  }
+                  disabled={firstAccessLoading || firstAccessCooldownActive}
                 >
-                  {firstAccessLoading ? (
+                  {firstAccessSendingChannel === "email" ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Enviando...
                     </>
                   ) : (
-                    "Enviar código"
+                    buildCooldownLabel(
+                      "email",
+                      "Receber por e-mail",
+                      firstAccessSendingChannel,
+                      firstAccessCooldownRemaining,
+                    )
                   )}
                 </Button>
+                {firstAccessWhatsappAvailable && (
+                  <Button
+                    onClick={() => {
+                      void startFirstAccess("whatsapp");
+                    }}
+                    className="w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
+                    disabled={firstAccessLoading || firstAccessCooldownActive}
+                  >
+                    {firstAccessSendingChannel === "whatsapp" ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      buildCooldownLabel(
+                        "whatsapp",
+                        "Receber por WhatsApp",
+                        firstAccessSendingChannel,
+                        firstAccessCooldownRemaining,
+                      )
+                    )}
+                  </Button>
+                )}
               </>
             )}
             {firstAccessStep === "verify" && (
@@ -1634,6 +1776,24 @@ export default function ConsultaClientePage() {
                     maxLength={6}
                   />
                 </div>
+                {firstAccessChannel !== "email" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      void startFirstAccess("email");
+                    }}
+                    disabled={firstAccessLoading || firstAccessCooldownActive}
+                  >
+                    {buildCooldownLabel(
+                      "email",
+                      "Reenviar por e-mail",
+                      firstAccessSendingChannel,
+                      firstAccessCooldownRemaining,
+                    )}
+                  </Button>
+                )}
                 {firstAccessWhatsappAvailable &&
                   firstAccessChannel !== "whatsapp" && (
                     <Button
@@ -1643,9 +1803,14 @@ export default function ConsultaClientePage() {
                       onClick={() => {
                         void startFirstAccess("whatsapp");
                       }}
-                      disabled={firstAccessLoading}
+                      disabled={firstAccessLoading || firstAccessCooldownActive}
                     >
-                      Enviar código por WhatsApp
+                      {buildCooldownLabel(
+                        "whatsapp",
+                        "Reenviar por WhatsApp",
+                        firstAccessSendingChannel,
+                        firstAccessCooldownRemaining,
+                      )}
                     </Button>
                   )}
                 {firstAccessInfo && (
@@ -1800,17 +1965,27 @@ export default function ConsultaClientePage() {
                       ? "w-full"
                       : "w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
                   }
-                  disabled={forgotLoading}
+                  disabled={forgotLoading || forgotCooldownActive}
                 >
-                  {forgotLoading ? (
+                  {forgotSendingChannel === "email" ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Enviando...
                     </>
                   ) : forgotMode === "corresponsavel-access" ? (
-                    "Receber código por e-mail"
+                    buildCooldownLabel(
+                      "email",
+                      "Receber código por e-mail",
+                      forgotSendingChannel,
+                      forgotCooldownRemaining,
+                    )
                   ) : (
-                    "Receber por e-mail"
+                    buildCooldownLabel(
+                      "email",
+                      "Receber por e-mail",
+                      forgotSendingChannel,
+                      forgotCooldownRemaining,
+                    )
                   )}
                 </Button>
                 {forgotWhatsappAvailable && (
@@ -1819,9 +1994,9 @@ export default function ConsultaClientePage() {
                       void startForgotPassword("whatsapp");
                     }}
                     className="w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
-                    disabled={forgotLoading}
+                    disabled={forgotLoading || forgotCooldownActive}
                   >
-                    {forgotLoading ? (
+                    {forgotSendingChannel === "whatsapp" ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Enviando...
@@ -1877,11 +2052,36 @@ export default function ConsultaClientePage() {
                     onClick={() => {
                       void startForgotPassword("whatsapp");
                     }}
-                    disabled={forgotLoading}
+                    disabled={forgotLoading || forgotCooldownActive}
                   >
-                    {forgotMode === "corresponsavel-access"
-                      ? "Receber código por WhatsApp"
-                      : "Enviar código por WhatsApp"}
+                    {buildCooldownLabel(
+                      "whatsapp",
+                      forgotMode === "corresponsavel-access"
+                        ? "Receber código por WhatsApp"
+                        : "Enviar código por WhatsApp",
+                      forgotSendingChannel,
+                      forgotCooldownRemaining,
+                    )}
+                  </Button>
+                )}
+                {forgotChannel !== "email" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      void startForgotPassword("email");
+                    }}
+                    disabled={forgotLoading || forgotCooldownActive}
+                  >
+                    {buildCooldownLabel(
+                      "email",
+                      forgotMode === "corresponsavel-access"
+                        ? "Receber código por e-mail"
+                        : "Reenviar por e-mail",
+                      forgotSendingChannel,
+                      forgotCooldownRemaining,
+                    )}
                   </Button>
                 )}
                 <Button

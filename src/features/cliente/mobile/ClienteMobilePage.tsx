@@ -231,6 +231,10 @@ export default function ClienteMobilePage() {
   const [faPassword, setFaPassword] = useState("");
   const [faPasswordConfirm, setFaPasswordConfirm] = useState("");
   const [faLoading, setFaLoading] = useState(false);
+  const [faSendingChannel, setFaSendingChannel] = useState<
+    "email" | "whatsapp" | null
+  >(null);
+  const [faCooldownUntil, setFaCooldownUntil] = useState<number | null>(null);
   const [faError, setFaError] = useState<string | null>(null);
   const [faInfo, setFaInfo] = useState<string | null>(null);
   const [faDestination, setFaDestination] = useState<string | null>(null);
@@ -246,10 +250,15 @@ export default function ClienteMobilePage() {
   const [fgPassword, setFgPassword] = useState("");
   const [fgPasswordConfirm, setFgPasswordConfirm] = useState("");
   const [fgLoading, setFgLoading] = useState(false);
+  const [fgSendingChannel, setFgSendingChannel] = useState<
+    "email" | "whatsapp" | null
+  >(null);
+  const [fgCooldownUntil, setFgCooldownUntil] = useState<number | null>(null);
   const [fgError, setFgError] = useState<string | null>(null);
   const [fgInfo, setFgInfo] = useState<string | null>(null);
   const [fgDestination, setFgDestination] = useState<string | null>(null);
   const [fgChannel, setFgChannel] = useState<"email" | "whatsapp" | null>(null);
+  const [otpCooldownNow, setOtpCooldownNow] = useState(() => Date.now());
   const faStartInFlightRef = useRef(false);
   const faVerifyInFlightRef = useRef(false);
   const faCompleteInFlightRef = useRef(false);
@@ -356,6 +365,19 @@ export default function ClienteMobilePage() {
     if (authView !== "first-access" && authView !== "forgot") return;
     void loadFirstAccessChannels();
   }, [authView, loadFirstAccessChannels]);
+
+  useEffect(() => {
+    const hasCooldown =
+      (faCooldownUntil !== null && faCooldownUntil > otpCooldownNow) ||
+      (fgCooldownUntil !== null && fgCooldownUntil > otpCooldownNow);
+    if (!hasCooldown) return;
+
+    const interval = window.setInterval(() => {
+      setOtpCooldownNow(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [faCooldownUntil, fgCooldownUntil, otpCooldownNow]);
 
   /* --- URL params handled ref --- */
   const urlParamsHandledRef = useRef(false);
@@ -691,9 +713,20 @@ export default function ClienteMobilePage() {
   const onStartFirstAccess = async (channel?: "email" | "whatsapp") => {
     if (faStartInFlightRef.current) return;
     faStartInFlightRef.current = true;
+    const targetChannel = channel === "whatsapp" ? "whatsapp" : "email";
     setFaError(null);
     setFaInfo(null);
     setFaDestination(null);
+    const faCooldownRemaining = faCooldownUntil
+      ? Math.max(0, Math.ceil((faCooldownUntil - otpCooldownNow) / 1000))
+      : 0;
+    if (faCooldownRemaining > 0) {
+      faStartInFlightRef.current = false;
+      setFaError(
+        `Aguarde ${faCooldownRemaining}s antes de solicitar um novo código.`,
+      );
+      return;
+    }
     const loginErr = validarLoginCliente(faLogin);
     if (loginErr) {
       faStartInFlightRef.current = false;
@@ -701,11 +734,12 @@ export default function ClienteMobilePage() {
       return;
     }
 
+    setFaSendingChannel(targetChannel);
     setFaLoading(true);
     try {
       const { data } = await api.post("/auth/first-access", {
         login: faLogin.trim(),
-        ...(channel ? { channel } : {}),
+        channel: targetChannel,
       });
       const destination =
         data?.start?.destinationMasked || data?.start?.channel || "seu contato";
@@ -713,6 +747,7 @@ export default function ClienteMobilePage() {
       setFaChannel(data?.start?.channel === "whatsapp" ? "whatsapp" : "email");
       const devOtp = data?.start?.dev?.otp;
       setFaInfo(devOtp ? `Código (dev): ${devOtp}` : null);
+      setFaCooldownUntil(Date.now() + 60 * 1000);
       setFaStep("verify");
     } catch (err) {
       const status = (err as { response?: { status?: number } })?.response
@@ -720,6 +755,15 @@ export default function ClienteMobilePage() {
       const code = extractServerCode(err);
       const msg = extractServerMessage(err);
       const login = faLogin.trim();
+      const retryAfterSeconds =
+        typeof (
+          err as {
+            response?: { data?: { retryAfterSeconds?: unknown } };
+          }
+        )?.response?.data?.retryAfterSeconds === "number"
+          ? ((err as { response?: { data?: { retryAfterSeconds?: number } } })
+              .response?.data?.retryAfterSeconds ?? null)
+          : null;
 
       if (status === 402 && code === "PAYMENT_REQUIRED") {
         setLoginValue(login);
@@ -747,9 +791,14 @@ export default function ClienteMobilePage() {
         setAuthView("cadastro-redirect");
         return;
       }
+      if (status === 429 && code === "OTP_RESEND_COOLDOWN") {
+        const remaining = retryAfterSeconds ?? 60;
+        setFaCooldownUntil(Date.now() + remaining * 1000);
+      }
       setFaError(msg || "Não foi possível enviar o código.");
     } finally {
       faStartInFlightRef.current = false;
+      setFaSendingChannel(null);
       setFaLoading(false);
     }
   };
@@ -851,9 +900,20 @@ export default function ClienteMobilePage() {
   const onStartForgot = async (channel?: "email" | "whatsapp") => {
     if (fgStartInFlightRef.current) return;
     fgStartInFlightRef.current = true;
+    const targetChannel = channel === "whatsapp" ? "whatsapp" : "email";
     setFgError(null);
     setFgInfo(null);
     setFgDestination(null);
+    const fgCooldownRemaining = fgCooldownUntil
+      ? Math.max(0, Math.ceil((fgCooldownUntil - otpCooldownNow) / 1000))
+      : 0;
+    if (fgCooldownRemaining > 0) {
+      fgStartInFlightRef.current = false;
+      setFgError(
+        `Aguarde ${fgCooldownRemaining}s antes de solicitar um novo código.`,
+      );
+      return;
+    }
     const loginErr = validarLoginCliente(fgLogin);
     if (loginErr) {
       fgStartInFlightRef.current = false;
@@ -861,6 +921,7 @@ export default function ClienteMobilePage() {
       return;
     }
 
+    setFgSendingChannel(targetChannel);
     setFgLoading(true);
     try {
       const endpoint =
@@ -869,7 +930,7 @@ export default function ClienteMobilePage() {
           : "/auth/forgot-password";
       const { data } = await api.post(endpoint, {
         login: fgLogin.trim(),
-        ...(channel ? { channel } : {}),
+        channel: targetChannel,
       });
       const destination =
         data?.start?.destinationMasked || data?.start?.channel || "seu contato";
@@ -881,13 +942,31 @@ export default function ClienteMobilePage() {
           ? `Enviamos um código para validar o acesso em ${destination}.`
           : `Enviamos um código para ${destination}.`;
       setFgInfo(`${prefixo}${devOtp ? ` Código (dev): ${devOtp}` : ""}`);
+      setFgCooldownUntil(Date.now() + 60 * 1000);
       setFgStep("verify");
     } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response
+        ?.status;
+      const code = extractServerCode(err);
+      const retryAfterSeconds =
+        typeof (
+          err as {
+            response?: { data?: { retryAfterSeconds?: unknown } };
+          }
+        )?.response?.data?.retryAfterSeconds === "number"
+          ? ((err as { response?: { data?: { retryAfterSeconds?: number } } })
+              .response?.data?.retryAfterSeconds ?? null)
+          : null;
+      if (status === 429 && code === "OTP_RESEND_COOLDOWN") {
+        const remaining = retryAfterSeconds ?? 60;
+        setFgCooldownUntil(Date.now() + remaining * 1000);
+      }
       setFgError(
         extractServerMessage(err) || "Não foi possível iniciar a recuperação.",
       );
     } finally {
       fgStartInFlightRef.current = false;
+      setFgSendingChannel(null);
       setFgLoading(false);
     }
   };
@@ -1040,6 +1119,13 @@ export default function ClienteMobilePage() {
       setPpLoading(false);
     }
   }, [loadPaymentPending, loginValue]);
+
+  const faCooldownRemaining = faCooldownUntil
+    ? Math.max(0, Math.ceil((faCooldownUntil - otpCooldownNow) / 1000))
+    : 0;
+  const fgCooldownRemaining = fgCooldownUntil
+    ? Math.max(0, Math.ceil((fgCooldownUntil - otpCooldownNow) / 1000))
+    : 0;
 
   /* ===================================================================
      Logout
@@ -1289,6 +1375,8 @@ export default function ClienteMobilePage() {
               setFaPasswordConfirm("");
               setFaDestination(null);
               setFaChannel(null);
+              setFaSendingChannel(null);
+              setFaCooldownUntil(null);
               setFaInfo(null);
               setFaError(null);
             }
@@ -1302,6 +1390,8 @@ export default function ClienteMobilePage() {
               setFgPasswordConfirm("");
               setFgDestination(null);
               setFgChannel(null);
+              setFgSendingChannel(null);
+              setFgCooldownUntil(null);
               setFgInfo(null);
               setFgError(null);
             }
@@ -1330,6 +1420,8 @@ export default function ClienteMobilePage() {
           faPasswordConfirm={faPasswordConfirm}
           setFaPasswordConfirm={setFaPasswordConfirm}
           faLoading={faLoading}
+          faSendingChannel={faSendingChannel}
+          faCooldownRemaining={faCooldownRemaining}
           faError={faError}
           faInfo={faInfo}
           faDestination={faDestination}
@@ -1350,6 +1442,8 @@ export default function ClienteMobilePage() {
           fgPasswordConfirm={fgPasswordConfirm}
           setFgPasswordConfirm={setFgPasswordConfirm}
           fgLoading={fgLoading}
+          fgSendingChannel={fgSendingChannel}
+          fgCooldownRemaining={fgCooldownRemaining}
           fgError={fgError}
           fgInfo={fgInfo}
           fgDestination={fgDestination}
