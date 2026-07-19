@@ -16,6 +16,7 @@ export type AuthView =
 
 export type FirstAccessStep = "request" | "verify" | "set-password";
 export type ForgotStep = "request" | "verify" | "set-password";
+export type ForgotMode = "reset-password" | "corresponsavel-access";
 
 export interface MobileLoginProps {
   authView: AuthView;
@@ -28,6 +29,7 @@ export interface MobileLoginProps {
   authLoading: boolean;
   authError: string | null;
   onLoginSubmit: (e: React.FormEvent) => void;
+  onForgotPasswordClick: () => void;
 
   faStep: FirstAccessStep;
   faLogin: string;
@@ -49,6 +51,7 @@ export interface MobileLoginProps {
   onCompleteFirstAccess: () => void;
 
   fgStep: ForgotStep;
+  fgMode: ForgotMode;
   fgLogin: string;
   setFgLogin: (v: string) => void;
   fgOtp: string;
@@ -61,7 +64,9 @@ export interface MobileLoginProps {
   fgError: string | null;
   fgInfo: string | null;
   fgDestination: string | null;
-  onStartForgot: () => void;
+  fgChannel: "email" | "whatsapp" | null;
+  fgWhatsappAvailable: boolean;
+  onStartForgot: (channel?: "email" | "whatsapp") => void;
   onVerifyForgot: () => void;
   onCompleteForgot: () => void;
 
@@ -196,6 +201,7 @@ function LoginView({
   authError,
   onLoginSubmit,
   setAuthView,
+  onForgotPasswordClick,
 }: Pick<
   MobileLoginProps,
   | "loginValue"
@@ -206,6 +212,7 @@ function LoginView({
   | "authError"
   | "onLoginSubmit"
   | "setAuthView"
+  | "onForgotPasswordClick"
 >) {
   return (
     <form onSubmit={onLoginSubmit} className="cm-login-content">
@@ -239,7 +246,7 @@ function LoginView({
           <button
             type="button"
             className="cm-login-link"
-            onClick={() => setAuthView("forgot")}
+            onClick={onForgotPasswordClick}
           >
             Esqueceu a senha?
           </button>
@@ -479,7 +486,7 @@ function FirstAccessView({
               {faInfo && <InfoBox message={faInfo} />}
               {faError && <ErrBox message={faError} />}
 
-              {faChannel !== "whatsapp" && (
+              {faWhatsappAvailable && faChannel !== "whatsapp" && (
                 <button
                   type="button"
                   className="cm-btn-outline cm-alterar-senha-submit"
@@ -584,6 +591,7 @@ function FirstAccessView({
    =================================================================== */
 
 function ForgotView({
+  fgMode,
   fgStep,
   fgLogin,
   setFgLogin,
@@ -597,12 +605,15 @@ function ForgotView({
   fgError,
   fgInfo,
   fgDestination,
+  fgChannel,
+  fgWhatsappAvailable,
   onStartForgot,
   onVerifyForgot,
   onCompleteForgot,
   setAuthView,
 }: Pick<
   MobileLoginProps,
+  | "fgMode"
   | "fgStep"
   | "fgLogin"
   | "setFgLogin"
@@ -616,6 +627,8 @@ function ForgotView({
   | "fgError"
   | "fgInfo"
   | "fgDestination"
+  | "fgChannel"
+  | "fgWhatsappAvailable"
   | "onStartForgot"
   | "onVerifyForgot"
   | "onCompleteForgot"
@@ -640,7 +653,11 @@ function ForgotView({
             aria-hidden
           />
         </button>
-        <h1>Recuperar senha</h1>
+        <h1>
+          {fgMode === "corresponsavel-access"
+            ? "Entrar como corresponsável"
+            : "Recuperar senha"}
+        </h1>
       </div>
 
       <div
@@ -657,15 +674,27 @@ function ForgotView({
                 height={26}
                 aria-hidden
               />
-              <h2>Redefinição de senha</h2>
+              <h2>
+                {fgMode === "corresponsavel-access"
+                  ? "Acesso com código"
+                  : "Redefinição de senha"}
+              </h2>
             </div>
 
             <div className="cm-alterar-senha-criteria">
               <p className="cm-alterar-senha-criteria-title">Como funciona:</p>
               <ul className="cm-alterar-senha-criteria-list">
                 <li>Informe seu CPF ou e-mail cadastrado;</li>
-                <li>Enviaremos um código de verificação;</li>
-                <li>Valide o código e defina sua nova senha.</li>
+                <li>
+                  {fgMode === "corresponsavel-access"
+                    ? "Enviaremos um código para o contato do corresponsável;"
+                    : "Enviaremos um código de verificação;"}
+                </li>
+                <li>
+                  {fgMode === "corresponsavel-access"
+                    ? "Valide o código para entrar, sem redefinir a senha."
+                    : "Valide o código e defina sua nova senha."}
+                </li>
               </ul>
             </div>
 
@@ -685,19 +714,45 @@ function ForgotView({
 
               <button
                 type="button"
-                className="cm-btn-solid cm-alterar-senha-submit"
+                className={
+                  fgWhatsappAvailable
+                    ? "cm-btn-outline"
+                    : "cm-btn-solid cm-alterar-senha-submit"
+                }
                 disabled={fgLoading}
-                onClick={onStartForgot}
+                onClick={() => onStartForgot("email")}
               >
                 {fgLoading ? (
                   <>
                     <Loader2 size={18} className="cm-spinner" />
                     Enviando...
                   </>
+                ) : fgMode === "corresponsavel-access" ? (
+                  "Receber código por e-mail"
                 ) : (
-                  "Enviar código"
+                  "Receber por e-mail"
                 )}
               </button>
+
+              {fgWhatsappAvailable && (
+                <button
+                  type="button"
+                  className="cm-btn-solid cm-alterar-senha-submit"
+                  disabled={fgLoading}
+                  onClick={() => onStartForgot("whatsapp")}
+                >
+                  {fgLoading ? (
+                    <>
+                      <Loader2 size={18} className="cm-spinner" />
+                      Enviando...
+                    </>
+                  ) : fgMode === "corresponsavel-access" ? (
+                    "Receber código por WhatsApp"
+                  ) : (
+                    "Receber por WhatsApp"
+                  )}
+                </button>
+              )}
             </div>
           </>
         )}
@@ -719,8 +774,16 @@ function ForgotView({
               <p className="cm-alterar-senha-criteria-title">Instruções:</p>
               <ul className="cm-alterar-senha-criteria-list">
                 <li>
-                  Código enviado para{" "}
-                  <strong>{fgDestination ?? "seu contato"}</strong>;
+                  {fgMode === "corresponsavel-access"
+                    ? "Código de acesso enviado para "
+                    : "Código enviado para "}
+                  <strong>
+                    {fgDestination ??
+                      (fgMode === "corresponsavel-access"
+                        ? "o contato do corresponsável"
+                        : "seu contato")}
+                  </strong>
+                  ;
                 </li>
                 <li>Digite os 6 dígitos no campo abaixo;</li>
                 <li>O código expira em alguns minutos.</li>
@@ -742,6 +805,19 @@ function ForgotView({
               {fgInfo && <InfoBox message={fgInfo} />}
               {fgError && <ErrBox message={fgError} />}
 
+              {fgWhatsappAvailable && fgChannel !== "whatsapp" && (
+                <button
+                  type="button"
+                  className="cm-btn-outline cm-alterar-senha-submit"
+                  disabled={fgLoading}
+                  onClick={() => onStartForgot("whatsapp")}
+                >
+                  {fgMode === "corresponsavel-access"
+                    ? "Receber código por WhatsApp"
+                    : "Reenviar via WhatsApp"}
+                </button>
+              )}
+
               <button
                 type="button"
                 className="cm-btn-solid cm-alterar-senha-submit"
@@ -753,6 +829,8 @@ function ForgotView({
                     <Loader2 size={18} className="cm-spinner" />
                     Validando...
                   </>
+                ) : fgMode === "corresponsavel-access" ? (
+                  "Entrar com código"
                 ) : (
                   "Validar código"
                 )}
@@ -761,7 +839,7 @@ function ForgotView({
           </>
         )}
 
-        {fgStep === "set-password" && (
+        {fgMode !== "corresponsavel-access" && fgStep === "set-password" && (
           <>
             <div className="cm-alterar-senha-heading">
               <Image

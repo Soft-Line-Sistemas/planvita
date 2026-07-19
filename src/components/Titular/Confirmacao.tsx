@@ -69,6 +69,12 @@ interface ConfirmacaoProps {
 
 const DEFAULT_TENANT_LABEL = "Campo do Bosque";
 
+const TENANT_UNIT_LABELS: Record<string, string> = {
+  bosque: "CAMPO DO BOSQUE",
+  lider: "FUNERÁRIA LIDER",
+  pax: "PAX LÍRIOS",
+};
+
 const escapeHtml = (value?: string | null) =>
   String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -142,9 +148,26 @@ const buildCoberturasText = (plano?: Plano | null) => {
 };
 
 const buildConsultorUnit = (tenantLabel?: string, tenantId?: string) => {
-  if (tenantLabel?.trim()) return tenantLabel.trim();
+  const normalizedTenantId = String(tenantId ?? "")
+    .trim()
+    .toLowerCase();
+
+  if (normalizedTenantId && TENANT_UNIT_LABELS[normalizedTenantId]) {
+    return TENANT_UNIT_LABELS[normalizedTenantId];
+  }
+
+  const normalizedTenantLabel = String(tenantLabel ?? "")
+    .trim()
+    .toLowerCase();
+
+  if (normalizedTenantLabel.includes("bosque"))
+    return TENANT_UNIT_LABELS.bosque;
+  if (normalizedTenantLabel.includes("lider")) return TENANT_UNIT_LABELS.lider;
+  if (normalizedTenantLabel.includes("pax")) return TENANT_UNIT_LABELS.pax;
+
+  if (tenantLabel?.trim()) return tenantLabel.trim().toUpperCase();
   if (tenantId?.trim()) return tenantId.trim().toUpperCase();
-  return DEFAULT_TENANT_LABEL;
+  return DEFAULT_TENANT_LABEL.toUpperCase();
 };
 
 const buildCheck = (checked: boolean, extraClass = "") =>
@@ -152,6 +175,22 @@ const buildCheck = (checked: boolean, extraClass = "") =>
 
 const buildRuledLine = (value?: string | null, tick = false) =>
   `<div class="ruled-line${tick ? " tick" : ""}"><span class="filled-text">${escapeHtml(value)}</span></div>`;
+
+const buildIconBox = (pathMarkup: string, viewBox = "0 0 24 24") =>
+  `<span class="icon-box"><svg viewBox="${viewBox}" aria-hidden="true">${pathMarkup}</svg></span>`;
+
+const locationIcon = buildIconBox(
+  '<path d="M12 21s6-5.33 6-11a6 6 0 1 0-12 0c0 5.67 6 11 6 11Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+);
+const phoneIcon = buildIconBox(
+  '<path d="M8.2 4.5h2.1l1 3.2-1.4 1.4a13 13 0 0 0 5.2 5.2l1.4-1.4 3.2 1v2.1c0 .7-.5 1.2-1.2 1.2A15.7 15.7 0 0 1 6.9 5.7c0-.7.6-1.2 1.3-1.2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+);
+const globeIcon = buildIconBox(
+  '<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.8 12h16.4M12 3.5c2.3 2.3 3.6 5.4 3.6 8.5S14.3 18.2 12 20.5M12 3.5C9.7 5.8 8.4 8.9 8.4 12s1.3 6.2 3.6 8.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>',
+);
+const mailIcon = buildIconBox(
+  '<rect x="3.5" y="6" width="17" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m5.5 8 6.5 4.8L18.5 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+);
 
 type SegmentedValueMode = "digits" | "alphanumeric" | "raw";
 
@@ -686,9 +725,12 @@ const buildAdesaoHtml = ({
     height:4mm;
     background:#1a1a1a;
     border-radius:0.7mm;
-    font-size:6.5pt;
-    line-height:1;
     color:#fff;
+  }
+  .icon-box svg{
+    width:2.7mm;
+    height:2.7mm;
+    display:block;
   }
   .side-code{
     position:absolute;
@@ -780,26 +822,13 @@ const buildAdesaoHtml = ({
           "end-bar",
         )}
       </div>
-      <div style="display:flex; flex-direction:column; gap:0.8mm;">
-        ${buildCheck(Boolean(titular?.whatsapp), "round")}
-        ${buildCheck(Boolean(titular?.telefone), "round")}
-      </div>
-      <div style="display:flex; flex-direction:column; gap:0.8mm;">
-        <span style="font-size:7pt;">WhatsApp</span>
-        <span style="font-size:7pt;">Ligação</span>
-      </div>
       <div class="field" style="flex:0 0 auto; min-width:48mm;">
         <span class="field-label">CPF</span>
         ${buildSegmentedLine(titular?.cpf, [3, 3, 3, 2], "end-bar")}
       </div>
       <div class="field" style="flex:0 0 auto; min-width:24mm;">
         <span class="field-label">RG</span>
-        ${buildSegmentedLine(
-          titular?.rg,
-          [2, 3, 2],
-          "no-tick end-bar start-bar",
-          { mode: "alphanumeric" },
-        )}
+        ${buildRuledLine(titular?.rg, true)}
       </div>
     </div>
 
@@ -1062,9 +1091,9 @@ const buildAdesaoHtml = ({
       <img class="pax-img" src="/adesao-cb/pax.png" alt="Pax">
     </div>
     <div class="contact-footer">
-      <span class="icon-box">📍</span> AV. CENTENÁRIO, 21 - CEP: 40.100-180 - GARCIA &nbsp; <span class="icon-box">📞</span> 71 3266-0787<br>
+      ${locationIcon} AV. CENTENÁRIO, 21 - CEP: 40.100-180 - GARCIA &nbsp; ${phoneIcon} 71 3266-0787<br>
       SALVADOR - BA<br>
-      <span class="icon-box">🌐</span> www.CAMPODOBOSQUE.com.br &nbsp; <span class="icon-box">✉</span> atendimento@campodobosque.com.br
+      ${globeIcon} www.CAMPODOBOSQUE.com.br &nbsp; ${mailIcon} atendimento@campodobosque.com.br
     </div>
   </div>
 </div>

@@ -339,6 +339,8 @@ export default function ConsultaClientePage() {
   const [firstAccessChannel, setFirstAccessChannel] = useState<
     "email" | "whatsapp" | null
   >(null);
+  const [firstAccessWhatsappAvailable, setFirstAccessWhatsappAvailable] =
+    useState(false);
   const [firstAccessError, setFirstAccessError] = useState<string | null>(null);
   const [firstAccessLoading, setFirstAccessLoading] = useState(false);
   const [paymentPendingOpen, setPaymentPendingOpen] = useState(false);
@@ -373,6 +375,9 @@ export default function ConsultaClientePage() {
   );
 
   const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotMode, setForgotMode] = useState<
+    "reset-password" | "corresponsavel-access"
+  >("reset-password");
   const [forgotStep, setForgotStep] = useState<
     "request" | "verify" | "setPassword"
   >("request");
@@ -386,6 +391,10 @@ export default function ConsultaClientePage() {
   const [forgotDestination, setForgotDestination] = useState<string | null>(
     null,
   );
+  const [forgotChannel, setForgotChannel] = useState<
+    "email" | "whatsapp" | null
+  >(null);
+  const [forgotWhatsappAvailable, setForgotWhatsappAvailable] = useState(false);
   const [forgotError, setForgotError] = useState<string | null>(null);
   const [forgotLoading, setForgotLoading] = useState(false);
 
@@ -442,6 +451,19 @@ export default function ConsultaClientePage() {
     setFirstAccessError(null);
   }, []);
 
+  const resetForgotState = useCallback(() => {
+    setForgotMode("reset-password");
+    setForgotStep("request");
+    setForgotOtp("");
+    setForgotVerificationToken("");
+    setForgotPassword("");
+    setForgotPasswordConfirm("");
+    setForgotDestination(null);
+    setForgotChannel(null);
+    setForgotInfo(null);
+    setForgotError(null);
+  }, []);
+
   const populatePaymentPending = useCallback(
     (data: {
       nome?: string | null;
@@ -478,6 +500,26 @@ export default function ConsultaClientePage() {
     [populatePaymentPending],
   );
 
+  const loadFirstAccessChannels = useCallback(async () => {
+    setFirstAccessWhatsappAvailable(false);
+    try {
+      const { data } = await api.get("/auth/first-access/channels");
+      setFirstAccessWhatsappAvailable(Boolean(data?.whatsapp));
+    } catch {
+      setFirstAccessWhatsappAvailable(false);
+    }
+  }, []);
+
+  const loadForgotChannels = useCallback(async () => {
+    setForgotWhatsappAvailable(false);
+    try {
+      const { data } = await api.get("/auth/first-access/channels");
+      setForgotWhatsappAvailable(Boolean(data?.whatsapp));
+    } catch {
+      setForgotWhatsappAvailable(false);
+    }
+  }, []);
+
   const clearFirstAccessQueryParams = useCallback(() => {
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
@@ -497,6 +539,16 @@ export default function ConsultaClientePage() {
       setTenantSelecionado(subdomainFromHost);
     }
   }, [subdomainFromHost]);
+
+  useEffect(() => {
+    if (!firstAccessOpen || firstAccessStep !== "request") return;
+    void loadFirstAccessChannels();
+  }, [firstAccessOpen, firstAccessStep, loadFirstAccessChannels]);
+
+  useEffect(() => {
+    if (!forgotOpen || forgotStep !== "request") return;
+    void loadForgotChannels();
+  }, [forgotOpen, forgotStep, loadForgotChannels]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -526,6 +578,7 @@ export default function ConsultaClientePage() {
 
     if (modo === "reset") {
       setForgotOpen(true);
+      setForgotMode("reset-password");
       setForgotStep(tokenFromUrl ? "setPassword" : "request");
       if (tokenFromUrl) {
         setForgotVerificationToken(tokenFromUrl);
@@ -763,6 +816,19 @@ export default function ConsultaClientePage() {
         setFirstAccessChannel(null);
         setFirstAccessInfo(
           "Seu cadastro ainda não possui senha. Vamos validar seu acesso e criar sua senha.",
+        );
+        return;
+      }
+
+      if (status === 401 && code === "CORRESPONSAVEL_OTP_REQUIRED") {
+        setForgotMode("corresponsavel-access");
+        setForgotOpen(true);
+        setForgotStep("request");
+        setForgotLogin(loginValue.trim());
+        setForgotDestination(null);
+        setForgotChannel(null);
+        setForgotInfo(
+          "Senha incorreta. Valide seu acesso com um código enviado ao e-mail ou WhatsApp do corresponsável.",
         );
         return;
       }
@@ -1039,7 +1105,7 @@ export default function ConsultaClientePage() {
     }
   };
 
-  const startForgotPassword = async () => {
+  const startForgotPassword = async (channel?: "email" | "whatsapp") => {
     setForgotError(null);
     setForgotInfo(null);
     setForgotDestination(null);
@@ -1051,16 +1117,26 @@ export default function ConsultaClientePage() {
 
     setForgotLoading(true);
     try {
-      const { data } = await api.post("/auth/forgot-password", {
+      const endpoint =
+        forgotMode === "corresponsavel-access"
+          ? "/auth/corresponsavel-access"
+          : "/auth/forgot-password";
+      const { data } = await api.post(endpoint, {
         login: forgotLogin.trim(),
+        ...(channel ? { channel } : {}),
       });
       const destination =
         data?.start?.destinationMasked || data?.start?.channel || "seu contato";
       setForgotDestination(destination);
-      const devOtp = data?.start?.dev?.otp;
-      setForgotInfo(
-        `Enviamos um código para ${destination}.${devOtp ? ` Código (dev): ${devOtp}` : ""}`,
+      setForgotChannel(
+        data?.start?.channel === "whatsapp" ? "whatsapp" : "email",
       );
+      const devOtp = data?.start?.dev?.otp;
+      const prefixo =
+        forgotMode === "corresponsavel-access"
+          ? `Enviamos um código para validar o acesso em ${destination}.`
+          : `Enviamos um código para ${destination}.`;
+      setForgotInfo(`${prefixo}${devOtp ? ` Código (dev): ${devOtp}` : ""}`);
       setForgotStep("verify");
     } catch (err: unknown) {
       const errorObject = err as {
@@ -1091,8 +1167,20 @@ export default function ConsultaClientePage() {
       const { data } = await api.post("/auth/verify", {
         login: forgotLogin.trim(),
         otp: forgotOtp.trim(),
-        purpose: "RESET_PASSWORD",
+        purpose:
+          forgotMode === "corresponsavel-access"
+            ? "LOGIN_ACCESS"
+            : "RESET_PASSWORD",
       });
+
+      if (forgotMode === "corresponsavel-access") {
+        setForgotInfo("Acesso validado. Entrando...");
+        await carregarClienteAutenticado();
+        setForgotOpen(false);
+        resetForgotState();
+        return;
+      }
+
       const token = String(data?.verificationToken ?? "");
       if (!token) {
         setForgotError("Não foi possível validar o código.");
@@ -1546,19 +1634,20 @@ export default function ConsultaClientePage() {
                     maxLength={6}
                   />
                 </div>
-                {firstAccessChannel !== "whatsapp" && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      void startFirstAccess("whatsapp");
-                    }}
-                    disabled={firstAccessLoading}
-                  >
-                    Enviar código por WhatsApp
-                  </Button>
-                )}
+                {firstAccessWhatsappAvailable &&
+                  firstAccessChannel !== "whatsapp" && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        void startFirstAccess("whatsapp");
+                      }}
+                      disabled={firstAccessLoading}
+                    >
+                      Enviar código por WhatsApp
+                    </Button>
+                  )}
                 {firstAccessInfo && (
                   <p className="text-xs text-slate-500">{firstAccessInfo}</p>
                 )}
@@ -1651,24 +1740,23 @@ export default function ConsultaClientePage() {
         onOpenChange={(open) => {
           setForgotOpen(open);
           if (!open) {
-            setForgotStep("request");
-            setForgotOtp("");
-            setForgotVerificationToken("");
-            setForgotPassword("");
-            setForgotPasswordConfirm("");
-            setForgotDestination(null);
-            setForgotInfo(null);
-            setForgotError(null);
+            resetForgotState();
           }
         }}
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Recuperar senha</DialogTitle>
+            <DialogTitle>
+              {forgotMode === "corresponsavel-access"
+                ? "Entrar como corresponsável"
+                : "Recuperar senha"}
+            </DialogTitle>
             <DialogDescription>
-              {forgotStep === "setPassword" && forgotVerificationToken
-                ? "Link validado. Defina sua nova senha."
-                : "Envie um código, valide e defina uma nova senha."}
+              {forgotMode === "corresponsavel-access"
+                ? "Use um código enviado ao contato do corresponsável para entrar na conta vinculada, sem redefinir a senha."
+                : forgotStep === "setPassword" && forgotVerificationToken
+                  ? "Link validado. Defina sua nova senha."
+                  : "Envie um código, valide e defina uma nova senha."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1687,7 +1775,11 @@ export default function ConsultaClientePage() {
                 </div>
                 {forgotInfo && (
                   <Alert>
-                    <AlertTitle>Info</AlertTitle>
+                    <AlertTitle>
+                      {forgotMode === "corresponsavel-access"
+                        ? "Acesso por código"
+                        : "Info"}
+                    </AlertTitle>
                     <AlertDescription>{forgotInfo}</AlertDescription>
                   </Alert>
                 )}
@@ -1699,8 +1791,15 @@ export default function ConsultaClientePage() {
                   </Alert>
                 )}
                 <Button
-                  onClick={startForgotPassword}
-                  className="w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
+                  onClick={() => {
+                    void startForgotPassword("email");
+                  }}
+                  variant={forgotWhatsappAvailable ? "outline" : "default"}
+                  className={
+                    forgotWhatsappAvailable
+                      ? "w-full"
+                      : "w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
+                  }
                   disabled={forgotLoading}
                 >
                   {forgotLoading ? (
@@ -1708,10 +1807,32 @@ export default function ConsultaClientePage() {
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Enviando...
                     </>
+                  ) : forgotMode === "corresponsavel-access" ? (
+                    "Receber código por e-mail"
                   ) : (
-                    "Enviar código"
+                    "Receber por e-mail"
                   )}
                 </Button>
+                {forgotWhatsappAvailable && (
+                  <Button
+                    onClick={() => {
+                      void startForgotPassword("whatsapp");
+                    }}
+                    className="w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
+                    disabled={forgotLoading}
+                  >
+                    {forgotLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : forgotMode === "corresponsavel-access" ? (
+                      "Receber código por WhatsApp"
+                    ) : (
+                      "Receber por WhatsApp"
+                    )}
+                  </Button>
+                )}
               </>
             )}
 
@@ -1719,7 +1840,9 @@ export default function ConsultaClientePage() {
               <>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700">
-                    {`Código enviado para ${forgotDestination || "seu contato"}`}
+                    {forgotMode === "corresponsavel-access"
+                      ? `Código de acesso enviado para ${forgotDestination || "o contato do corresponsável"}`
+                      : `Código enviado para ${forgotDestination || "seu contato"}`}
                   </label>
                   <Input
                     value={forgotOtp}
@@ -1731,7 +1854,11 @@ export default function ConsultaClientePage() {
                 </div>
                 {forgotInfo && (
                   <Alert>
-                    <AlertTitle>Info</AlertTitle>
+                    <AlertTitle>
+                      {forgotMode === "corresponsavel-access"
+                        ? "Acesso por código"
+                        : "Info"}
+                    </AlertTitle>
                     <AlertDescription>{forgotInfo}</AlertDescription>
                   </Alert>
                 )}
@@ -1741,6 +1868,21 @@ export default function ConsultaClientePage() {
                     <AlertTitle>Erro</AlertTitle>
                     <AlertDescription>{forgotError}</AlertDescription>
                   </Alert>
+                )}
+                {forgotWhatsappAvailable && forgotChannel !== "whatsapp" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      void startForgotPassword("whatsapp");
+                    }}
+                    disabled={forgotLoading}
+                  >
+                    {forgotMode === "corresponsavel-access"
+                      ? "Receber código por WhatsApp"
+                      : "Enviar código por WhatsApp"}
+                  </Button>
                 )}
                 <Button
                   onClick={verifyForgotOtp}
@@ -1752,6 +1894,8 @@ export default function ConsultaClientePage() {
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Validando...
                     </>
+                  ) : forgotMode === "corresponsavel-access" ? (
+                    "Entrar com código"
                   ) : (
                     "Validar código"
                   )}
@@ -1759,61 +1903,62 @@ export default function ConsultaClientePage() {
               </>
             )}
 
-            {forgotStep === "setPassword" && (
-              <>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">
-                    Nova senha
-                  </label>
-                  <Input
-                    type="password"
-                    value={forgotPassword}
-                    onChange={(e) => setForgotPassword(e.target.value)}
-                    placeholder="Mín. 8 caracteres"
-                    autoComplete="new-password"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">
-                    Confirmar senha
-                  </label>
-                  <Input
-                    type="password"
-                    value={forgotPasswordConfirm}
-                    onChange={(e) => setForgotPasswordConfirm(e.target.value)}
-                    placeholder="Repita a senha"
-                    autoComplete="new-password"
-                  />
-                </div>
-                {forgotInfo && (
-                  <Alert>
-                    <AlertTitle>Info</AlertTitle>
-                    <AlertDescription>{forgotInfo}</AlertDescription>
-                  </Alert>
-                )}
-                {forgotError && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Erro</AlertTitle>
-                    <AlertDescription>{forgotError}</AlertDescription>
-                  </Alert>
-                )}
-                <Button
-                  onClick={completeForgotPassword}
-                  className="w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
-                  disabled={forgotLoading}
-                >
-                  {forgotLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : (
-                    "Alterar senha"
+            {forgotMode !== "corresponsavel-access" &&
+              forgotStep === "setPassword" && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      Nova senha
+                    </label>
+                    <Input
+                      type="password"
+                      value={forgotPassword}
+                      onChange={(e) => setForgotPassword(e.target.value)}
+                      placeholder="Mín. 8 caracteres"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      Confirmar senha
+                    </label>
+                    <Input
+                      type="password"
+                      value={forgotPasswordConfirm}
+                      onChange={(e) => setForgotPasswordConfirm(e.target.value)}
+                      placeholder="Repita a senha"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  {forgotInfo && (
+                    <Alert>
+                      <AlertTitle>Info</AlertTitle>
+                      <AlertDescription>{forgotInfo}</AlertDescription>
+                    </Alert>
                   )}
-                </Button>
-              </>
-            )}
+                  {forgotError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Erro</AlertTitle>
+                      <AlertDescription>{forgotError}</AlertDescription>
+                    </Alert>
+                  )}
+                  <Button
+                    onClick={completeForgotPassword}
+                    className="w-full bg-[#3a9b28] hover:bg-[#2d7a1f] text-white"
+                    disabled={forgotLoading}
+                  >
+                    {forgotLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      "Alterar senha"
+                    )}
+                  </Button>
+                </>
+              )}
           </div>
         </DialogContent>
       </Dialog>
@@ -2071,6 +2216,7 @@ export default function ConsultaClientePage() {
                         type="button"
                         className="text-xs text-[#3a9b28] hover:text-[#2d7a1f] hover:underline font-medium"
                         onClick={() => {
+                          setForgotMode("reset-password");
                           setForgotOpen(true);
                           setForgotStep("request");
                           setForgotLogin(loginValue.trim());
