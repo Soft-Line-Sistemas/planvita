@@ -41,6 +41,8 @@ export interface MobileLoginProps {
   faPasswordConfirm: string;
   setFaPasswordConfirm: (v: string) => void;
   faLoading: boolean;
+  faSendingChannel: "email" | "whatsapp" | null;
+  faCooldownRemaining: number;
   faError: string | null;
   faInfo: string | null;
   faDestination: string | null;
@@ -61,6 +63,8 @@ export interface MobileLoginProps {
   fgPasswordConfirm: string;
   setFgPasswordConfirm: (v: string) => void;
   fgLoading: boolean;
+  fgSendingChannel: "email" | "whatsapp" | null;
+  fgCooldownRemaining: number;
   fgError: string | null;
   fgInfo: string | null;
   fgDestination: string | null;
@@ -188,6 +192,17 @@ function BackButton({ onClick }: { onClick: () => void }) {
   );
 }
 
+function buildCooldownLabel(
+  channel: "email" | "whatsapp",
+  idleLabel: string,
+  sendingChannel: "email" | "whatsapp" | null,
+  cooldownRemaining: number,
+) {
+  if (sendingChannel === channel) return "Enviando...";
+  if (cooldownRemaining > 0) return `Aguarde ${cooldownRemaining}s`;
+  return idleLabel;
+}
+
 /* ===================================================================
    Login view (Login-1 design)
    =================================================================== */
@@ -310,6 +325,8 @@ function FirstAccessView({
   faPasswordConfirm,
   setFaPasswordConfirm,
   faLoading,
+  faSendingChannel,
+  faCooldownRemaining,
   faError,
   faInfo,
   faDestination,
@@ -331,6 +348,8 @@ function FirstAccessView({
   | "faPasswordConfirm"
   | "setFaPasswordConfirm"
   | "faLoading"
+  | "faSendingChannel"
+  | "faCooldownRemaining"
   | "faError"
   | "faInfo"
   | "faDestination"
@@ -412,16 +431,21 @@ function FirstAccessView({
                     ? "cm-btn-outline"
                     : "cm-btn-solid cm-alterar-senha-submit"
                 }
-                disabled={faLoading}
+                disabled={faLoading || faCooldownRemaining > 0}
                 onClick={() => onStartFirstAccess("email")}
               >
-                {faLoading ? (
+                {faSendingChannel === "email" ? (
                   <>
                     <Loader2 size={18} className="cm-spinner" />
                     Enviando...
                   </>
                 ) : (
-                  "Receber por e-mail"
+                  buildCooldownLabel(
+                    "email",
+                    "Receber por e-mail",
+                    faSendingChannel,
+                    faCooldownRemaining,
+                  )
                 )}
               </button>
 
@@ -429,16 +453,21 @@ function FirstAccessView({
                 <button
                   type="button"
                   className="cm-btn-solid cm-alterar-senha-submit"
-                  disabled={faLoading}
+                  disabled={faLoading || faCooldownRemaining > 0}
                   onClick={() => onStartFirstAccess("whatsapp")}
                 >
-                  {faLoading ? (
+                  {faSendingChannel === "whatsapp" ? (
                     <>
                       <Loader2 size={18} className="cm-spinner" />
                       Enviando...
                     </>
                   ) : (
-                    "Receber por WhatsApp"
+                    buildCooldownLabel(
+                      "whatsapp",
+                      "Receber por WhatsApp",
+                      faSendingChannel,
+                      faCooldownRemaining,
+                    )
                   )}
                 </button>
               )}
@@ -486,14 +515,35 @@ function FirstAccessView({
               {faInfo && <InfoBox message={faInfo} />}
               {faError && <ErrBox message={faError} />}
 
+              {faChannel !== "email" && (
+                <button
+                  type="button"
+                  className="cm-btn-outline cm-alterar-senha-submit"
+                  disabled={faLoading || faCooldownRemaining > 0}
+                  onClick={() => onStartFirstAccess("email")}
+                >
+                  {buildCooldownLabel(
+                    "email",
+                    "Reenviar por e-mail",
+                    faSendingChannel,
+                    faCooldownRemaining,
+                  )}
+                </button>
+              )}
+
               {faWhatsappAvailable && faChannel !== "whatsapp" && (
                 <button
                   type="button"
                   className="cm-btn-outline cm-alterar-senha-submit"
-                  disabled={faLoading}
+                  disabled={faLoading || faCooldownRemaining > 0}
                   onClick={() => onStartFirstAccess("whatsapp")}
                 >
-                  Reenviar via WhatsApp
+                  {buildCooldownLabel(
+                    "whatsapp",
+                    "Reenviar por WhatsApp",
+                    faSendingChannel,
+                    faCooldownRemaining,
+                  )}
                 </button>
               )}
 
@@ -602,6 +652,8 @@ function ForgotView({
   fgPasswordConfirm,
   setFgPasswordConfirm,
   fgLoading,
+  fgSendingChannel,
+  fgCooldownRemaining,
   fgError,
   fgInfo,
   fgDestination,
@@ -624,6 +676,8 @@ function ForgotView({
   | "fgPasswordConfirm"
   | "setFgPasswordConfirm"
   | "fgLoading"
+  | "fgSendingChannel"
+  | "fgCooldownRemaining"
   | "fgError"
   | "fgInfo"
   | "fgDestination"
@@ -719,18 +773,28 @@ function ForgotView({
                     ? "cm-btn-outline"
                     : "cm-btn-solid cm-alterar-senha-submit"
                 }
-                disabled={fgLoading}
+                disabled={fgLoading || fgCooldownRemaining > 0}
                 onClick={() => onStartForgot("email")}
               >
-                {fgLoading ? (
+                {fgSendingChannel === "email" ? (
                   <>
                     <Loader2 size={18} className="cm-spinner" />
                     Enviando...
                   </>
                 ) : fgMode === "corresponsavel-access" ? (
-                  "Receber código por e-mail"
+                  buildCooldownLabel(
+                    "email",
+                    "Receber código por e-mail",
+                    fgSendingChannel,
+                    fgCooldownRemaining,
+                  )
                 ) : (
-                  "Receber por e-mail"
+                  buildCooldownLabel(
+                    "email",
+                    "Receber por e-mail",
+                    fgSendingChannel,
+                    fgCooldownRemaining,
+                  )
                 )}
               </button>
 
@@ -738,10 +802,10 @@ function ForgotView({
                 <button
                   type="button"
                   className="cm-btn-solid cm-alterar-senha-submit"
-                  disabled={fgLoading}
+                  disabled={fgLoading || fgCooldownRemaining > 0}
                   onClick={() => onStartForgot("whatsapp")}
                 >
-                  {fgLoading ? (
+                  {fgSendingChannel === "whatsapp" ? (
                     <>
                       <Loader2 size={18} className="cm-spinner" />
                       Enviando...
@@ -805,16 +869,39 @@ function ForgotView({
               {fgInfo && <InfoBox message={fgInfo} />}
               {fgError && <ErrBox message={fgError} />}
 
+              {fgChannel !== "email" && (
+                <button
+                  type="button"
+                  className="cm-btn-outline cm-alterar-senha-submit"
+                  disabled={fgLoading || fgCooldownRemaining > 0}
+                  onClick={() => onStartForgot("email")}
+                >
+                  {buildCooldownLabel(
+                    "email",
+                    fgMode === "corresponsavel-access"
+                      ? "Receber código por e-mail"
+                      : "Reenviar por e-mail",
+                    fgSendingChannel,
+                    fgCooldownRemaining,
+                  )}
+                </button>
+              )}
+
               {fgWhatsappAvailable && fgChannel !== "whatsapp" && (
                 <button
                   type="button"
                   className="cm-btn-outline cm-alterar-senha-submit"
-                  disabled={fgLoading}
+                  disabled={fgLoading || fgCooldownRemaining > 0}
                   onClick={() => onStartForgot("whatsapp")}
                 >
-                  {fgMode === "corresponsavel-access"
-                    ? "Receber código por WhatsApp"
-                    : "Reenviar via WhatsApp"}
+                  {buildCooldownLabel(
+                    "whatsapp",
+                    fgMode === "corresponsavel-access"
+                      ? "Receber código por WhatsApp"
+                      : "Reenviar via WhatsApp",
+                    fgSendingChannel,
+                    fgCooldownRemaining,
+                  )}
                 </button>
               )}
 
