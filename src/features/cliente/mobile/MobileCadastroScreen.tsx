@@ -43,6 +43,7 @@ import {
   getWhatsAppFromPhone,
   formatRG,
   formatCEP,
+  validateCPF,
 } from "@/helpers/formHelpers";
 import {
   calcularIdade,
@@ -104,8 +105,7 @@ function validateSingleDependente(dep: Dependente): DepErrors {
   if (!dep.parentesco) err.parentesco = "Parentesco é obrigatório";
   if (dep.telefone && dep.telefone.replace(/\D/g, "").length < 10)
     err.telefone = "Telefone inválido";
-  if (dep.cpf && dep.cpf.replace(/\D/g, "").length < 11)
-    err.cpf = "CPF inválido";
+  if (dep.cpf && !validateCPF(dep.cpf)) err.cpf = "CPF inválido";
   return err;
 }
 

@@ -45,6 +45,7 @@ import {
   useCreateTitular,
   type CreateTitularInput,
 } from "@/hooks/mutations/useCreateTitular";
+import { validateCPF } from "@/helpers/formHelpers";
 import api from "@/utils/api";
 
 type CadastroClienteWizardVariant = "dashboard" | "public";
@@ -171,7 +172,7 @@ export function CadastroClienteWizard({
     if (telefoneDigits && telefoneDigits.length < 10) {
       errors.telefone = "Telefone inválido";
     }
-    if (cpfDigits && cpfDigits.length < 11) {
+    if (cpfDigits && !validateCPF(cpfDigits)) {
       errors.cpf = "CPF inválido";
     }
 

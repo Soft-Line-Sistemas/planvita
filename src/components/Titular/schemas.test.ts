@@ -9,7 +9,7 @@ import {
 
 const validDadosPessoais = {
   nomeCompleto: "Cliente Teste",
-  cpf: "123.456.789-01",
+  cpf: "314.159.265-90",
   dataNascimento: "1990-06-18",
   sexo: "Masculino",
   rg: "1234567",
@@ -35,7 +35,7 @@ const validEndereco = {
 const validResponsavel = {
   usarMesmosDados: false,
   nomeCompleto: "Responsavel Teste",
-  cpf: "987.654.321-00",
+  cpf: "271.828.182-05",
   rg: "7654321",
   dataNascimento: "1990-06-18",
   sexo: "Feminino",
@@ -63,7 +63,7 @@ const validDependentes = {
       idade: "10",
       parentesco: "Filho(a)",
       telefone: "(71) 98888-7777",
-      cpf: "123.456.789-01",
+      cpf: "417.508.392-88",
     },
   ],
 };
