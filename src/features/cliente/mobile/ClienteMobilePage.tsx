@@ -21,6 +21,7 @@ import getTenantFromHost from "@/utils/getTenantFromHost";
 import MobileLoginScreen, {
   type AuthView,
   type FirstAccessStep,
+  type ForgotMode,
   type ForgotStep,
 } from "./MobileLoginScreen";
 import SplashScreen from "./screens/SplashScreen";
@@ -238,6 +239,7 @@ export default function ClienteMobilePage() {
 
   /* --- Forgot password --- */
   const [fgStep, setFgStep] = useState<ForgotStep>("request");
+  const [fgMode, setFgMode] = useState<ForgotMode>("reset-password");
   const [fgLogin, setFgLogin] = useState("");
   const [fgOtp, setFgOtp] = useState("");
   const [fgVerificationToken, setFgVerificationToken] = useState("");
@@ -247,6 +249,7 @@ export default function ClienteMobilePage() {
   const [fgError, setFgError] = useState<string | null>(null);
   const [fgInfo, setFgInfo] = useState<string | null>(null);
   const [fgDestination, setFgDestination] = useState<string | null>(null);
+  const [fgChannel, setFgChannel] = useState<"email" | "whatsapp" | null>(null);
   const faStartInFlightRef = useRef(false);
   const faVerifyInFlightRef = useRef(false);
   const faCompleteInFlightRef = useRef(false);
@@ -350,7 +353,7 @@ export default function ClienteMobilePage() {
   }, []);
 
   useEffect(() => {
-    if (authView !== "first-access") return;
+    if (authView !== "first-access" && authView !== "forgot") return;
     void loadFirstAccessChannels();
   }, [authView, loadFirstAccessChannels]);
 
@@ -599,6 +602,18 @@ export default function ClienteMobilePage() {
         }
         return;
       }
+      if (status === 401 && code === "CORRESPONSAVEL_OTP_REQUIRED") {
+        setFgMode("corresponsavel-access");
+        setFgLogin(loginValue.trim());
+        setFgStep("request");
+        setFgDestination(null);
+        setFgChannel(null);
+        setFgInfo(
+          "Senha incorreta. Valide seu acesso com um código enviado ao e-mail ou WhatsApp do corresponsável.",
+        );
+        setAuthView("forgot");
+        return;
+      }
       setAuthError("Não foi possível entrar. Verifique seu login e senha.");
     } finally {
       setAuthLoading(false);
@@ -641,6 +656,18 @@ export default function ClienteMobilePage() {
           } catch {
             // non-fatal
           }
+          return;
+        }
+        if (status === 401 && code === "CORRESPONSAVEL_OTP_REQUIRED") {
+          setFgMode("corresponsavel-access");
+          setFgLogin(loginValue.trim());
+          setFgStep("request");
+          setFgDestination(null);
+          setFgChannel(null);
+          setFgInfo(
+            "Senha incorreta. Valide seu acesso com um código enviado ao e-mail ou WhatsApp do corresponsável.",
+          );
+          setAuthView("forgot");
           return;
         }
         setAuthError("Não foi possível entrar. Verifique seu login e senha.");
@@ -821,7 +848,7 @@ export default function ClienteMobilePage() {
   /* ===================================================================
      Forgot password handlers
      ================================================================ */
-  const onStartForgot = async () => {
+  const onStartForgot = async (channel?: "email" | "whatsapp") => {
     if (fgStartInFlightRef.current) return;
     fgStartInFlightRef.current = true;
     setFgError(null);
@@ -836,16 +863,24 @@ export default function ClienteMobilePage() {
 
     setFgLoading(true);
     try {
-      const { data } = await api.post("/auth/forgot-password", {
+      const endpoint =
+        fgMode === "corresponsavel-access"
+          ? "/auth/corresponsavel-access"
+          : "/auth/forgot-password";
+      const { data } = await api.post(endpoint, {
         login: fgLogin.trim(),
+        ...(channel ? { channel } : {}),
       });
       const destination =
         data?.start?.destinationMasked || data?.start?.channel || "seu contato";
       setFgDestination(destination);
+      setFgChannel(data?.start?.channel === "whatsapp" ? "whatsapp" : "email");
       const devOtp = data?.start?.dev?.otp;
-      setFgInfo(
-        `Enviamos um código para ${destination}.${devOtp ? ` Código (dev): ${devOtp}` : ""}`,
-      );
+      const prefixo =
+        fgMode === "corresponsavel-access"
+          ? `Enviamos um código para validar o acesso em ${destination}.`
+          : `Enviamos um código para ${destination}.`;
+      setFgInfo(`${prefixo}${devOtp ? ` Código (dev): ${devOtp}` : ""}`);
       setFgStep("verify");
     } catch (err) {
       setFgError(
@@ -873,8 +908,18 @@ export default function ClienteMobilePage() {
       const { data } = await api.post("/auth/verify", {
         login: fgLogin.trim(),
         otp: fgOtp.trim(),
-        purpose: "RESET_PASSWORD",
+        purpose:
+          fgMode === "corresponsavel-access"
+            ? "LOGIN_ACCESS"
+            : "RESET_PASSWORD",
       });
+
+      if (fgMode === "corresponsavel-access") {
+        setFgInfo("Acesso validado. Entrando...");
+        await carregarCliente();
+        return;
+      }
+
       const token = String(data?.verificationToken ?? "");
       if (!token) {
         setFgError("Não foi possível validar o código.");
@@ -1249,12 +1294,14 @@ export default function ClienteMobilePage() {
             }
             /* Reset forgot state when switching away */
             if (v !== "forgot") {
+              setFgMode("reset-password");
               setFgStep("request");
               setFgOtp("");
               setFgVerificationToken("");
               setFgPassword("");
               setFgPasswordConfirm("");
               setFgDestination(null);
+              setFgChannel(null);
               setFgInfo(null);
               setFgError(null);
             }
@@ -1267,6 +1314,11 @@ export default function ClienteMobilePage() {
           authLoading={authLoading}
           authError={authError}
           onLoginSubmit={handleLoginSubmit}
+          onForgotPasswordClick={() => {
+            setFgMode("reset-password");
+            setFgLogin(loginValue.trim());
+            setAuthView("forgot");
+          }}
           /* first access */
           faStep={faStep}
           faLogin={faLogin}
@@ -1287,6 +1339,7 @@ export default function ClienteMobilePage() {
           onVerifyFirstAccess={onVerifyFirstAccess}
           onCompleteFirstAccess={onCompleteFirstAccess}
           /* forgot */
+          fgMode={fgMode}
           fgStep={fgStep}
           fgLogin={fgLogin}
           setFgLogin={setFgLogin}
@@ -1300,6 +1353,8 @@ export default function ClienteMobilePage() {
           fgError={fgError}
           fgInfo={fgInfo}
           fgDestination={fgDestination}
+          fgChannel={fgChannel}
+          fgWhatsappAvailable={faWhatsappAvailable}
           onStartForgot={onStartForgot}
           onVerifyForgot={onVerifyForgot}
           onCompleteForgot={onCompleteForgot}
