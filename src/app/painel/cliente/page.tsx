@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Users } from "lucide-react";
+import { Loader2, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -170,7 +170,7 @@ export default function ClientesPage() {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+    <div className="p-6 space-y-6 bg-slate-50/50 min-h-screen">
       <ClienteHeader
         onExport={handleExportClients}
         onNewClient={handleNewClient}
@@ -190,31 +190,29 @@ export default function ClientesPage() {
         setViewMode={setViewMode}
       />
       {planoFilter !== "todos" && (
-        <Card className="border border-emerald-200 shadow-sm">
+        <Card className="border-[#c5e3be] shadow-sm">
           <CardContent className="p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-emerald-700 uppercase tracking-wide">
+                <p className="text-sm text-primary uppercase tracking-wide">
                   Plano selecionado
                 </p>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {planoFilter}
-                </h2>
+                <h2 className="text-xl font-semibold">{planoFilter}</h2>
               </div>
               {isLoadingPlanos && (
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-muted-foreground">
                   Carregando informações...
                 </span>
               )}
             </div>
             {isErrorPlanos ? (
-              <p className="text-sm text-red-600">
+              <p className="text-sm text-destructive">
                 Não foi possível carregar os dados do plano.
               </p>
             ) : planoSelecionadoInfo ? (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-700">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <p className="text-xs text-gray-500 uppercase">
+                  <p className="text-xs text-muted-foreground uppercase">
                     Valor mensal
                   </p>
                   <p className="font-medium">
@@ -224,7 +222,7 @@ export default function ClientesPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase">
+                  <p className="text-xs text-muted-foreground uppercase">
                     Carência (dias)
                   </p>
                   <p className="font-medium">
@@ -232,7 +230,7 @@ export default function ClientesPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase">
+                  <p className="text-xs text-muted-foreground uppercase">
                     Vigência (meses)
                   </p>
                   <p className="font-medium">
@@ -240,7 +238,7 @@ export default function ClientesPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase">
+                  <p className="text-xs text-muted-foreground uppercase">
                     Idade mínima de entrada
                   </p>
                   <p className="font-medium">
@@ -251,7 +249,7 @@ export default function ClientesPage() {
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 Plano não encontrado na lista de planos cadastrados.
               </p>
             )}
@@ -260,35 +258,31 @@ export default function ClientesPage() {
       )}
 
       {isLoading ? (
-        <Card className="border border-gray-200 rounded-lg hover:shadow-md transition">
-          <CardContent className="p-12 text-center">
-            <p>Carregando clientes...</p>
+        <Card className="rounded-xl border-slate-100">
+          <CardContent className="p-12 flex items-center justify-center gap-2 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Carregando clientes...
           </CardContent>
         </Card>
       ) : clientes.length === 0 ? (
-        <Card className="border border-gray-200 rounded-lg hover:shadow-md transition">
+        <Card className="rounded-xl border-slate-100">
           <CardContent className="p-12 text-center">
-            <Users className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <Users className="w-12 h-12 mx-auto text-muted-foreground/60 mb-4" />
+            <h3 className="text-lg font-medium mb-2">
               Nenhum cliente encontrado
             </h3>
-            <p className="text-gray-500 mb-6">
+            <p className="text-muted-foreground mb-6">
               Tente ajustar os filtros ou cadastre um novo cliente
             </p>
             {canCreateClient && (
-              <Button
-                onClick={handleNewClient}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                Cadastrar Cliente
-              </Button>
+              <Button onClick={handleNewClient}>Cadastrar Cliente</Button>
             )}
           </CardContent>
         </Card>
       ) : (
         <>
           <div className="flex justify-between items-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               Mostrando {clientes.length} clientes
             </p>
             {selectedClientes.length > 0 && (

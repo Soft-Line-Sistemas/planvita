@@ -4,15 +4,13 @@ import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plano } from "@/types/PlanType";
 import { User } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatDatePtBr } from "@/utils/date";
+import { Button } from "@/components/ui/button";
+import { Loader2, Search } from "lucide-react";
+import { ConsultorLookupCard } from "@/components/ConsultorLookupCard";
+import type { ConsultorPublicResult } from "@/utils/consultorPublic";
 
 interface PessoaResumo {
   nomeCompleto?: string;
@@ -53,17 +51,12 @@ interface ConfirmacaoProps {
     billingType?: "PIX" | "BOLETO" | "CREDIT_CARD";
     assinaturaTitularRegistrada?: boolean;
   };
-  consultores: Array<{
-    id: number;
-    nome: string;
-    tenantId: string;
-    tenantLabel?: string;
-    selectionKey: string;
-  }>;
-  selectedConsultorKey?: string;
-  onSelectConsultor: (consultorKey: string) => void;
+  consultorCode: string;
+  onConsultorCodeChange: (consultorCode: string) => void;
+  onResolveConsultor: () => void;
+  consultorSelecionado: ConsultorPublicResult | null;
   isConsultorLocked?: boolean;
-  isLoadingConsultores?: boolean;
+  isResolvingConsultor?: boolean;
   consultorError?: string | null;
 }
 
@@ -1103,34 +1096,14 @@ const buildAdesaoHtml = ({
 
 export function Confirmacao({
   dados,
-  consultores,
-  selectedConsultorKey,
-  onSelectConsultor,
+  consultorCode,
+  onConsultorCodeChange,
+  onResolveConsultor,
+  consultorSelecionado,
   isConsultorLocked = false,
-  isLoadingConsultores = false,
+  isResolvingConsultor = false,
   consultorError = null,
 }: ConfirmacaoProps) {
-  const consultorSelecionadoNoLink =
-    Boolean(selectedConsultorKey) &&
-    !consultores.some((item) => item.selectionKey === selectedConsultorKey);
-
-  const consultoresDisponiveis = consultorSelecionadoNoLink
-    ? [
-        ...consultores,
-        {
-          id: -1,
-          nome: `Consultor ${selectedConsultorKey}`,
-          tenantId: "",
-          tenantLabel: DEFAULT_TENANT_LABEL,
-          selectionKey: selectedConsultorKey as string,
-        },
-      ]
-    : consultores;
-
-  const consultorSelecionado = consultoresDisponiveis.find(
-    (item) => item.selectionKey === selectedConsultorKey,
-  );
-
   const previewHtml = useMemo(
     () =>
       buildAdesaoHtml({
@@ -1156,45 +1129,46 @@ export function Confirmacao({
       <CardContent className="space-y-6">
         <div className="space-y-4 rounded-lg border border-emerald-200 bg-emerald-50/40 p-5">
           <Label
-            htmlFor="consultor-select"
+            htmlFor="consultor-code"
             className="text-sm font-semibold text-emerald-800"
           >
             Consultor Responsável <span className="text-red-500">*</span>
           </Label>
-          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-            <Select
-              value={selectedConsultorKey}
-              onValueChange={onSelectConsultor}
-              disabled={isConsultorLocked || isLoadingConsultores}
-            >
-              <SelectTrigger
-                id="consultor-select"
-                className="w-full bg-white border-emerald-200 sm:max-w-md"
+          <div className="flex flex-col gap-3 sm:max-w-xl">
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Input
+                id="consultor-code"
+                value={consultorCode}
+                onChange={(event) => onConsultorCodeChange(event.target.value)}
+                placeholder="Digite o código do consultor"
+                className="bg-white border-emerald-200"
+                disabled={isConsultorLocked || isResolvingConsultor}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="border-emerald-200"
+                onClick={onResolveConsultor}
+                disabled={
+                  isConsultorLocked ||
+                  isResolvingConsultor ||
+                  !consultorCode.trim()
+                }
               >
-                <SelectValue
-                  placeholder={
-                    isLoadingConsultores
-                      ? "Carregando consultores..."
-                      : "Selecione um consultor"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {consultoresDisponiveis.map((consultorItem) => (
-                  <SelectItem
-                    key={consultorItem.selectionKey}
-                    value={consultorItem.selectionKey}
-                  >
-                    {consultorItem.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {isConsultorLocked && (
-              <span className="rounded bg-amber-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700">
-                Bloqueado via link
-              </span>
-            )}
+                {isResolvingConsultor ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="mr-2 h-4 w-4" />
+                )}
+                Validar código
+              </Button>
+            </div>
+            {consultorSelecionado ? (
+              <ConsultorLookupCard
+                consultor={consultorSelecionado}
+                locked={isConsultorLocked}
+              />
+            ) : null}
           </div>
           {consultorError && (
             <p className="text-xs font-medium text-red-600">{consultorError}</p>

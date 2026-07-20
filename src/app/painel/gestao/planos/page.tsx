@@ -13,6 +13,7 @@ import {
   Filter,
   Download,
   Loader2,
+  ArrowLeft,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -20,6 +21,35 @@ import { Plano } from "@/types/PlanType";
 import api from "@/utils/api";
 import { sanitizePlanoArray } from "@/utils/planos";
 import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
 
 const formatCurrency = (value?: number | null) =>
   `R$ ${Number(value ?? 0).toFixed(2)}`;
@@ -283,7 +313,7 @@ const GestaoPlanos = () => {
       headers.map((header) => getCsvValue(header)).join(";"),
       ...rows.map((row) => row.map((value) => getCsvValue(value)).join(";")),
     ].join("\n");
-    const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["﻿", csv], { type: "text/csv;charset=utf-8;" });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -323,7 +353,7 @@ const GestaoPlanos = () => {
   if (loading) {
     return (
       <div className="p-8">
-        <div className="flex items-center gap-2 text-sm text-gray-700">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Carregando...
         </div>
@@ -334,9 +364,11 @@ const GestaoPlanos = () => {
   if (!canView) {
     return (
       <div className="p-8">
-        <div className="text-sm text-gray-700">
-          Você não tem permissão para visualizar planos.
-        </div>
+        <Card>
+          <CardContent className="pt-6 text-sm text-muted-foreground">
+            Você não tem permissão para visualizar planos.
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -487,10 +519,6 @@ const GestaoPlanos = () => {
     }
   };
 
-  const getStatusColor = (ativo: boolean) => {
-    return ativo ? "text-green-600 bg-green-100" : "text-red-600 bg-red-100";
-  };
-
   const beneficiariosSelecionados = planoSelecionado
     ? getBeneficiariosNomes(planoSelecionado.beneficiarios)
     : [];
@@ -538,71 +566,62 @@ const GestaoPlanos = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="bg-white rounded-lg shadow-md p-6 max-w-md text-center space-y-4">
-          <div className="text-red-600 font-semibold text-lg">
-            Não foi possível carregar os planos.
-          </div>
-          <p className="text-sm text-gray-600">
-            {error?.message || "Tente novamente em instantes."}
-          </p>
-          <button
-            onClick={() => refetch()}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-          >
-            Tentar novamente
-          </button>
-        </div>
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <Card className="max-w-md">
+          <CardContent className="pt-6 text-center space-y-4">
+            <div className="text-destructive font-semibold text-lg">
+              Não foi possível carregar os planos.
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {error?.message || "Tente novamente em instantes."}
+            </p>
+            <Button onClick={() => refetch()}>Tentar novamente</Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50/50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-white border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <button
+          <div className="flex flex-wrap items-center justify-between gap-4 py-4">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={onVoltar}
-                className="text-gray-600 hover:text-gray-900 transition-colors"
+                className="text-muted-foreground"
               >
-                ← Voltar
-              </button>
+                <ArrowLeft className="w-4 h-4" />
+                Voltar
+              </Button>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">
-                  Gestão de Planos
-                </h1>
-                <p className="text-sm text-gray-500">
+                <h1 className="text-xl font-semibold">Gestão de Planos</h1>
+                <p className="text-sm text-muted-foreground">
                   Gerencie os planos de assistência familiar
                 </p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={handleExportarPlanos}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-              >
+            <div className="flex items-center gap-3">
+              <Button variant="outline" onClick={handleExportarPlanos}>
                 <Download className="w-4 h-4" />
-                <span>Exportar</span>
-              </button>
-              <button
-                onClick={handleNovoPlano}
-                disabled={!canCreate}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+                Exportar
+              </Button>
+              <Button onClick={handleNovoPlano} disabled={!canCreate}>
                 <Plus className="w-4 h-4" />
-                <span>Novo Plano</span>
-              </button>
+                Novo Plano
+              </Button>
             </div>
           </div>
         </div>
@@ -610,61 +629,59 @@ const GestaoPlanos = () => {
 
       {/* Filtros e Busca */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-            <div className="flex-1 max-w-md">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Buscar planos..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                />
-              </div>
+        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex-1 max-w-md relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                className="pl-10"
+                placeholder="Buscar planos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
 
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Filter className="w-4 h-4 text-gray-400" />
-                <select
-                  value={filtroStatus}
-                  onChange={(e) => setFiltroStatus(e.target.value)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  <option value="todos">Todos os Status</option>
-                  <option value="ativo">Ativos</option>
-                  <option value="inativo">Inativos</option>
-                </select>
-              </div>
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+                <SelectTrigger className="w-44">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os Status</SelectItem>
+                  <SelectItem value="ativo">Ativos</SelectItem>
+                  <SelectItem value="inativo">Inativos</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
 
         {/* Estatísticas Rápidas */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <Shield className="w-6 h-6 text-green-600" />
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-[#f2faf0] rounded-full flex items-center justify-center">
+                <Shield className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total de Planos</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-sm text-muted-foreground">Total de Planos</p>
+                <p className="text-2xl font-bold text-primary">
                   {planos.length}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center space-x-3">
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+            <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                 <Users className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total de Clientes</p>
+                <p className="text-sm text-muted-foreground">
+                  Total de Clientes
+                </p>
                 <p className="text-2xl font-bold text-blue-600">
                   {totalClientes}
                 </p>
@@ -672,13 +689,13 @@ const GestaoPlanos = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center space-x-3">
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+            <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
                 <DollarSign className="w-6 h-6 text-purple-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Receita Mensal</p>
+                <p className="text-sm text-muted-foreground">Receita Mensal</p>
                 <p className="text-2xl font-bold text-purple-600">
                   {formatCurrency(receitaMensalTotal)}
                 </p>
@@ -686,13 +703,13 @@ const GestaoPlanos = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center space-x-3">
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+            <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
                 <CheckCircle className="w-6 h-6 text-yellow-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Planos Ativos</p>
+                <p className="text-sm text-muted-foreground">Planos Ativos</p>
                 <p className="text-2xl font-bold text-yellow-600">
                   {planosAtivos}
                 </p>
@@ -702,107 +719,98 @@ const GestaoPlanos = () => {
         </div>
 
         {/* Lista de Planos */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">
+        <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+          <div className="px-6 py-4 border-b border-slate-100">
+            <h3 className="text-lg font-semibold">
               Planos ({planosFiltrados.length})
             </h3>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Plano
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Valor Mensal
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Idade Mínima
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Clientes
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Receita Mensal
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {planosFiltrados.map((plano) => (
-                  <tr key={plano.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                          <Shield className="w-5 h-5 text-green-600" />
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Plano</TableHead>
+                <TableHead>Valor Mensal</TableHead>
+                <TableHead>Idade Mínima</TableHead>
+                <TableHead>Clientes</TableHead>
+                <TableHead>Receita Mensal</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {planosFiltrados.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className="text-center py-8 text-muted-foreground"
+                  >
+                    Nenhum plano encontrado.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                planosFiltrados.map((plano) => (
+                  <TableRow key={plano.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-[#f2faf0] rounded-full flex items-center justify-center flex-shrink-0">
+                          <Shield className="w-5 h-5 text-primary" />
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium">
                             {plano.nome}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-muted-foreground">
                             Carência: {plano.carenciaDias} dias
                           </div>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {formatCurrency(plano.valorMensal)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {plano.idadeMaxima
-                          ? `${plano.idadeMaxima} anos`
-                          : "Sem limite"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {plano.totalClientes ?? 0}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {formatCurrency(plano.receitaMensal)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(plano.ativo)}`}
-                      >
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {formatCurrency(plano.valorMensal)}
+                    </TableCell>
+                    <TableCell>
+                      {plano.idadeMaxima
+                        ? `${plano.idadeMaxima} anos`
+                        : "Sem limite"}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {plano.totalClientes ?? 0}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {formatCurrency(plano.receitaMensal)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={plano.ativo ? "default" : "outline"}>
                         {plano.ativo ? "Ativo" : "Inativo"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex items-center space-x-2">
-                        <button
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-blue-600"
                           onClick={() => handleVisualizarPlano(plano)}
-                          className="text-blue-600 hover:text-blue-800"
                           title="Visualizar"
                         >
                           <Eye className="w-4 h-4" />
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-primary"
                           onClick={() => handleEditarPlano(plano)}
                           disabled={!canUpdate}
-                          className="text-green-600 hover:text-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Editar"
                         >
                           <Edit className="w-4 h-4" />
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive"
                           onClick={() => handleExcluirPlano(plano)}
-                          className="text-red-600 hover:text-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Excluir"
                           disabled={
                             planoEmExclusao === String(plano.id) || !canDelete
@@ -813,601 +821,546 @@ const GestaoPlanos = () => {
                           ) : (
                             <Trash2 className="w-4 h-4" />
                           )}
-                        </button>
+                        </Button>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
       </div>
 
       {/* Modal de Detalhes/Edição do Plano */}
-      {modalAberto && (planoSelecionado || isNovoPlano) && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {isNovoPlano
-                    ? "Novo Plano"
-                    : `${modoEdicao ? "Editar Plano" : "Detalhes do Plano"} - ${planoSelecionado?.nome ?? ""}`}
-                </h3>
-                <button
-                  onClick={() => {
-                    setModalAberto(false);
-                    setPlanoSelecionado(null);
-                    setModoEdicao(false);
-                  }}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
+      <Dialog
+        open={modalAberto && Boolean(planoSelecionado || isNovoPlano)}
+        onOpenChange={(open) => {
+          if (open) return;
+          setModalAberto(false);
+          setPlanoSelecionado(null);
+          setModoEdicao(false);
+        }}
+      >
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {isNovoPlano
+                ? "Novo Plano"
+                : `${modoEdicao ? "Editar Plano" : "Detalhes do Plano"} - ${planoSelecionado?.nome ?? ""}`}
+            </DialogTitle>
+          </DialogHeader>
 
-            <div className="p-6 space-y-6">
-              {/* Informações Básicas */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-4">
-                    Informações Básicas
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-sm text-gray-600">
-                        Nome do Plano
-                      </label>
-                      {modoEdicao ? (
-                        <input
-                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500"
-                          value={formPlano.nome}
-                          onChange={(e) =>
-                            handleCampoPlano("nome", e.target.value)
-                          }
-                        />
-                      ) : (
-                        <p className="font-medium">{planoDetalhe.nome}</p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">
-                        Valor Mensal
-                      </label>
-                      {modoEdicao ? (
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500"
-                          value={formPlano.valorMensal}
-                          onChange={(e) =>
-                            handleCampoPlano("valorMensal", e.target.value)
-                          }
-                        />
-                      ) : (
-                        <p className="font-medium">
-                          {formatCurrency(planoDetalhe.valorMensal)}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">
-                        Idade mínima de entrada
-                      </label>
-                      {modoEdicao ? (
-                        <input
-                          type="number"
-                          min="0"
-                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500"
-                          value={formPlano.idadeMaxima}
-                          onChange={(e) =>
-                            handleCampoPlano("idadeMaxima", e.target.value)
-                          }
-                          placeholder="Sem limite"
-                        />
-                      ) : (
-                        <p className="font-medium">
-                          {planoDetalhe.idadeMaxima
-                            ? `${planoDetalhe.idadeMaxima} anos`
-                            : "Sem limite"}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">
-                        Cobertura Máxima
-                      </label>
-                      {modoEdicao ? (
-                        <input
-                          type="number"
-                          min="0"
-                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500"
-                          value={formPlano.coberturaMaxima}
-                          onChange={(e) =>
-                            handleCampoPlano("coberturaMaxima", e.target.value)
-                          }
-                        />
-                      ) : (
-                        <p className="font-medium">
-                          {planoDetalhe.coberturaMaxima} pessoas
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-4">
-                    Estatísticas
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-sm text-gray-600">
-                        Total de Clientes
-                      </label>
-                      <p className="font-medium">
-                        {planoDetalhe.totalClientes}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">
-                        Receita Mensal
-                      </label>
-                      <p className="font-medium">
-                        {formatCurrency(planoDetalhe.receitaMensal)}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Carência</label>
-                      {modoEdicao ? (
-                        <input
-                          type="number"
-                          min="0"
-                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500"
-                          value={formPlano.carenciaDias}
-                          onChange={(e) =>
-                            handleCampoPlano("carenciaDias", e.target.value)
-                          }
-                        />
-                      ) : (
-                        <p className="font-medium">
-                          {planoDetalhe.carenciaDias} dias
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Vigência</label>
-                      {modoEdicao ? (
-                        <input
-                          type="number"
-                          min="1"
-                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500"
-                          value={formPlano.vigenciaMeses}
-                          onChange={(e) =>
-                            handleCampoPlano("vigenciaMeses", e.target.value)
-                          }
-                        />
-                      ) : (
-                        <p className="font-medium">
-                          {planoDetalhe.vigenciaMeses} meses
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">
-                        Assistência Funeral
-                      </label>
-                      {modoEdicao ? (
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500"
-                          value={formPlano.assistenciaFuneral}
-                          onChange={(e) =>
-                            handleCampoPlano(
-                              "assistenciaFuneral",
-                              e.target.value,
-                            )
-                          }
-                        />
-                      ) : (
-                        <p className="font-medium">
-                          {formatCurrency(planoDetalhe.assistenciaFuneral)}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">
-                        Auxílio Cemitério
-                      </label>
-                      {modoEdicao ? (
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500"
-                          value={formPlano.auxilioCemiterio}
-                          onChange={(e) =>
-                            handleCampoPlano("auxilioCemiterio", e.target.value)
-                          }
-                          placeholder="0,00"
-                        />
-                      ) : (
-                        <p className="font-medium">
-                          {planoDetalhe.auxilioCemiterio
-                            ? formatCurrency(planoDetalhe.auxilioCemiterio)
-                            : "Não informado"}
-                        </p>
-                      )}
-                    </div>
-                    <div
-                      className={`flex ${modoEdicao ? "border rounded-lg justify-between items-center py-2 px-3" : "flex-col"}`}
-                    >
-                      <div>
-                        <p className="text-sm text-gray-600">
-                          Taxa Inclusa em Cemitérios Públicos
-                        </p>
-                      </div>
-                      {modoEdicao ? (
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4"
-                          checked={formPlano.taxaInclusaCemiterioPublico}
-                          onChange={(e) =>
-                            handleCampoPlano(
-                              "taxaInclusaCemiterioPublico",
-                              e.target.checked,
-                            )
-                          }
-                        />
-                      ) : (
-                        <span className="text-sm font-medium">
-                          {planoDetalhe.taxaInclusaCemiterioPublico
-                            ? "Sim"
-                            : "Não"}
-                        </span>
-                      )}
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Status</label>
-                      {modoEdicao ? (
-                        <select
-                          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500"
-                          value={formPlano.ativo ? "true" : "false"}
-                          onChange={(e) =>
-                            handleCampoPlano("ativo", e.target.value === "true")
-                          }
-                        >
-                          <option value="true">Ativo</option>
-                          <option value="false">Inativo</option>
-                        </select>
-                      ) : (
-                        <p className="font-medium">
-                          {planoDetalhe.ativo ? "Ativo" : "Inativo"}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Beneficiários */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-4">
-                  Beneficiários Cobertos
-                </h4>
-                {modoEdicao ? (
-                  <div className="space-y-3">
-                    <textarea
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500 min-h-[90px]"
-                      placeholder="Ex: Titular, Cônjuge, Filhos"
-                      value={formPlano.beneficiariosTexto}
-                      onChange={(e) =>
-                        handleCampoPlano("beneficiariosTexto", e.target.value)
-                      }
-                    />
-                    <p className="text-xs text-gray-500">
-                      Informe os beneficiários separados por vírgula.
-                    </p>
-                    {beneficiariosDigitados.length > 0 ? (
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {beneficiariosDigitados.map((beneficiario, index) => (
-                          <div
-                            key={`${beneficiario}-${index}`}
-                            className="flex items-center space-x-2 p-2 bg-green-50 rounded-lg"
-                          >
-                            <CheckCircle className="w-4 h-4 text-green-600" />
-                            <span className="text-sm">{beneficiario}</span>
-                          </div>
-                        ))}
-                      </div>
+          <div className="space-y-6">
+            {/* Informações Básicas */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <h4 className="font-semibold">Informações Básicas</h4>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label>Nome do Plano</Label>
+                    {modoEdicao ? (
+                      <Input
+                        value={formPlano.nome}
+                        onChange={(e) =>
+                          handleCampoPlano("nome", e.target.value)
+                        }
+                      />
                     ) : (
-                      <p className="text-sm text-gray-500">
-                        Nenhum beneficiário informado.
+                      <p className="font-medium">{planoDetalhe.nome}</p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Valor Mensal</Label>
+                    {modoEdicao ? (
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formPlano.valorMensal}
+                        onChange={(e) =>
+                          handleCampoPlano("valorMensal", e.target.value)
+                        }
+                      />
+                    ) : (
+                      <p className="font-medium">
+                        {formatCurrency(planoDetalhe.valorMensal)}
                       </p>
                     )}
                   </div>
-                ) : (
-                  <>
-                    {beneficiariosSelecionados.length > 0 ? (
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {beneficiariosSelecionados.map(
-                          (beneficiario, index) => (
+                  <div className="space-y-1.5">
+                    <Label>Idade mínima de entrada</Label>
+                    {modoEdicao ? (
+                      <Input
+                        type="number"
+                        min="0"
+                        value={formPlano.idadeMaxima}
+                        onChange={(e) =>
+                          handleCampoPlano("idadeMaxima", e.target.value)
+                        }
+                        placeholder="Sem limite"
+                      />
+                    ) : (
+                      <p className="font-medium">
+                        {planoDetalhe.idadeMaxima
+                          ? `${planoDetalhe.idadeMaxima} anos`
+                          : "Sem limite"}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Cobertura Máxima</Label>
+                    {modoEdicao ? (
+                      <Input
+                        type="number"
+                        min="0"
+                        value={formPlano.coberturaMaxima}
+                        onChange={(e) =>
+                          handleCampoPlano("coberturaMaxima", e.target.value)
+                        }
+                      />
+                    ) : (
+                      <p className="font-medium">
+                        {planoDetalhe.coberturaMaxima} pessoas
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="font-semibold">Estatísticas</h4>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-muted-foreground font-normal">
+                      Total de Clientes
+                    </Label>
+                    <p className="font-medium">{planoDetalhe.totalClientes}</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-muted-foreground font-normal">
+                      Receita Mensal
+                    </Label>
+                    <p className="font-medium">
+                      {formatCurrency(planoDetalhe.receitaMensal)}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Carência</Label>
+                    {modoEdicao ? (
+                      <Input
+                        type="number"
+                        min="0"
+                        value={formPlano.carenciaDias}
+                        onChange={(e) =>
+                          handleCampoPlano("carenciaDias", e.target.value)
+                        }
+                      />
+                    ) : (
+                      <p className="font-medium">
+                        {planoDetalhe.carenciaDias} dias
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Vigência</Label>
+                    {modoEdicao ? (
+                      <Input
+                        type="number"
+                        min="1"
+                        value={formPlano.vigenciaMeses}
+                        onChange={(e) =>
+                          handleCampoPlano("vigenciaMeses", e.target.value)
+                        }
+                      />
+                    ) : (
+                      <p className="font-medium">
+                        {planoDetalhe.vigenciaMeses} meses
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Assistência Funeral</Label>
+                    {modoEdicao ? (
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formPlano.assistenciaFuneral}
+                        onChange={(e) =>
+                          handleCampoPlano("assistenciaFuneral", e.target.value)
+                        }
+                      />
+                    ) : (
+                      <p className="font-medium">
+                        {formatCurrency(planoDetalhe.assistenciaFuneral)}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Auxílio Cemitério</Label>
+                    {modoEdicao ? (
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formPlano.auxilioCemiterio}
+                        onChange={(e) =>
+                          handleCampoPlano("auxilioCemiterio", e.target.value)
+                        }
+                        placeholder="0,00"
+                      />
+                    ) : (
+                      <p className="font-medium">
+                        {planoDetalhe.auxilioCemiterio
+                          ? formatCurrency(planoDetalhe.auxilioCemiterio)
+                          : "Não informado"}
+                      </p>
+                    )}
+                  </div>
+                  <div
+                    className={`flex ${modoEdicao ? "border rounded-lg justify-between items-center py-2 px-3" : "flex-col gap-1.5"}`}
+                  >
+                    <p className="text-sm text-muted-foreground">
+                      Taxa Inclusa em Cemitérios Públicos
+                    </p>
+                    {modoEdicao ? (
+                      <Checkbox
+                        checked={formPlano.taxaInclusaCemiterioPublico}
+                        onCheckedChange={(checked) =>
+                          handleCampoPlano(
+                            "taxaInclusaCemiterioPublico",
+                            checked === true,
+                          )
+                        }
+                      />
+                    ) : (
+                      <span className="text-sm font-medium">
+                        {planoDetalhe.taxaInclusaCemiterioPublico
+                          ? "Sim"
+                          : "Não"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Status</Label>
+                    {modoEdicao ? (
+                      <Select
+                        value={formPlano.ativo ? "true" : "false"}
+                        onValueChange={(v) =>
+                          handleCampoPlano("ativo", v === "true")
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">Ativo</SelectItem>
+                          <SelectItem value="false">Inativo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <p className="font-medium">
+                        {planoDetalhe.ativo ? "Ativo" : "Inativo"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Beneficiários */}
+            <div className="space-y-3">
+              <h4 className="font-semibold">Beneficiários Cobertos</h4>
+              {modoEdicao ? (
+                <div className="space-y-3">
+                  <Textarea
+                    className="min-h-[90px]"
+                    placeholder="Ex: Titular, Cônjuge, Filhos"
+                    value={formPlano.beneficiariosTexto}
+                    onChange={(e) =>
+                      handleCampoPlano("beneficiariosTexto", e.target.value)
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Informe os beneficiários separados por vírgula.
+                  </p>
+                  {beneficiariosDigitados.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {beneficiariosDigitados.map((beneficiario, index) => (
+                        <div
+                          key={`${beneficiario}-${index}`}
+                          className="flex items-center gap-2 p-2 bg-[#f2faf0] rounded-lg"
+                        >
+                          <CheckCircle className="w-4 h-4 text-primary" />
+                          <span className="text-sm">{beneficiario}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Nenhum beneficiário informado.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {beneficiariosSelecionados.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {beneficiariosSelecionados.map((beneficiario, index) => (
+                        <div
+                          key={`${beneficiario}-${index}`}
+                          className="flex items-center gap-2 p-2 bg-[#f2faf0] rounded-lg"
+                        >
+                          <CheckCircle className="w-4 h-4 text-primary" />
+                          <span className="text-sm">{beneficiario}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Nenhum beneficiário cadastrado para este plano.
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Coberturas */}
+            <div className="space-y-4">
+              <h4 className="font-semibold">Coberturas Incluídas</h4>
+              {modoEdicao ? (
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label>Serviços Padrão Inclusos</Label>
+                    <Textarea
+                      className="min-h-[80px]"
+                      placeholder="Ex: Velório, Urna padrão, Ornamentação básica"
+                      value={formPlano.servicosPadraoTexto}
+                      onChange={(e) =>
+                        handleCampoPlano("servicosPadraoTexto", e.target.value)
+                      }
+                    />
+                    {servicosPadraoDigitados.length > 0 && (
+                      <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {servicosPadraoDigitados.map((item, index) => (
+                          <div
+                            key={`padrao-edit-${index}`}
+                            className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg"
+                          >
+                            <CheckCircle className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm">{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Cobertura e Translado</Label>
+                    <Textarea
+                      className="min-h-[80px]"
+                      placeholder="Ex: Translado até 1000 km rodados"
+                      value={formPlano.coberturaTransladoTexto}
+                      onChange={(e) =>
+                        handleCampoPlano(
+                          "coberturaTransladoTexto",
+                          e.target.value,
+                        )
+                      }
+                    />
+                    {coberturaTransladoDigitada.length > 0 && (
+                      <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {coberturaTransladoDigitada.map((item, index) => (
+                          <div
+                            key={`translado-edit-${index}`}
+                            className="flex items-center gap-2 p-2 bg-purple-50 rounded-lg"
+                          >
+                            <Shield className="w-4 h-4 text-purple-600" />
+                            <span className="text-sm">{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Serviços Específicos do Plano</Label>
+                    <Textarea
+                      className="min-h-[80px]"
+                      placeholder="Ex: Cerimonial especial, Coroa de flores premium"
+                      value={formPlano.servicosEspecificosTexto}
+                      onChange={(e) =>
+                        handleCampoPlano(
+                          "servicosEspecificosTexto",
+                          e.target.value,
+                        )
+                      }
+                    />
+                    {servicosEspecificosDigitados.length > 0 && (
+                      <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {servicosEspecificosDigitados.map((item, index) => (
+                          <div
+                            key={`especifico-edit-${index}`}
+                            className="flex items-center gap-2 p-2 bg-emerald-50 rounded-lg"
+                          >
+                            <Shield className="w-4 h-4 text-emerald-600" />
+                            <span className="text-sm">{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    Separe itens por vírgula, ponto e vírgula ou quebra de
+                    linha.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {coberturasSelecionadas.servicosPadrao.length > 0 && (
+                    <div>
+                      <h5 className="font-medium mb-2">
+                        Serviços Padrão Inclusos
+                      </h5>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {coberturasSelecionadas.servicosPadrao.map(
+                          (servico, index) => (
                             <div
-                              key={`${beneficiario}-${index}`}
-                              className="flex items-center space-x-2 p-2 bg-green-50 rounded-lg"
+                              key={`padrao-${index}`}
+                              className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg"
                             >
-                              <CheckCircle className="w-4 h-4 text-green-600" />
-                              <span className="text-sm">{beneficiario}</span>
+                              <CheckCircle className="w-4 h-4 text-blue-600" />
+                              <span className="text-sm">{servico}</span>
                             </div>
                           ),
                         )}
                       </div>
-                    ) : (
-                      <p className="text-sm text-gray-500">
-                        Nenhum beneficiário cadastrado para este plano.
-                      </p>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Coberturas */}
-              <div className="space-y-4">
-                <h4 className="font-semibold text-gray-900">
-                  Coberturas Incluídas
-                </h4>
-                {modoEdicao ? (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm text-gray-600">
-                        Serviços Padrão Inclusos
-                      </label>
-                      <textarea
-                        className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500 min-h-[80px]"
-                        placeholder="Ex: Velório, Urna padrão, Ornamentação básica"
-                        value={formPlano.servicosPadraoTexto}
-                        onChange={(e) =>
-                          handleCampoPlano(
-                            "servicosPadraoTexto",
-                            e.target.value,
-                          )
-                        }
-                      />
-                      {servicosPadraoDigitados.length > 0 && (
-                        <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {servicosPadraoDigitados.map((item, index) => (
-                            <div
-                              key={`padrao-edit-${index}`}
-                              className="flex items-center space-x-2 p-2 bg-blue-50 rounded-lg"
-                            >
-                              <CheckCircle className="w-4 h-4 text-blue-600" />
-                              <span className="text-sm">{item}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
+                  )}
 
+                  {coberturasSelecionadas.coberturaTranslado.length > 0 && (
                     <div>
-                      <label className="text-sm text-gray-600">
+                      <h5 className="font-medium mb-2">
                         Cobertura e Translado
-                      </label>
-                      <textarea
-                        className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500 min-h-[80px]"
-                        placeholder="Ex: Translado até 1000 km rodados"
-                        value={formPlano.coberturaTransladoTexto}
-                        onChange={(e) =>
-                          handleCampoPlano(
-                            "coberturaTransladoTexto",
-                            e.target.value,
-                          )
-                        }
-                      />
-                      {coberturaTransladoDigitada.length > 0 && (
-                        <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {coberturaTransladoDigitada.map((item, index) => (
+                      </h5>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {coberturasSelecionadas.coberturaTranslado.map(
+                          (cobertura, index) => (
                             <div
-                              key={`translado-edit-${index}`}
-                              className="flex items-center space-x-2 p-2 bg-purple-50 rounded-lg"
+                              key={`translado-${index}`}
+                              className="flex items-center gap-2 p-2 bg-purple-50 rounded-lg"
                             >
                               <Shield className="w-4 h-4 text-purple-600" />
-                              <span className="text-sm">{item}</span>
+                              <span className="text-sm">{cobertura}</span>
                             </div>
-                          ))}
-                        </div>
-                      )}
+                          ),
+                        )}
+                      </div>
                     </div>
+                  )}
 
+                  {coberturasSelecionadas.servicosEspecificos.length > 0 && (
                     <div>
-                      <label className="text-sm text-gray-600">
+                      <h5 className="font-medium mb-2">
                         Serviços Específicos do Plano
-                      </label>
-                      <textarea
-                        className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500 min-h-[80px]"
-                        placeholder="Ex: Cerimonial especial, Coroa de flores premium"
-                        value={formPlano.servicosEspecificosTexto}
-                        onChange={(e) =>
-                          handleCampoPlano(
-                            "servicosEspecificosTexto",
-                            e.target.value,
-                          )
-                        }
-                      />
-                      {servicosEspecificosDigitados.length > 0 && (
-                        <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {servicosEspecificosDigitados.map((item, index) => (
+                      </h5>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {coberturasSelecionadas.servicosEspecificos.map(
+                          (servico, index) => (
                             <div
-                              key={`especifico-edit-${index}`}
-                              className="flex items-center space-x-2 p-2 bg-emerald-50 rounded-lg"
+                              key={`especifico-${index}`}
+                              className="flex items-center gap-2 p-2 bg-emerald-50 rounded-lg"
                             >
                               <Shield className="w-4 h-4 text-emerald-600" />
-                              <span className="text-sm">{item}</span>
+                              <span className="text-sm">{servico}</span>
                             </div>
-                          ))}
-                        </div>
-                      )}
+                          ),
+                        )}
+                      </div>
                     </div>
+                  )}
 
-                    <p className="text-xs text-gray-500">
-                      Separe itens por vírgula, ponto e vírgula ou quebra de
-                      linha.
+                  {coberturasSelecionadas.outros.length > 0 && (
+                    <div>
+                      <h5 className="font-medium mb-2">Outras Coberturas</h5>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {coberturasSelecionadas.outros.map(
+                          (descricao, index) => (
+                            <div
+                              key={`outros-${index}`}
+                              className="flex items-center gap-2 p-2 bg-slate-100 rounded-lg"
+                            >
+                              <Shield className="w-4 h-4 text-slate-600" />
+                              <span className="text-sm">{descricao}</span>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {!possuiCoberturas && (
+                    <p className="text-sm text-muted-foreground">
+                      Nenhuma cobertura cadastrada para este plano.
                     </p>
-                  </div>
-                ) : (
-                  <>
-                    {coberturasSelecionadas.servicosPadrao.length > 0 && (
-                      <div>
-                        <h5 className="font-medium text-gray-800 mb-2">
-                          Serviços Padrão Inclusos
-                        </h5>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {coberturasSelecionadas.servicosPadrao.map(
-                            (servico, index) => (
-                              <div
-                                key={`padrao-${index}`}
-                                className="flex items-center space-x-2 p-2 bg-blue-50 rounded-lg"
-                              >
-                                <CheckCircle className="w-4 h-4 text-blue-600" />
-                                <span className="text-sm">{servico}</span>
-                              </div>
-                            ),
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {coberturasSelecionadas.coberturaTranslado.length > 0 && (
-                      <div>
-                        <h5 className="font-medium text-gray-800 mb-2">
-                          Cobertura e Translado
-                        </h5>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {coberturasSelecionadas.coberturaTranslado.map(
-                            (cobertura, index) => (
-                              <div
-                                key={`translado-${index}`}
-                                className="flex items-center space-x-2 p-2 bg-purple-50 rounded-lg"
-                              >
-                                <Shield className="w-4 h-4 text-purple-600" />
-                                <span className="text-sm">{cobertura}</span>
-                              </div>
-                            ),
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {coberturasSelecionadas.servicosEspecificos.length > 0 && (
-                      <div>
-                        <h5 className="font-medium text-gray-800 mb-2">
-                          Serviços Específicos do Plano
-                        </h5>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {coberturasSelecionadas.servicosEspecificos.map(
-                            (servico, index) => (
-                              <div
-                                key={`especifico-${index}`}
-                                className="flex items-center space-x-2 p-2 bg-emerald-50 rounded-lg"
-                              >
-                                <Shield className="w-4 h-4 text-emerald-600" />
-                                <span className="text-sm">{servico}</span>
-                              </div>
-                            ),
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {coberturasSelecionadas.outros.length > 0 && (
-                      <div>
-                        <h5 className="font-medium text-gray-800 mb-2">
-                          Outras Coberturas
-                        </h5>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {coberturasSelecionadas.outros.map(
-                            (descricao, index) => (
-                              <div
-                                key={`outros-${index}`}
-                                className="flex items-center space-x-2 p-2 bg-gray-100 rounded-lg"
-                              >
-                                <Shield className="w-4 h-4 text-gray-600" />
-                                <span className="text-sm">{descricao}</span>
-                              </div>
-                            ),
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {!possuiCoberturas && (
-                      <p className="text-sm text-gray-500">
-                        Nenhuma cobertura cadastrada para este plano.
-                      </p>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="p-6 border-t border-gray-200 space-y-3">
-              {feedbackMensagem && (
-                <p className="text-sm text-red-600">{feedbackMensagem}</p>
+                  )}
+                </>
               )}
-              <div className="flex flex-wrap justify-end gap-2">
-                {modoEdicao && planoSelecionado && (
-                  <button
-                    onClick={() => handleExcluirPlano(planoSelecionado)}
-                    className="px-4 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={planoEmExclusao === String(planoSelecionado.id)}
-                  >
-                    {planoEmExclusao === String(planoSelecionado.id) ? (
-                      <span className="flex items-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Excluindo...
-                      </span>
-                    ) : (
-                      "Excluir Plano"
-                    )}
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    setModalAberto(false);
-                    setPlanoSelecionado(null);
-                    setModoEdicao(false);
-                  }}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Fechar
-                </button>
-                {modoEdicao && (
-                  <button
-                    onClick={handleSalvarPlano}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={isSavingPlano}
-                  >
-                    {isSavingPlano ? (
-                      <span className="flex items-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Salvando...
-                      </span>
-                    ) : isNovoPlano ? (
-                      "Criar Plano"
-                    ) : (
-                      "Salvar Alterações"
-                    )}
-                  </button>
-                )}
-              </div>
             </div>
           </div>
-        </div>
-      )}
+
+          <DialogFooter className="flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+            {feedbackMensagem && (
+              <p className="text-sm text-destructive">{feedbackMensagem}</p>
+            )}
+            <div className="flex flex-wrap justify-end gap-2 ml-auto">
+              {modoEdicao && planoSelecionado && (
+                <Button
+                  variant="outline"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => handleExcluirPlano(planoSelecionado)}
+                  disabled={planoEmExclusao === String(planoSelecionado.id)}
+                >
+                  {planoEmExclusao === String(planoSelecionado.id) ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Excluindo...
+                    </>
+                  ) : (
+                    "Excluir Plano"
+                  )}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setModalAberto(false);
+                  setPlanoSelecionado(null);
+                  setModoEdicao(false);
+                }}
+              >
+                Fechar
+              </Button>
+              {modoEdicao && (
+                <Button onClick={handleSalvarPlano} disabled={isSavingPlano}>
+                  {isSavingPlano ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : isNovoPlano ? (
+                    "Criar Plano"
+                  ) : (
+                    "Salvar Alterações"
+                  )}
+                </Button>
+              )}
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

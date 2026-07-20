@@ -1,11 +1,29 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import Modal from "@/components/Frota/Modal";
+import React, { useEffect, useMemo, useState } from "react";
 import VeiculoForm from "@/components/Frota/VeiculoForm";
 import VeiculoTable from "@/components/Frota/VeiculoTable";
-import ConfirmDelete from "@/components/Frota/ConfirmDelete";
 import { Veiculo } from "@/types/VeiculoType";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Car, CheckCircle2, Plus, RefreshCw, Truck } from "lucide-react";
+import { toast } from "sonner";
 
 export default function FrotaPage() {
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
@@ -45,7 +63,8 @@ export default function FrotaPage() {
       setVeiculos(data);
     } catch (err) {
       console.error(err);
-      alert("Erro ao carregar dados dos veiculos");
+      setError("Não foi possível carregar os veículos.");
+      toast.error("Erro ao carregar dados dos veículos");
     } finally {
       setLoading(false);
     }
@@ -83,9 +102,10 @@ export default function FrotaPage() {
       await fetchVeiculos();
       setIsAddOpen(false);
       setForm(emptyForm);
+      toast.success("Veículo cadastrado com sucesso");
     } catch (err) {
       console.error(err);
-      alert("Erro ao carregar dados dos veiculos");
+      toast.error("Erro ao cadastrar veículo");
     } finally {
       setSaving(false);
     }
@@ -106,9 +126,10 @@ export default function FrotaPage() {
       if (!res.ok) throw new Error(`Erro ao atualizar: ${res.status}`);
       await fetchVeiculos();
       setIsEditOpen(false);
+      toast.success("Veículo atualizado com sucesso");
     } catch (err) {
       console.error(err);
-      alert("Erro ao carregar dados ao atualizar");
+      toast.error("Erro ao atualizar veículo");
     } finally {
       setSaving(false);
     }
@@ -125,37 +146,82 @@ export default function FrotaPage() {
       if (!res.ok) throw new Error(`Erro ao excluir: ${res.status}`);
       await fetchVeiculos();
       setIsDeleteOpen(false);
+      toast.success("Veículo excluído com sucesso");
     } catch (err) {
       console.error(err);
-      alert("Erro ao carregar dados ao excluir veiculos");
+      toast.error("Erro ao excluir veículo");
     } finally {
       setSaving(false);
       setSelectedIdToDelete(null);
     }
   }
 
+  const totalAtivos = useMemo(
+    () => veiculos.filter((v) => v.ativo).length,
+    [veiculos],
+  );
+
   return (
-    <div className="p-6">
-      <header className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Gestão de Frota</h1>
+    <div className="p-8 space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Gestão de Frota</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Cadastre e acompanhe os veículos utilizados nos atendimentos.
+          </p>
+        </div>
         <div className="flex gap-2">
-          <button
+          <Button variant="outline" onClick={fetchVeiculos} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Atualizar
+          </Button>
+          <Button
             onClick={() => {
               setForm(emptyForm);
               setIsAddOpen(true);
             }}
-            className="px-4 py-2 bg-sky-600 text-white rounded hover:bg-sky-700"
           >
-            + Adicionar veículo
-          </button>
-          <button
-            onClick={fetchVeiculos}
-            className="px-4 py-2 border rounded hover:bg-gray-100"
-          >
-            Atualizar
-          </button>
+            <Plus className="h-4 w-4" />
+            Adicionar veículo
+          </Button>
         </div>
-      </header>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
+          <div className="h-11 w-11 rounded-full bg-gradient-to-br from-[#3a9b28] to-[#2d7a1f] flex items-center justify-center text-white flex-shrink-0">
+            <Truck className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold leading-none">{veiculos.length}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Veículos cadastrados
+            </p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
+          <div className="h-11 w-11 rounded-full bg-green-100 flex items-center justify-center text-green-600 flex-shrink-0">
+            <CheckCircle2 className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold leading-none">{totalAtivos}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Ativos na frota
+            </p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
+          <div className="h-11 w-11 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 flex-shrink-0">
+            <Car className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold leading-none">
+              {veiculos.length - totalAtivos}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Inativos</p>
+          </div>
+        </div>
+      </div>
 
       <VeiculoTable
         veiculos={veiculos}
@@ -165,15 +231,21 @@ export default function FrotaPage() {
           setForm(v);
           setIsEditOpen(true);
         }}
-        onDelete={(id: React.SetStateAction<number | null>) => {
+        onDelete={(id: number) => {
           setSelectedIdToDelete(id);
           setIsDeleteOpen(true);
         }}
       />
 
       {/* MODAL ADICIONAR */}
-      {isAddOpen && (
-        <Modal title="Adicionar veículo" onClose={() => setIsAddOpen(false)}>
+      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Adicionar veículo</DialogTitle>
+            <DialogDescription>
+              Preencha os dados do veículo que será incluído na frota.
+            </DialogDescription>
+          </DialogHeader>
           <VeiculoForm
             form={form}
             updateForm={updateForm}
@@ -182,12 +254,18 @@ export default function FrotaPage() {
             onCancel={() => setIsAddOpen(false)}
             actionLabel="Criar"
           />
-        </Modal>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* MODAL EDITAR */}
-      {isEditOpen && (
-        <Modal title="Editar veículo" onClose={() => setIsEditOpen(false)}>
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Editar veículo</DialogTitle>
+            <DialogDescription>
+              Atualize os dados do veículo selecionado.
+            </DialogDescription>
+          </DialogHeader>
           <VeiculoForm
             form={form}
             updateForm={updateForm}
@@ -196,17 +274,34 @@ export default function FrotaPage() {
             onCancel={() => setIsEditOpen(false)}
             actionLabel="Salvar"
           />
-        </Modal>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* MODAL EXCLUIR */}
-      {isDeleteOpen && (
-        <ConfirmDelete
-          onCancel={() => setIsDeleteOpen(false)}
-          onConfirm={handleDelete}
-          saving={saving}
-        />
-      )}
+      <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este veículo? Essa ação não pode
+              ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={saving}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={saving}
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {saving ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

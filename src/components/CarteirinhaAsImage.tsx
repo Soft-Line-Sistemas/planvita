@@ -195,7 +195,7 @@ export default function CarteirinhaAsImage({
             <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.18em;color:${COLORS.slate400}">PLANVITA</span>
           </div>
 
-          <ul style="margin:16px 0 0 0;padding:0;list-style:none;display:grid;grid-template-columns:1fr;gap:8px;">
+          <ul style="margin:16px 0 0 0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             ${coberturaLis}
           </ul>
 

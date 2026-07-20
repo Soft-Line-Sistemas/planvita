@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import api from "@/utils/api";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -21,10 +21,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { motion } from "framer-motion";
-import { Search } from "lucide-react";
+import {
+  Camera,
+  LayoutGrid,
+  Loader2,
+  MoreVertical,
+  Search,
+  Table as TableIcon,
+  Trash2,
+  Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LinksRedesSociais from "@/components/LinksRedesSocias";
 import { Label } from "@/components/ui/label";
@@ -39,6 +54,7 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import getTenantFromHost from "@/utils/getTenantFromHost";
+import { buildConsultorCadastroLink } from "@/utils/consultorPublic";
 
 type Role = {
   id: number;
@@ -50,12 +66,41 @@ type User = {
   id: number;
   name: string;
   email: string;
+  avatarUrl?: string | null;
   roleId?: number | null;
   consultorId?: number | null;
+  consultorCodigo?: string | null;
   consultorWhatsapp?: string | null;
   valorComissaoIndicacao?: number | null;
   comissaoPendente?: number;
 };
+
+const AVATAR_ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp"];
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error("Falha ao processar arquivo."));
+    };
+    reader.onerror = () => reject(new Error("Falha ao processar arquivo."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function getInitials(name?: string) {
+  const trimmed = (name ?? "").trim();
+  if (!trimmed) return "?";
+  const parts = trimmed.split(/\s+/);
+  const first = parts[0]?.[0] ?? "";
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
+  return (first + last).toUpperCase();
+}
 
 export default function AcessoPage() {
   const { user, hasPermission, loading: authLoading } = useAuth();
@@ -64,12 +109,22 @@ export default function AcessoPage() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
+
+  const [createOpen, setCreateOpen] = useState(false);
   const [newUserName, setNewUserName] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserRole, setNewUserRole] = useState<number | null>(null);
   const [newUserCommission, setNewUserCommission] = useState("0");
   const [newUserWhatsapp, setNewUserWhatsapp] = useState("");
   const [creating, setCreating] = useState(false);
+
+  const [editUser, setEditUser] = useState<User | null>(null);
+  const [editRole, setEditRole] = useState<number | null>(null);
+  const [editWhatsapp, setEditWhatsapp] = useState("");
+  const [editCommission, setEditCommission] = useState("0");
+  const [savingEdit, setSavingEdit] = useState(false);
+
   const [passwordModalUser, setPasswordModalUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -77,15 +132,11 @@ export default function AcessoPage() {
   const [emailModalUser, setEmailModalUser] = useState<User | null>(null);
   const [newEmail, setNewEmail] = useState("");
   const [updatingEmail, setUpdatingEmail] = useState(false);
-  const [commissionDrafts, setCommissionDrafts] = useState<
-    Record<number, string>
-  >({});
-  const [whatsappDrafts, setWhatsappDrafts] = useState<Record<number, string>>(
-    {},
-  );
-  const [savingCommissionId, setSavingCommissionId] = useState<number | null>(
+  const [uploadingAvatarId, setUploadingAvatarId] = useState<number | null>(
     null,
   );
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
+  const avatarTargetUserId = useRef<number | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -99,28 +150,11 @@ export default function AcessoPage() {
           api.get("/users"),
           api.get("/roles"),
         ]);
-        const loadedUsers = usersRes.data as User[];
-        setUsers(loadedUsers);
-        setCommissionDrafts(
-          Object.fromEntries(
-            loadedUsers.map((loadedUser) => [
-              loadedUser.id,
-              String(Number(loadedUser.valorComissaoIndicacao ?? 0)),
-            ]),
-          ),
-        );
-        setWhatsappDrafts(
-          Object.fromEntries(
-            loadedUsers.map((loadedUser) => [
-              loadedUser.id,
-              loadedUser.consultorWhatsapp ?? "",
-            ]),
-          ),
-        );
+        setUsers(usersRes.data as User[]);
         setRoles(rolesRes.data);
       } catch (err) {
         console.error(err);
-        alert("Erro ao carregar dados de acesso");
+        toast.error("Erro ao carregar dados de acesso");
       } finally {
         setLoading(false);
       }
@@ -128,109 +162,49 @@ export default function AcessoPage() {
     load();
   }, [authLoading, hasPermission]);
 
-  const handleChangeRole = async (userId: number, newRoleId: number) => {
-    const roleSelecionada = roles.find((role) => role.id === newRoleId);
-    const isConsultorRole =
-      roleSelecionada?.name?.toLowerCase().trim() === "consultor";
-    const valorComissaoIndicacao = isConsultorRole
-      ? Number(commissionDrafts[userId] ?? 0)
-      : undefined;
+  const isAdmin = user?.role?.name === "admin_master";
+  const canAssignRole = hasPermission("user.assign_roles");
+  const canUpdateUser = hasPermission("user.update");
+  const roleSelecionada = roles.find((role) => role.id === newUserRole);
+  const roleSelecionadaEhConsultor =
+    roleSelecionada?.name?.toLowerCase().trim() === "consultor";
+  const editRoleSelecionada = roles.find((role) => role.id === editRole);
+  const editRoleEhConsultor =
+    editRoleSelecionada?.name?.toLowerCase().trim() === "consultor";
 
-    try {
-      await api.put(`/users/${userId}/role`, {
-        roleId: newRoleId,
-        whatsapp: isConsultorRole ? (whatsappDrafts[userId] ?? "") : undefined,
-        valorComissaoIndicacao,
-      });
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === userId
-            ? {
-                ...u,
-                roleId: newRoleId,
-                consultorWhatsapp: isConsultorRole
-                  ? (whatsappDrafts[userId] ?? null)
-                  : null,
-                valorComissaoIndicacao: isConsultorRole
-                  ? Number(commissionDrafts[userId] ?? 0)
-                  : u.valorComissaoIndicacao,
-              }
-            : u,
-        ),
-      );
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao atribuir cargo ao usuário");
-    }
+  const filteredUsers = useMemo(
+    () =>
+      users.filter(
+        (u) =>
+          u.name?.toLowerCase()?.includes(search.toLowerCase()) ||
+          u.email?.toLowerCase()?.includes(search.toLowerCase()),
+      ),
+    [users, search],
+  );
+
+  const roleName = (roleId?: number | null) =>
+    roles.find((r) => r.id === roleId)?.name;
+  const isConsultor = (target: User) => {
+    const roleAtual = roles.find((r) => r.id === target.roleId);
+    return (
+      roleAtual?.name?.toLowerCase().trim() === "consultor" ||
+      !!target.consultorId
+    );
   };
 
-  const handleSaveCommission = async (targetUser: User) => {
-    if (!targetUser.roleId) {
-      toast.error("Defina um cargo antes de salvar a comissão");
-      return;
-    }
-
-    const roleAtual = roles.find((role) => role.id === targetUser.roleId);
-    const isConsultorRole =
-      roleAtual?.name?.toLowerCase().trim() === "consultor" ||
-      !!targetUser.consultorId;
-
-    if (!isConsultorRole) {
-      toast.error("Comissão só pode ser configurada para consultor");
-      return;
-    }
-
-    const rawValue =
-      commissionDrafts[targetUser.id] ??
-      String(Number(targetUser.valorComissaoIndicacao ?? 0));
-    const parsedValue = Number(rawValue);
-
-    if (Number.isNaN(parsedValue) || parsedValue < 0) {
-      toast.error("Informe um valor de comissão válido");
-      return;
-    }
-
-    setSavingCommissionId(targetUser.id);
-    try {
-      await api.put(`/users/${targetUser.id}/role`, {
-        roleId: targetUser.roleId,
-        whatsapp: whatsappDrafts[targetUser.id] ?? "",
-        valorComissaoIndicacao: parsedValue,
-      });
-
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === targetUser.id
-            ? {
-                ...u,
-                consultorWhatsapp: whatsappDrafts[targetUser.id] ?? "",
-                valorComissaoIndicacao: parsedValue,
-              }
-            : u,
-        ),
-      );
-      setCommissionDrafts((prev) => ({
-        ...prev,
-        [targetUser.id]: String(parsedValue),
-      }));
-      toast.success("Comissão atualizada com sucesso");
-    } catch (err) {
-      console.error(err);
-      toast.error("Erro ao atualizar comissão");
-    } finally {
-      setSavingCommissionId(null);
-    }
+  const resetCreateForm = () => {
+    setNewUserName("");
+    setNewUserEmail("");
+    setNewUserRole(null);
+    setNewUserCommission("0");
+    setNewUserWhatsapp("");
   };
 
   const handleCreateUser = async () => {
     if (!newUserName || !newUserEmail || !newUserRole) {
-      alert("Preencha todos os campos para criar o colaborador");
+      toast.error("Preencha todos os campos para criar o colaborador");
       return;
     }
-
-    const roleSelecionada = roles.find((role) => role.id === newUserRole);
-    const isConsultorRole =
-      roleSelecionada?.name?.toLowerCase().trim() === "consultor";
 
     setCreating(true);
     try {
@@ -238,34 +212,87 @@ export default function AcessoPage() {
         nome: newUserName,
         email: newUserEmail,
         roleId: newUserRole,
-        whatsapp: isConsultorRole ? newUserWhatsapp : undefined,
-        valorComissaoIndicacao: isConsultorRole
+        whatsapp: roleSelecionadaEhConsultor ? newUserWhatsapp : undefined,
+        valorComissaoIndicacao: roleSelecionadaEhConsultor
           ? Number(newUserCommission || 0)
           : undefined,
       });
 
-      // 🔗 gera o link pessoal automaticamente
       const consultorId = res.data.consultorId;
       const linkCadastro = consultorId
-        ? `${window.location.origin}/cliente/cadastro?${new URLSearchParams({
-            consultorId: String(consultorId),
-            ...(currentTenant ? { consultorTenant: currentTenant } : {}),
-          }).toString()}`
+        ? buildConsultorCadastroLink(window.location.origin, {
+            codigo: res.data.consultorCodigo,
+            legacyId: consultorId,
+            tenantId: currentTenant,
+          })
         : undefined;
-      const novoUser = { ...res.data, linkCadastro };
 
-      setUsers((prev) => [...prev, novoUser]);
-      setNewUserName("");
-      setNewUserEmail("");
-      setNewUserRole(null);
-      setNewUserCommission("0");
-      setNewUserWhatsapp("");
-      alert("Colaborador criado com sucesso!");
+      setUsers((prev) => [...prev, { ...res.data, linkCadastro }]);
+      resetCreateForm();
+      setCreateOpen(false);
+      toast.success("Colaborador criado com sucesso!");
     } catch (err) {
       console.error(err);
-      alert("Erro ao criar colaborador");
+      toast.error("Erro ao criar colaborador");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleOpenEdit = (target: User) => {
+    setEditUser(target);
+    setEditRole(target.roleId ?? null);
+    setEditWhatsapp(target.consultorWhatsapp ?? "");
+    setEditCommission(String(Number(target.valorComissaoIndicacao ?? 0)));
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editUser || !editRole) {
+      toast.error("Selecione um cargo para o colaborador");
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const { data } = await api.put(`/users/${editUser.id}/role`, {
+        roleId: editRole,
+        whatsapp: editRoleEhConsultor ? editWhatsapp : undefined,
+        valorComissaoIndicacao: editRoleEhConsultor
+          ? Number(editCommission || 0)
+          : undefined,
+      });
+
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === editUser.id
+            ? {
+                ...u,
+                roleId: editRole,
+                consultorWhatsapp: editRoleEhConsultor ? editWhatsapp : null,
+                consultorId: editRoleEhConsultor
+                  ? (data?.consultor?.id ?? u.consultorId)
+                  : null,
+                consultorCodigo: editRoleEhConsultor
+                  ? (data?.consultor?.codigo ?? u.consultorCodigo)
+                  : null,
+                valorComissaoIndicacao: editRoleEhConsultor
+                  ? Number(
+                      data?.consultor?.valorComissaoIndicacao ??
+                        editCommission ??
+                        0,
+                    )
+                  : null,
+              }
+            : u,
+        ),
+      );
+      toast.success("Colaborador atualizado com sucesso");
+      setEditUser(null);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao atualizar colaborador");
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -341,20 +368,89 @@ export default function AcessoPage() {
     }
   };
 
+  const handlePickAvatar = (userId: number) => {
+    avatarTargetUserId.current = userId;
+    avatarInputRef.current?.click();
+  };
+
+  const handleAvatarFileSelected = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    const targetUserId = avatarTargetUserId.current;
+    event.target.value = "";
+    if (!file || !targetUserId) return;
+
+    if (!AVATAR_ALLOWED_MIME.includes(file.type)) {
+      toast.error("Envie uma imagem PNG, JPEG ou WEBP");
+      return;
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      toast.error("A imagem deve ter até 5MB");
+      return;
+    }
+
+    setUploadingAvatarId(targetUserId);
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      const { data } = await api.put(`/users/${targetUserId}/avatar`, {
+        fileBase64: dataUrl,
+        filename: file.name,
+        mimeType: file.type,
+      });
+
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === targetUserId ? { ...u, avatarUrl: data.avatarUrl } : u,
+        ),
+      );
+      toast.success("Foto atualizada com sucesso");
+    } catch (err) {
+      console.error(err);
+      toast.error("Não foi possível enviar a foto");
+    } finally {
+      setUploadingAvatarId(null);
+    }
+  };
+
+  const handleRemoveAvatar = async (targetUserId: number) => {
+    setUploadingAvatarId(targetUserId);
+    try {
+      await api.delete(`/users/${targetUserId}/avatar`);
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === targetUserId ? { ...u, avatarUrl: null } : u,
+        ),
+      );
+      toast.success("Foto removida");
+    } catch (err) {
+      console.error(err);
+      toast.error("Não foi possível remover a foto");
+    } finally {
+      setUploadingAvatarId(null);
+    }
+  };
+
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [selectedLink, setSelectedLink] = useState<string | null>(null);
 
-  const filteredUsers = users.filter(
-    (u) =>
-      u.name?.toLowerCase()?.includes(search.toLowerCase()) ||
-      u.email?.toLowerCase()?.includes(search.toLowerCase()),
-  );
-  const isAdmin = user?.role?.name === "admin_master";
-  const canAssignRole = hasPermission("user.assign_roles");
-  const canUpdateUser = hasPermission("user.update");
-  const roleSelecionada = roles.find((role) => role.id === newUserRole);
-  const roleSelecionadaEhConsultor =
-    roleSelecionada?.name?.toLowerCase().trim() === "consultor";
+  const handleSendLink = (target: User) => {
+    const link =
+      target.linkCadastro ||
+      (target.consultorId
+        ? buildConsultorCadastroLink(window.location.origin, {
+            codigo: target.consultorCodigo,
+            legacyId: target.consultorId,
+            tenantId: currentTenant,
+          })
+        : "");
+    if (!link) {
+      toast.error("Este colaborador não possui vínculo de consultor");
+      return;
+    }
+    setSelectedLink(link);
+    setShareModalOpen(true);
+  };
 
   if (!authLoading && !loading && !hasPermission("user.view")) {
     return (
@@ -371,7 +467,8 @@ export default function AcessoPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="flex justify-center items-center h-64 text-gray-500 animate-pulse">
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" />
         Carregando dados...
       </div>
     );
@@ -384,294 +481,502 @@ export default function AcessoPage() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
+      <input
+        ref={avatarInputRef}
+        type="file"
+        accept={AVATAR_ALLOWED_MIME.join(",")}
+        className="hidden"
+        onChange={handleAvatarFileSelected}
+      />
+
       {/* Cabeçalho */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Gerenciar Colaboradores
-        </h1>
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Buscar usuário..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8"
-          />
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Colaboradores e seus Cargos
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Gerencie acesso, cargos e comissões da equipe.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar colaborador..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-8"
+            />
+          </div>
+          <div className="flex items-center rounded-lg border border-slate-200 p-0.5">
+            <Button
+              type="button"
+              variant={viewMode === "cards" ? "default" : "ghost"}
+              size="sm"
+              className="h-8 px-2.5"
+              onClick={() => setViewMode("cards")}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant={viewMode === "table" ? "default" : "ghost"}
+              size="sm"
+              className="h-8 px-2.5"
+              onClick={() => setViewMode("table")}
+            >
+              <TableIcon className="h-4 w-4" />
+            </Button>
+          </div>
+          {hasPermission("user.create") && (
+            <Button onClick={() => setCreateOpen(true)} className="sm:w-auto">
+              Novo Colaborador
+            </Button>
+          )}
         </div>
       </div>
 
-      <Separator />
-
-      {/* Criar novo colaborador */}
-      {hasPermission("user.create") && (
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle>Criar Novo Colaborador</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <Input
-              placeholder="Nome completo"
-              value={newUserName}
-              onChange={(e) => setNewUserName(e.target.value)}
-            />
-            <Input
-              placeholder="E-mail"
-              value={newUserEmail}
-              onChange={(e) => setNewUserEmail(e.target.value)}
-            />
-            <Select
-              value={newUserRole?.toString() || ""}
-              onValueChange={(val) => setNewUserRole(Number(val))}
+      {filteredUsers.length === 0 ? (
+        <div className="bg-white rounded-xl border border-slate-100 shadow-sm py-16 flex flex-col items-center gap-2 text-center">
+          <Users className="h-8 w-8 text-muted-foreground/60" />
+          <p className="text-sm font-medium">Nenhum colaborador encontrado</p>
+          <p className="text-xs text-muted-foreground">
+            Ajuste sua busca ou cadastre um novo colaborador.
+          </p>
+        </div>
+      ) : viewMode === "cards" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredUsers.map((target) => (
+            <motion.div
+              key={target.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.15 }}
+              className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex flex-col gap-4"
             >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione o cargo" />
-              </SelectTrigger>
-              <SelectContent>
-                {roles.map((role) => (
-                  <SelectItem key={role.id} value={role.id.toString()}>
-                    {role.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {roleSelecionadaEhConsultor && (
-              <>
-                <Input
-                  placeholder="WhatsApp do consultor"
-                  value={newUserWhatsapp}
-                  onChange={(e) => setNewUserWhatsapp(e.target.value)}
-                />
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="Comissão por referência (R$)"
-                  value={newUserCommission}
-                  onChange={(e) => setNewUserCommission(e.target.value)}
-                />
-              </>
-            )}
-            <Button
-              onClick={handleCreateUser}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
-              disabled={creating}
-            >
-              {creating ? "Criando..." : "Criar Colaborador"}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative shrink-0">
+                    <Avatar className="size-14">
+                      <AvatarImage
+                        src={target.avatarUrl ?? undefined}
+                        alt={target.name}
+                      />
+                      <AvatarFallback className="bg-[#f2faf0] text-primary font-semibold">
+                        {getInitials(target.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    {canUpdateUser && (
+                      <button
+                        type="button"
+                        onClick={() => handlePickAvatar(target.id)}
+                        disabled={uploadingAvatarId === target.id}
+                        className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center shadow-sm hover:bg-primary/90 disabled:opacity-60"
+                        title="Alterar foto"
+                      >
+                        {uploadingAvatarId === target.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Camera className="h-3 w-3" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold truncate">{target.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {target.email}
+                    </p>
+                  </div>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {canAssignRole && (
+                      <DropdownMenuItem onClick={() => handleOpenEdit(target)}>
+                        Editar cargo
+                      </DropdownMenuItem>
+                    )}
+                    {canUpdateUser && (
+                      <DropdownMenuItem
+                        onClick={() => handleOpenEmailModal(target)}
+                      >
+                        Alterar e-mail
+                      </DropdownMenuItem>
+                    )}
+                    {isAdmin && canUpdateUser && (
+                      <DropdownMenuItem
+                        onClick={() => handleOpenPasswordModal(target)}
+                      >
+                        Alterar senha
+                      </DropdownMenuItem>
+                    )}
+                    {target.consultorId && (
+                      <DropdownMenuItem onClick={() => handleSendLink(target)}>
+                        Enviar link de cadastro
+                      </DropdownMenuItem>
+                    )}
+                    {canUpdateUser && target.avatarUrl && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => handleRemoveAvatar(target.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Remover foto
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
 
-      <Separator />
+              <div className="flex items-center justify-between">
+                {target.roleId ? (
+                  <Badge variant="secondary">{roleName(target.roleId)}</Badge>
+                ) : (
+                  <Badge variant="outline" className="text-muted-foreground">
+                    Sem cargo
+                  </Badge>
+                )}
+              </div>
 
-      {/* Tabela de usuários */}
-      <Card className="shadow-md">
-        <CardHeader>
-          <CardTitle>Colaboradores e seus Cargos</CardTitle>
-        </CardHeader>
-
-        <CardContent>
-          <ScrollArea className="h-[50vh]">
+              {isConsultor(target) && (
+                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100 text-sm">
+                  <div className="col-span-2">
+                    <p className="text-xs text-muted-foreground">Codigo</p>
+                    <p className="font-medium">
+                      {target.consultorCodigo ?? "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Comissão</p>
+                    <p className="font-medium">
+                      R$ {Number(target.valorComissaoIndicacao ?? 0).toFixed(2)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">A receber</p>
+                    <p className="font-medium">
+                      R$ {Number(target.comissaoPendente ?? 0).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="pt-6">
             <Table>
               <TableCaption>
                 {filteredUsers.length > 0
                   ? "Lista completa de usuários cadastrados"
                   : "Nenhum usuário encontrado"}
               </TableCaption>
-
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Cargo Atual</TableHead>
+                  <TableHead>Colaborador</TableHead>
+                  <TableHead>Cargo</TableHead>
+                  <TableHead>Codigo</TableHead>
                   <TableHead>Comissão</TableHead>
                   <TableHead>A receber</TableHead>
-                  <TableHead>Alterar Cargo</TableHead>
-                  {isAdmin && (
-                    <TableHead className="text-right">Alterar Senha</TableHead>
-                  )}
-                  <TableHead className="text-right">Enviar Link</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
-
               <TableBody>
-                {filteredUsers.map((user) => {
-                  const roleAtual = roles.find((r) => r.id === user.roleId);
-                  const isConsultorRow =
-                    roleAtual?.name?.toLowerCase().trim() === "consultor" ||
-                    !!user.consultorId;
-
-                  return (
-                    <motion.tr
-                      key={user.id}
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.15 }}
-                      className="hover:bg-muted/40"
-                    >
-                      <TableCell className="font-medium">{user.name}</TableCell>
-                      <TableCell className="text-gray-500">
-                        {user.email}
-                        {canUpdateUser && (
+                {filteredUsers.map((target) => (
+                  <TableRow key={target.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="size-9">
+                          <AvatarImage
+                            src={target.avatarUrl ?? undefined}
+                            alt={target.name}
+                          />
+                          <AvatarFallback className="bg-[#f2faf0] text-primary text-xs font-semibold">
+                            {getInitials(target.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="font-medium leading-tight">
+                            {target.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground leading-tight">
+                            {target.email}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {target.roleId ? (
+                        <Badge variant="secondary">
+                          {roleName(target.roleId)}
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="text-muted-foreground"
+                        >
+                          Sem cargo
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {isConsultor(target)
+                        ? (target.consultorCodigo ?? "—")
+                        : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {isConsultor(target)
+                        ? `R$ ${Number(target.valorComissaoIndicacao ?? 0).toFixed(2)}`
+                        : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {isConsultor(target)
+                        ? `R$ ${Number(target.comissaoPendente ?? 0).toFixed(2)}`
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
-                            size="sm"
-                            onClick={() => handleOpenEmailModal(user)}
+                            size="icon"
+                            className="h-8 w-8"
                           >
-                            Editar
+                            <MoreVertical className="h-4 w-4" />
                           </Button>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {user.roleId ? (
-                          <Badge variant="secondary">
-                            {roles.find((r) => r.id === user.roleId)?.name ||
-                              "—"}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-gray-500">
-                            Sem cargo
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {isConsultorRow
-                          ? `R$ ${Number(user.valorComissaoIndicacao ?? 0).toFixed(2)}`
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        {isConsultorRow
-                          ? `R$ ${Number(user.comissaoPendente ?? 0).toFixed(2)}`
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Select
-                            value={user.roleId?.toString() || ""}
-                            onValueChange={(val) =>
-                              handleChangeRole(user.id, Number(val))
-                            }
-                            disabled={!canAssignRole}
-                          >
-                            <SelectTrigger className="w-44">
-                              <SelectValue placeholder="Selecionar" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {roles.map((role) => (
-                                <SelectItem
-                                  key={role.id}
-                                  value={role.id.toString()}
-                                >
-                                  {role.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {isConsultorRow && (
-                            <>
-                              <Input
-                                className="w-40"
-                                value={whatsappDrafts[user.id] ?? ""}
-                                onChange={(e) =>
-                                  setWhatsappDrafts((prev) => ({
-                                    ...prev,
-                                    [user.id]: e.target.value,
-                                  }))
-                                }
-                                placeholder="WhatsApp"
-                                disabled={
-                                  !canAssignRole ||
-                                  savingCommissionId === user.id
-                                }
-                              />
-                              <Input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                className="w-36"
-                                value={
-                                  commissionDrafts[user.id] ??
-                                  String(
-                                    Number(user.valorComissaoIndicacao ?? 0),
-                                  )
-                                }
-                                onChange={(e) =>
-                                  setCommissionDrafts((prev) => ({
-                                    ...prev,
-                                    [user.id]: e.target.value,
-                                  }))
-                                }
-                                disabled={
-                                  !canAssignRole ||
-                                  savingCommissionId === user.id
-                                }
-                              />
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleSaveCommission(user)}
-                                disabled={
-                                  !canAssignRole ||
-                                  savingCommissionId === user.id
-                                }
-                              >
-                                {savingCommissionId === user.id
-                                  ? "Salvando..."
-                                  : "Salvar"}
-                              </Button>
-                            </>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {canAssignRole && (
+                            <DropdownMenuItem
+                              onClick={() => handleOpenEdit(target)}
+                            >
+                              Editar cargo
+                            </DropdownMenuItem>
                           )}
-                        </div>
-                      </TableCell>
-                      {isAdmin && canUpdateUser && (
-                        <TableCell className="text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenPasswordModal(user)}
-                          >
-                            Alterar
-                          </Button>
-                        </TableCell>
-                      )}
-                      <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const link =
-                              user.linkCadastro ||
-                              (user.consultorId
-                                ? `${window.location.origin}/cliente/cadastro?${new URLSearchParams(
-                                    {
-                                      consultorId: String(user.consultorId),
-                                      ...(currentTenant
-                                        ? { consultorTenant: currentTenant }
-                                        : {}),
-                                    },
-                                  ).toString()}`
-                                : "");
-                            if (!link) {
-                              toast.error(
-                                "Este colaborador não possui vínculo de consultor",
-                              );
-                              return;
-                            }
-                            setSelectedLink(link);
-                            setShareModalOpen(true);
-                          }}
-                        >
-                          Enviar
-                        </Button>
-                      </TableCell>
-                    </motion.tr>
-                  );
-                })}
+                          {canUpdateUser && (
+                            <DropdownMenuItem
+                              onClick={() => handleOpenEmailModal(target)}
+                            >
+                              Alterar e-mail
+                            </DropdownMenuItem>
+                          )}
+                          {isAdmin && canUpdateUser && (
+                            <DropdownMenuItem
+                              onClick={() => handleOpenPasswordModal(target)}
+                            >
+                              Alterar senha
+                            </DropdownMenuItem>
+                          )}
+                          {target.consultorId && (
+                            <DropdownMenuItem
+                              onClick={() => handleSendLink(target)}
+                            >
+                              Enviar link de cadastro
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Modal: Criar novo colaborador */}
+      <Dialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) resetCreateForm();
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Criar Novo Colaborador</DialogTitle>
+            <DialogDescription>
+              Preencha os dados para cadastrar um novo colaborador.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="new-name">Nome completo</Label>
+              <Input
+                id="new-name"
+                placeholder="Nome completo"
+                value={newUserName}
+                onChange={(e) => setNewUserName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-email">E-mail</Label>
+              <Input
+                id="new-email"
+                placeholder="E-mail"
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Cargo</Label>
+              <Select
+                value={newUserRole?.toString() || ""}
+                onValueChange={(val) => setNewUserRole(Number(val))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione o cargo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id.toString()}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {roleSelecionadaEhConsultor && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="new-whatsapp">WhatsApp do consultor</Label>
+                  <Input
+                    id="new-whatsapp"
+                    placeholder="WhatsApp do consultor"
+                    value={newUserWhatsapp}
+                    onChange={(e) => setNewUserWhatsapp(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-commission">
+                    Comissão por referência (R$)
+                  </Label>
+                  <Input
+                    id="new-commission"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0,00"
+                    value={newUserCommission}
+                    onChange={(e) => setNewUserCommission(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCreateOpen(false)}
+              disabled={creating}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateUser} disabled={creating}>
+              {creating ? "Criando..." : "Criar Colaborador"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Editar cargo/comissão */}
+      <Dialog
+        open={!!editUser}
+        onOpenChange={(open) => {
+          if (!open) setEditUser(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar colaborador</DialogTitle>
+            <DialogDescription>
+              Atualize o cargo de{" "}
+              <span className="font-semibold">
+                {editUser?.name || "o colaborador"}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Cargo</Label>
+              <Select
+                value={editRole?.toString() || ""}
+                onValueChange={(val) => setEditRole(Number(val))}
+                disabled={!canAssignRole}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecionar cargo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id.toString()}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {editRoleEhConsultor && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-whatsapp">WhatsApp do consultor</Label>
+                  <Input
+                    id="edit-whatsapp"
+                    value={editWhatsapp}
+                    onChange={(e) => setEditWhatsapp(e.target.value)}
+                    placeholder="WhatsApp"
+                    disabled={!canAssignRole}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-commission">
+                    Comissão por referência (R$)
+                  </Label>
+                  <Input
+                    id="edit-commission"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editCommission}
+                    onChange={(e) => setEditCommission(e.target.value)}
+                    disabled={!canAssignRole}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditUser(null)}
+              disabled={savingEdit}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveEdit}
+              disabled={savingEdit || !canAssignRole}
+            >
+              {savingEdit ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Alterar e-mail */}
       {isAdmin && (
         <Dialog
           open={!!emailModalUser}
@@ -691,9 +996,9 @@ export default function AcessoPage() {
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label htmlFor="new-email">Novo e-mail</Label>
+                <Label htmlFor="new-email-modal">Novo e-mail</Label>
                 <Input
-                  id="new-email"
+                  id="new-email-modal"
                   type="email"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
@@ -717,6 +1022,8 @@ export default function AcessoPage() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Modal: Alterar senha */}
       {isAdmin && (
         <Dialog
           open={!!passwordModalUser}

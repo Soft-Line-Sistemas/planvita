@@ -714,7 +714,7 @@ export default function NotificacoesRecorrentesPage() {
         <TabsContent value="operacao" className="space-y-6">
           {isPeriodic ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="!bg-gradient-to-br !from-emerald-600 !to-green-700 !text-white">
+              <Card className="bg-gradient-to-br from-[#3a9b28] to-[#1e5a14] text-white border-transparent">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-lg font-medium flex items-center gap-2">
                     <Clock3 className="w-5 h-5" />
@@ -734,7 +734,7 @@ export default function NotificacoesRecorrentesPage() {
                       "Pausado"
                     )}
                   </div>
-                  <p className="text-sm text-emerald-100">
+                  <p className="text-sm text-white/80">
                     {agendamentoAtivo
                       ? "Próximo disparo previsto para "
                       : "Agendamento pausado. "}
@@ -745,7 +745,7 @@ export default function NotificacoesRecorrentesPage() {
                       : "—"}
                   </p>
                   <Progress value={progresso} className="mt-4 bg-white/20" />
-                  <p className="text-xs text-emerald-100 mt-1">
+                  <p className="text-xs text-white/80 mt-1">
                     {Math.round(progresso)}% do ciclo percorrido
                   </p>
                 </CardContent>

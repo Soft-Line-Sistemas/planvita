@@ -6,8 +6,12 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { formatPhone } from "@/helpers/formHelpers";
+import { toast } from "sonner";
+import { Loader2, Plus, X } from "lucide-react";
 
 type FaixaTarifacao = {
   idadeMaxima: number | null;
@@ -73,6 +77,7 @@ export default function ConfiguracoesPage() {
   const { user } = useAuth();
   const [config, setConfig] = useState<BusinessRulesConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [faixas, setFaixas] = useState<FaixaTarifacao[]>([]);
 
   useEffect(() => {
@@ -131,24 +136,44 @@ export default function ConfiguracoesPage() {
       valorAdicionalDependenteForaGradeFaixasJson: faixasJson,
     };
 
+    setSaving(true);
     try {
       if (config.tenantId) {
         await api.put(`/regras/${config.tenantId}`, payload);
       } else {
         await api.post(`/regras`, { ...payload, tenantId: user?.tenant });
       }
-      alert("Regras de negócio salvas com sucesso!");
+      toast.success("Regras de negócio salvas com sucesso!");
     } catch (err) {
       console.error(err);
-      alert("Erro ao salvar regras de negócio.");
+      toast.error("Erro ao salvar regras de negócio.");
+    } finally {
+      setSaving(false);
     }
   };
 
-  if (loading) return <p>Carregando...</p>;
+  if (loading) {
+    return (
+      <div className="p-8 space-y-6">
+        <Skeleton className="h-9 w-96" />
+        <Skeleton className="h-56 w-full rounded-xl" />
+        <Skeleton className="h-72 w-full rounded-xl" />
+        <Skeleton className="h-40 w-full rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-6">
-      <h1 className="text-3xl font-bold">Configurações de Regras de Negócio</h1>
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Configurações de Regras de Negócio
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Defina prazos, limites e regras aplicadas automaticamente pela
+          plataforma.
+        </p>
+      </div>
 
       {/* Financeiro */}
       <Card>
@@ -216,25 +241,29 @@ export default function ConfiguracoesPage() {
               }
             />
           </div>
-          <div>
-            <Label>Aviso de reajuste anual</Label>
-            <input
-              type="checkbox"
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="avisoReajusteAnual"
               checked={config?.avisoReajusteAnual || false}
-              onChange={(e) =>
-                handleChange("avisoReajusteAnual", e.target.checked)
+              onCheckedChange={(checked) =>
+                handleChange("avisoReajusteAnual", checked === true)
               }
             />
+            <Label htmlFor="avisoReajusteAnual" className="font-normal">
+              Aviso de reajuste anual
+            </Label>
           </div>
-          <div>
-            <Label>Aviso de renovação automática</Label>
-            <input
-              type="checkbox"
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="avisoRenovacaoAutomatica"
               checked={config?.avisoRenovacaoAutomatica || false}
-              onChange={(e) =>
-                handleChange("avisoRenovacaoAutomatica", e.target.checked)
+              onCheckedChange={(checked) =>
+                handleChange("avisoRenovacaoAutomatica", checked === true)
               }
             />
+            <Label htmlFor="avisoRenovacaoAutomatica" className="font-normal">
+              Aviso de renovação automática
+            </Label>
           </div>
         </CardContent>
       </Card>
@@ -289,7 +318,7 @@ export default function ConfiguracoesPage() {
           </div>
 
           {/* Matriz de tarifação progressiva por faixa etária */}
-          <div className="border rounded-lg p-4 space-y-3">
+          <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 space-y-3">
             <div>
               <p className="text-sm font-semibold">
                 Tarifação por faixa etária — dependentes fora da grade familiar
@@ -318,7 +347,7 @@ export default function ConfiguracoesPage() {
               return (
                 <div
                   key={index}
-                  className="flex items-center gap-3 bg-muted/40 rounded px-3 py-2"
+                  className="flex items-center gap-3 bg-white border border-slate-100 rounded-lg px-3 py-2"
                 >
                   <span className="text-xs text-muted-foreground w-28 shrink-0">
                     {isUltima && faixa.idadeMaxima === null
@@ -356,14 +385,16 @@ export default function ConfiguracoesPage() {
                     }
                   />
 
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={() => removerFaixa(index)}
-                    className="text-red-500 hover:text-red-700 text-lg leading-none shrink-0"
+                    className="h-8 w-8 text-destructive shrink-0"
                     title="Remover faixa"
                   >
-                    ×
-                  </button>
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
               );
             })}
@@ -374,7 +405,8 @@ export default function ConfiguracoesPage() {
               size="sm"
               onClick={adicionarFaixa}
             >
-              + Adicionar faixa etária
+              <Plus className="h-4 w-4" />
+              Adicionar faixa etária
             </Button>
           </div>
 
@@ -405,16 +437,15 @@ export default function ConfiguracoesPage() {
           <CardTitle>Redirecionamento WhatsApp por Idade</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4">
-          <div className="col-span-2 flex items-center gap-3">
-            <input
+          <div className="col-span-2 flex items-center gap-2">
+            <Checkbox
               id="waRedirectAtivo"
-              type="checkbox"
               checked={config?.redirecionamentoWhatsappAtivo ?? false}
-              onChange={(e) =>
-                handleChange("redirecionamentoWhatsappAtivo", e.target.checked)
+              onCheckedChange={(checked) =>
+                handleChange("redirecionamentoWhatsappAtivo", checked === true)
               }
             />
-            <Label htmlFor="waRedirectAtivo">
+            <Label htmlFor="waRedirectAtivo" className="font-normal">
               Ativar redirecionamento de cadastro para WhatsApp fora da faixa de
               idade
             </Label>
@@ -524,11 +555,15 @@ export default function ConfiguracoesPage() {
       </Card>
       */}
 
-      <Button
-        className="cursor-pointer bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
-        onClick={handleSave}
-      >
-        Salvar Regras de Negócio
+      <Button onClick={handleSave} disabled={saving}>
+        {saving ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Salvando...
+          </>
+        ) : (
+          "Salvar Regras de Negócio"
+        )}
       </Button>
     </div>
   );

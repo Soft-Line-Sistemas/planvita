@@ -66,6 +66,13 @@ import type { Plano } from "@/types/PlanType";
 import api from "@/utils/api";
 import { fetchSuggestedPlanosWithRetry } from "@/services/planoSuggestion";
 import { extractApiError } from "@/utils/httpError";
+import { ConsultorLookupCard } from "@/components/ConsultorLookupCard";
+import {
+  normalizeConsultorCode,
+  resolveConsultorPublicByCode,
+  resolveConsultorPublicLegacy,
+  type ConsultorPublicResult,
+} from "@/utils/consultorPublic";
 
 /* ================================================================
    Types
@@ -244,14 +251,6 @@ function getAdicionalParticipantePorParentesco(
     participante as Dependente,
     matrizTarifacaoDependente,
   );
-}
-
-interface ConsultorOption {
-  id: number;
-  nome: string;
-  tenantId: string;
-  tenantLabel: string;
-  selectionKey: string;
 }
 
 type MetodoPagamento = "PIX" | "BOLETO" | "CARTAO";
@@ -2150,11 +2149,12 @@ function Step8Confirmacao({
   plano,
   metodoPagamento,
   servicosAdicionais,
-  consultores,
-  selectedConsultorKey,
-  onSelectConsultor,
+  consultorCode,
+  onConsultorCodeChange,
+  onResolveConsultor,
+  consultorSelecionado,
   isConsultorLocked,
-  isLoadingConsultores,
+  isResolvingConsultor,
   consultorError,
   aceitouContrato,
   onAceitouContratoChange,
@@ -2171,11 +2171,12 @@ function Step8Confirmacao({
   plano: Plano | null;
   metodoPagamento: MetodoPagamento | "";
   servicosAdicionais: string[];
-  consultores: ConsultorOption[];
-  selectedConsultorKey?: string;
-  onSelectConsultor: (id: string) => void;
+  consultorCode: string;
+  onConsultorCodeChange: (value: string) => void;
+  onResolveConsultor: () => void;
+  consultorSelecionado: ConsultorPublicResult | null;
   isConsultorLocked: boolean;
-  isLoadingConsultores: boolean;
+  isResolvingConsultor: boolean;
   consultorError: string | null;
   aceitouContrato: boolean;
   onAceitouContratoChange: (v: boolean) => void;
@@ -2244,26 +2245,31 @@ function Step8Confirmacao({
       </p>
 
       <Field label="Consultor" error={consultorError ?? undefined}>
-        {isLoadingConsultores ? (
-          <p className="cm-cad-conf-muted">Carregando…</p>
-        ) : isConsultorLocked ? (
-          <p className="cm-cad-conf-consultor-locked">
-            {consultores.find((c) => c.selectionKey === selectedConsultorKey)
-              ?.nome ?? `Consultor ${selectedConsultorKey}`}
-          </p>
-        ) : (
-          <select
-            className={`cm-cad-select${consultorError ? " error" : ""}`}
-            value={selectedConsultorKey ?? ""}
-            onChange={(ev) => onSelectConsultor(ev.target.value)}
+        <div className="flex flex-col gap-3">
+          <input
+            className={`cm-cad-input${consultorError ? " error" : ""}`}
+            value={consultorCode}
+            onChange={(ev) => onConsultorCodeChange(ev.target.value)}
+            placeholder="Digite o código do consultor"
+            disabled={isConsultorLocked || isResolvingConsultor}
+          />
+          <button
+            type="button"
+            className="cm-cad-btn cm-cad-btn-outline"
+            onClick={onResolveConsultor}
+            disabled={
+              isConsultorLocked || isResolvingConsultor || !consultorCode.trim()
+            }
           >
-            {consultores.map((c) => (
-              <option key={c.selectionKey} value={c.selectionKey}>
-                {c.nome}
-              </option>
-            ))}
-          </select>
-        )}
+            {isResolvingConsultor ? "Validando..." : "Validar código"}
+          </button>
+          {consultorSelecionado ? (
+            <ConsultorLookupCard
+              consultor={consultorSelecionado}
+              locked={isConsultorLocked}
+            />
+          ) : null}
+        </div>
       </Field>
 
       <div className="cm-cad-dep-screen">
@@ -2758,16 +2764,16 @@ export default function MobileCadastroScreen() {
   );
 
   /* Consultor */
-  const [consultores, setConsultores] = useState<ConsultorOption[]>([]);
-  const [selectedConsultorKey, setSelectedConsultorKey] = useState<
-    string | undefined
-  >();
+  const [consultorCode, setConsultorCode] = useState("");
+  const [consultorSelecionado, setConsultorSelecionado] =
+    useState<ConsultorPublicResult | null>(null);
   const [consultorError, setConsultorError] = useState<string | null>(null);
   const [consultorFromQuery, setConsultorFromQuery] = useState<{
+    codigo?: string;
     id: number;
     tenantId?: string;
   } | null>(null);
-  const [isLoadingConsultores, setIsLoadingConsultores] = useState(true);
+  const [isResolvingConsultor, setIsResolvingConsultor] = useState(false);
 
   useEffect(() => {
     if (currentStep !== 5) {
@@ -3007,85 +3013,69 @@ export default function MobileCadastroScreen() {
       .catch(() => {});
   }, []);
 
-  /* Fetch consultores */
-  useEffect(() => {
-    let alive = true;
-    api
-      .get("/consultor/public")
-      .then((res) => {
-        if (!alive) return;
-        const list = Array.isArray(res.data) ? res.data : [];
-        setConsultores(
-          list
-            .map((item: Record<string, unknown>) => ({
-              id: Number(item.id),
-              nome: String(item.nome ?? "").trim(),
-              tenantId: String(item.tenantId ?? "")
-                .trim()
-                .toLowerCase(),
-              tenantLabel: String(item.tenantLabel ?? "").trim(),
-              selectionKey: String(item.selectionKey ?? "").trim(),
-            }))
-            .filter(
-              (c: ConsultorOption) =>
-                c.id > 0 &&
-                c.nome.length > 0 &&
-                c.tenantId.length > 0 &&
-                c.selectionKey.length > 0,
-            ),
-        );
-      })
-      .catch(() => {
-        if (alive) setConsultores([]);
-      })
-      .finally(() => {
-        if (alive) setIsLoadingConsultores(false);
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
-
   /* Consultor from URL */
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
+    const codigo = normalizeConsultorCode(params.get("consultorCodigo"));
     const id = Number(params.get("consultorId"));
     const tenantId = params.get("consultorTenant")?.trim().toLowerCase();
+    if (codigo) {
+      setConsultorCode(codigo);
+      setConsultorFromQuery({
+        codigo,
+        id: 0,
+        tenantId: tenantId || undefined,
+      });
+      return;
+    }
     if (Number.isFinite(id) && id > 0) {
       setConsultorFromQuery({
+        codigo: undefined,
         id,
         tenantId: tenantId || undefined,
       });
     }
   }, []);
 
-  useEffect(() => {
-    if (!consultorFromQuery || consultores.length === 0) return;
-    const matched =
-      (consultorFromQuery.tenantId
-        ? consultores.find(
-            (c) =>
-              c.id === consultorFromQuery.id &&
-              c.tenantId === consultorFromQuery.tenantId,
-          )
-        : undefined) ?? consultores.find((c) => c.id === consultorFromQuery.id);
-    if (!matched) return;
-    setSelectedConsultorKey(matched.selectionKey);
-    setConsultorError(null);
-  }, [consultorFromQuery, consultores]);
+  const resolveConsultor = async (
+    inputCode = consultorCode,
+    legacy = consultorFromQuery,
+  ) => {
+    const normalizedCode = normalizeConsultorCode(inputCode);
+    if (!normalizedCode && !(legacy?.id && legacy.tenantId)) {
+      setConsultorSelecionado(null);
+      setConsultorError("Informe o código do consultor.");
+      return null;
+    }
+
+    setIsResolvingConsultor(true);
+    try {
+      const resolved = normalizedCode
+        ? await resolveConsultorPublicByCode(normalizedCode)
+        : await resolveConsultorPublicLegacy(legacy!.id, legacy!.tenantId!);
+      if (!resolved) {
+        setConsultorSelecionado(null);
+        setConsultorError("Consultor não encontrado para o código informado.");
+        return null;
+      }
+      setConsultorSelecionado(resolved);
+      setConsultorCode(resolved.codigo);
+      setConsultorError(null);
+      return resolved;
+    } catch {
+      setConsultorSelecionado(null);
+      setConsultorError("Consultor não encontrado para o código informado.");
+      return null;
+    } finally {
+      setIsResolvingConsultor(false);
+    }
+  };
 
   useEffect(() => {
-    if (consultorFromQuery) return;
-    if (selectedConsultorKey) return;
-    if (isLoadingConsultores) return;
-    setSelectedConsultorKey(consultores[0]?.selectionKey);
-  }, [
-    consultorFromQuery,
-    consultores,
-    isLoadingConsultores,
-    selectedConsultorKey,
-  ]);
+    if (!consultorFromQuery) return;
+    void resolveConsultor(consultorFromQuery.codigo ?? "", consultorFromQuery);
+  }, [consultorFromQuery]);
 
   /* ViaCEP – step 2 */
   const cep2 = step2Form.watch("cep");
@@ -3340,10 +3330,6 @@ export default function MobileCadastroScreen() {
       );
       return;
     }
-    if (!selectedConsultorKey) {
-      setConsultorError("Selecione um consultor para continuar.");
-      return;
-    }
     if (metodoPagamento === "CARTAO") {
       const errors = validateCreditCard(creditCard);
       setCreditCardErrors(errors);
@@ -3352,11 +3338,9 @@ export default function MobileCadastroScreen() {
         return;
       }
     }
-    const consultorSelecionado = consultores.find(
-      (item) => item.selectionKey === selectedConsultorKey,
-    );
-    if (!consultorSelecionado) {
-      setConsultorError("Consultor selecionado não foi encontrado.");
+    const consultorVinculado =
+      consultorSelecionado ?? (await resolveConsultor(consultorCode));
+    if (!consultorVinculado) {
       return;
     }
     setSubmitError(null);
@@ -3394,9 +3378,10 @@ export default function MobileCadastroScreen() {
         servicosAdicionais,
         dependentes,
         usarMesmosDados,
-        consultorId: consultorSelecionado.id,
-        consultorTenantId: consultorSelecionado.tenantId,
-        targetTenantId: consultorSelecionado.tenantId,
+        consultorId: consultorVinculado.id,
+        consultorCodigo: consultorVinculado.codigo,
+        consultorTenantId: consultorVinculado.tenantId,
+        targetTenantId: consultorVinculado.tenantId,
       };
       await mutateAsync(payload);
     } catch (err: unknown) {
@@ -3531,14 +3516,18 @@ export default function MobileCadastroScreen() {
             plano={selectedPlano}
             metodoPagamento={metodoPagamento}
             servicosAdicionais={servicosAdicionais}
-            consultores={consultores}
-            selectedConsultorKey={selectedConsultorKey}
-            onSelectConsultor={(id) => {
-              setSelectedConsultorKey(id);
+            consultorCode={consultorCode}
+            onConsultorCodeChange={(value) => {
+              setConsultorCode(normalizeConsultorCode(value));
+              setConsultorSelecionado(null);
               setConsultorError(null);
             }}
+            onResolveConsultor={() => {
+              void resolveConsultor();
+            }}
+            consultorSelecionado={consultorSelecionado}
             isConsultorLocked={Boolean(consultorFromQuery)}
-            isLoadingConsultores={isLoadingConsultores}
+            isResolvingConsultor={isResolvingConsultor}
             consultorError={consultorError}
             aceitouContrato={aceitouContrato}
             onAceitouContratoChange={setAceitouContrato}
