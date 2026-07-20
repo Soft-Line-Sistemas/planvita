@@ -56,6 +56,7 @@ import { useAuth } from "@/hooks/useAuth";
 import getTenantFromHost from "@/utils/getTenantFromHost";
 import { buildConsultorCadastroLink } from "@/utils/consultorPublic";
 import { Slider } from "@/components/ui/slider";
+import { API_VERSION, getApiUrl } from "@/config/api-config";
 
 type Role = {
   id: number;
@@ -116,6 +117,10 @@ function getInitials(name?: string) {
   const first = parts[0]?.[0] ?? "";
   const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
   return (first + last).toUpperCase();
+}
+
+function buildAvatarProxyUrl(userId: number): string {
+  return `${getApiUrl()}/${API_VERSION}/users/${userId}/avatar/arquivo?t=${Date.now()}`;
 }
 
 export default function AcessoPage() {
@@ -205,7 +210,11 @@ export default function AcessoPage() {
           api.get("/users"),
           api.get("/roles"),
         ]);
-        setUsers(usersRes.data as User[]);
+        const loadedUsers = (usersRes.data as User[]).map((u) => ({
+          ...u,
+          avatarUrl: u.avatarUrl ? buildAvatarProxyUrl(u.id) : null,
+        }));
+        setUsers(loadedUsers);
         setRoles(rolesRes.data);
       } catch (err) {
         console.error(err);
@@ -530,15 +539,16 @@ export default function AcessoPage() {
       );
 
       const imageBase64 = canvas.toDataURL("image/png");
-      const { data } = await api.put(`/users/${cropUser.id}/avatar`, {
+      await api.put(`/users/${cropUser.id}/avatar`, {
         fileBase64: imageBase64,
         filename: cropDraftFilename,
         mimeType: "image/png",
       });
 
+      const proxyUrl = buildAvatarProxyUrl(cropUser.id);
       setUsers((prev) =>
         prev.map((u) =>
-          u.id === cropUser.id ? { ...u, avatarUrl: data.avatarUrl } : u,
+          u.id === cropUser.id ? { ...u, avatarUrl: proxyUrl } : u,
         ),
       );
       toast.success("Foto atualizada com sucesso");
