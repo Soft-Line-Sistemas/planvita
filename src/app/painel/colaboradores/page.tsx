@@ -119,8 +119,10 @@ function getInitials(name?: string) {
   return (first + last).toUpperCase();
 }
 
-function buildAvatarProxyUrl(userId: number): string {
-  return `${getApiUrl()}/${API_VERSION}/users/${userId}/avatar/arquivo?t=${Date.now()}`;
+function buildAvatarProxyUrl(userId: number, tenantId?: string | null): string {
+  const params = new URLSearchParams({ t: String(Date.now()) });
+  if (tenantId) params.set("tenant", tenantId);
+  return `${getApiUrl()}/${API_VERSION}/users/${userId}/avatar/arquivo?${params.toString()}`;
 }
 
 export default function AcessoPage() {
@@ -212,7 +214,9 @@ export default function AcessoPage() {
         ]);
         const loadedUsers = (usersRes.data as User[]).map((u) => ({
           ...u,
-          avatarUrl: u.avatarUrl ? buildAvatarProxyUrl(u.id) : null,
+          avatarUrl: u.avatarUrl
+            ? buildAvatarProxyUrl(u.id, currentTenant)
+            : null,
         }));
         setUsers(loadedUsers);
         setRoles(rolesRes.data);
@@ -224,7 +228,7 @@ export default function AcessoPage() {
       }
     };
     load();
-  }, [authLoading, hasPermission]);
+  }, [authLoading, currentTenant, hasPermission]);
 
   const isAdmin = user?.role?.name === "admin_master";
   const canAssignRole = hasPermission("user.assign_roles");
@@ -545,7 +549,7 @@ export default function AcessoPage() {
         mimeType: "image/png",
       });
 
-      const proxyUrl = buildAvatarProxyUrl(cropUser.id);
+      const proxyUrl = buildAvatarProxyUrl(cropUser.id, currentTenant);
       setUsers((prev) =>
         prev.map((u) =>
           u.id === cropUser.id ? { ...u, avatarUrl: proxyUrl } : u,
