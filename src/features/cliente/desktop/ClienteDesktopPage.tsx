@@ -922,6 +922,9 @@ export default function ConsultaClientePage() {
         login: firstAccessLogin.trim(),
         channel: targetChannel,
       });
+      if (typeof data?.tenant === "string") {
+        selecionarTenant(data.tenant);
+      }
       const destination =
         data?.start?.destinationMasked || data?.start?.channel || "seu contato";
       setFirstAccessDestination(destination);
