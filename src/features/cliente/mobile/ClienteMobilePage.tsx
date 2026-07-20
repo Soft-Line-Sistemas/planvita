@@ -741,6 +741,9 @@ export default function ClienteMobilePage() {
         login: faLogin.trim(),
         channel: targetChannel,
       });
+      if (typeof data?.tenant === "string") {
+        selecionarTenant(data.tenant);
+      }
       const destination =
         data?.start?.destinationMasked || data?.start?.channel || "seu contato";
       setFaDestination(destination);
