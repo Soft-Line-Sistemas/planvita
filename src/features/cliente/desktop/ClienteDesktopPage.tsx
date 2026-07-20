@@ -220,9 +220,9 @@ const ASSINATURA_API_BASE = API_BASE_URL
 const DEFAULT_DIAS_SUSPENSAO = 90;
 const DEFAULT_DIAS_POS_SUSPENSAO = 92;
 const TENANTS_CLIENTE = [
-  { slug: "lider", label: "Líder" },
-  { slug: "pax", label: "Pax" },
-  { slug: "bosque", label: "Bosque" },
+  { slug: "lider", label: "Funerária Lider" },
+  { slug: "pax", label: "Pax Lírios" },
+  { slug: "bosque", label: "Campo do Bosque" },
 ] as const;
 
 type TenantCadastro = {
