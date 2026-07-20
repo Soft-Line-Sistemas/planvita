@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import api from "@/utils/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -55,6 +55,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import getTenantFromHost from "@/utils/getTenantFromHost";
 import { buildConsultorCadastroLink } from "@/utils/consultorPublic";
+import { Slider } from "@/components/ui/slider";
 
 type Role = {
   id: number;
@@ -77,6 +78,8 @@ type User = {
 
 const AVATAR_ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp"];
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+const CROP_SIZE = 240;
+const CROP_OUTPUT_SIZE = 512;
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -90,6 +93,19 @@ function readFileAsDataUrl(file: File): Promise<string> {
     };
     reader.onerror = () => reject(new Error("Falha ao processar arquivo."));
     reader.readAsDataURL(file);
+  });
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Falha ao carregar imagem."));
+    img.src = src;
   });
 }
 
@@ -136,7 +152,46 @@ export default function AcessoPage() {
     null,
   );
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
-  const avatarTargetUserId = useRef<number | null>(null);
+  const avatarTargetUser = useRef<User | null>(null);
+  const [cropUser, setCropUser] = useState<User | null>(null);
+  const [cropDraftImage, setCropDraftImage] = useState<string | null>(null);
+  const [cropDraftFilename, setCropDraftFilename] =
+    useState<string>("avatar.png");
+  const [cropImgNatural, setCropImgNatural] = useState<{
+    w: number;
+    h: number;
+  } | null>(null);
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
+  const [cropDragStart, setCropDragStart] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [cropOffsetStart, setCropOffsetStart] = useState({ x: 0, y: 0 });
+  const [cropSaving, setCropSaving] = useState(false);
+
+  const cropBaseScale = cropImgNatural
+    ? Math.max(CROP_SIZE / cropImgNatural.w, CROP_SIZE / cropImgNatural.h)
+    : 1;
+  const cropRenderScale = cropBaseScale * cropZoom;
+  const cropRenderW = cropImgNatural
+    ? cropImgNatural.w * cropRenderScale
+    : CROP_SIZE;
+  const cropRenderH = cropImgNatural
+    ? cropImgNatural.h * cropRenderScale
+    : CROP_SIZE;
+  const cropMaxOffsetX = Math.max(0, (cropRenderW - CROP_SIZE) / 2);
+  const cropMaxOffsetY = Math.max(0, (cropRenderH - CROP_SIZE) / 2);
+
+  const clampCropOffset = (next: { x: number; y: number }) => ({
+    x: clamp(next.x, -cropMaxOffsetX, cropMaxOffsetX),
+    y: clamp(next.y, -cropMaxOffsetY, cropMaxOffsetY),
+  });
+
+  useEffect(() => {
+    setCropOffset((prev) => clampCropOffset(prev));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cropZoom, cropImgNatural?.w, cropImgNatural?.h]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -368,8 +423,17 @@ export default function AcessoPage() {
     }
   };
 
-  const handlePickAvatar = (userId: number) => {
-    avatarTargetUserId.current = userId;
+  const resetCropState = () => {
+    setCropUser(null);
+    setCropDraftImage(null);
+    setCropImgNatural(null);
+    setCropZoom(1);
+    setCropOffset({ x: 0, y: 0 });
+    setCropDragStart(null);
+  };
+
+  const handlePickAvatar = (target: User) => {
+    avatarTargetUser.current = target;
     avatarInputRef.current?.click();
   };
 
@@ -377,9 +441,9 @@ export default function AcessoPage() {
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = event.target.files?.[0];
-    const targetUserId = avatarTargetUserId.current;
+    const targetUser = avatarTargetUser.current;
     event.target.value = "";
-    if (!file || !targetUserId) return;
+    if (!file || !targetUser) return;
 
     if (!AVATAR_ALLOWED_MIME.includes(file.type)) {
       toast.error("Envie uma imagem PNG, JPEG ou WEBP");
@@ -390,25 +454,100 @@ export default function AcessoPage() {
       return;
     }
 
-    setUploadingAvatarId(targetUserId);
     try {
       const dataUrl = await readFileAsDataUrl(file);
-      const { data } = await api.put(`/users/${targetUserId}/avatar`, {
-        fileBase64: dataUrl,
-        filename: file.name,
-        mimeType: file.type,
+      const img = await loadImage(dataUrl);
+      setCropUser(targetUser);
+      setCropDraftImage(dataUrl);
+      setCropDraftFilename(file.name || "avatar.png");
+      setCropImgNatural({
+        w: img.naturalWidth || img.width,
+        h: img.naturalHeight || img.height,
+      });
+      setCropZoom(1);
+      setCropOffset({ x: 0, y: 0 });
+    } catch (err) {
+      console.error(err);
+      toast.error("Não foi possível processar a imagem");
+    }
+  };
+
+  const handleCropPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (!cropDraftImage) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setCropDragStart({ x: event.clientX, y: event.clientY });
+    setCropOffsetStart(cropOffset);
+  };
+
+  const handleCropPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (!cropDragStart) return;
+    const dx = event.clientX - cropDragStart.x;
+    const dy = event.clientY - cropDragStart.y;
+    setCropOffset(
+      clampCropOffset({ x: cropOffsetStart.x + dx, y: cropOffsetStart.y + dy }),
+    );
+  };
+
+  const handleCropPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setCropDragStart(null);
+  };
+
+  const handleConfirmarRecorte = async () => {
+    if (!cropDraftImage || !cropImgNatural || !cropUser) return;
+
+    setCropSaving(true);
+    setUploadingAvatarId(cropUser.id);
+    try {
+      const img = await loadImage(cropDraftImage);
+      const canvas = document.createElement("canvas");
+      canvas.width = CROP_OUTPUT_SIZE;
+      canvas.height = CROP_OUTPUT_SIZE;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Falha ao preparar recorte.");
+
+      const scale = cropRenderScale;
+      const sw = CROP_SIZE / scale;
+      const sh = sw;
+      const sx = (cropRenderW / 2 - CROP_SIZE / 2 - cropOffset.x) / scale;
+      const sy = (cropRenderH / 2 - CROP_SIZE / 2 - cropOffset.y) / scale;
+      const sxClamped = clamp(sx, 0, Math.max(0, cropImgNatural.w - sw));
+      const syClamped = clamp(sy, 0, Math.max(0, cropImgNatural.h - sh));
+
+      ctx.clearRect(0, 0, CROP_OUTPUT_SIZE, CROP_OUTPUT_SIZE);
+      ctx.drawImage(
+        img,
+        sxClamped,
+        syClamped,
+        sw,
+        sh,
+        0,
+        0,
+        CROP_OUTPUT_SIZE,
+        CROP_OUTPUT_SIZE,
+      );
+
+      const imageBase64 = canvas.toDataURL("image/png");
+      const { data } = await api.put(`/users/${cropUser.id}/avatar`, {
+        fileBase64: imageBase64,
+        filename: cropDraftFilename,
+        mimeType: "image/png",
       });
 
       setUsers((prev) =>
         prev.map((u) =>
-          u.id === targetUserId ? { ...u, avatarUrl: data.avatarUrl } : u,
+          u.id === cropUser.id ? { ...u, avatarUrl: data.avatarUrl } : u,
         ),
       );
       toast.success("Foto atualizada com sucesso");
+      resetCropState();
     } catch (err) {
       console.error(err);
       toast.error("Não foi possível enviar a foto");
     } finally {
+      setCropSaving(false);
       setUploadingAvatarId(null);
     }
   };
@@ -570,7 +709,7 @@ export default function AcessoPage() {
                     {canUpdateUser && (
                       <button
                         type="button"
-                        onClick={() => handlePickAvatar(target.id)}
+                        onClick={() => handlePickAvatar(target)}
                         disabled={uploadingAvatarId === target.id}
                         className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center shadow-sm hover:bg-primary/90 disabled:opacity-60"
                         title="Alterar foto"
@@ -794,6 +933,87 @@ export default function AcessoPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Modal: Recortar foto do colaborador */}
+      <Dialog
+        open={!!cropUser}
+        onOpenChange={(open) => {
+          if (!open) resetCropState();
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Ajustar foto</DialogTitle>
+            <DialogDescription>
+              Arraste para posicionar e use o controle para dar zoom na foto de{" "}
+              <span className="font-semibold">
+                {cropUser?.name || "o colaborador"}
+              </span>
+              .
+            </DialogDescription>
+          </DialogHeader>
+          {cropDraftImage && cropImgNatural && (
+            <div className="flex flex-col items-center gap-4 py-2">
+              <div
+                onPointerDown={handleCropPointerDown}
+                onPointerMove={handleCropPointerMove}
+                onPointerUp={handleCropPointerUp}
+                onPointerCancel={handleCropPointerUp}
+                style={{
+                  width: CROP_SIZE,
+                  height: CROP_SIZE,
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  border: "2px solid #d7d7d7",
+                  position: "relative",
+                  touchAction: "none",
+                  background: "#f3f3f3",
+                  cursor: "grab",
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={cropDraftImage}
+                  alt="Pré-visualização da foto"
+                  draggable={false}
+                  style={{
+                    position: "absolute",
+                    left: "50%",
+                    top: "50%",
+                    width: `${cropRenderW}px`,
+                    height: `${cropRenderH}px`,
+                    transform: `translate(calc(-50% + ${cropOffset.x}px), calc(-50% + ${cropOffset.y}px))`,
+                    userSelect: "none",
+                    maxWidth: "none",
+                    pointerEvents: "none",
+                  }}
+                />
+              </div>
+              <Slider
+                min={1}
+                max={3}
+                step={0.01}
+                value={[cropZoom]}
+                onValueChange={([value]) => setCropZoom(value)}
+                className="w-full"
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={resetCropState}
+              disabled={cropSaving}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmarRecorte} disabled={cropSaving}>
+              {cropSaving ? "Salvando..." : "Confirmar recorte"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal: Criar novo colaborador */}
       <Dialog
