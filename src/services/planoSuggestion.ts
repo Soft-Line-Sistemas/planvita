@@ -12,6 +12,12 @@ type ParticipantePayload = {
 
 type FetchSuggestedPlanosOptions = {
   ignorarComposicao?: boolean;
+  /**
+   * O cadastro público pode ser aberto em um domínio diferente do tenant do
+   * consultor. Nesse caso, a recomendação precisa consultar o mesmo tenant
+   * que receberá o cadastro, para que o ID do plano seja válido ao finalizar.
+   */
+  tenantId?: string | null;
 };
 
 const NO_PLAN_MESSAGE = "Nenhum plano elegível encontrado.";
@@ -58,11 +64,22 @@ export async function fetchSuggestedPlanosWithRetry(
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
-      const resp = await api.post("/plano/sugerir", {
-        participantes,
-        retornarTodos: true,
-        ignorarComposicao: options.ignorarComposicao === true,
-      });
+      const resp = await api.post(
+        "/plano/sugerir",
+        {
+          participantes,
+          retornarTodos: true,
+          ignorarComposicao: options.ignorarComposicao === true,
+        },
+        {
+          ...(options.tenantId
+            ? {
+                headers: { "X-Tenant": options.tenantId },
+                params: { tenant: options.tenantId },
+              }
+            : {}),
+        },
+      );
 
       const sanitized = sortPlanos(sanitizePlanoArray(resp.data));
       if (sanitized.length > 0 || attempt === attempts) {

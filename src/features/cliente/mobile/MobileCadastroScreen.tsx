@@ -65,6 +65,7 @@ import type { Dependente } from "@/types/DependentesType";
 import type { Plano } from "@/types/PlanType";
 import api from "@/utils/api";
 import { fetchSuggestedPlanosWithRetry } from "@/services/planoSuggestion";
+import getTenantFromHost from "@/utils/getTenantFromHost";
 import { extractApiError } from "@/utils/httpError";
 import { ConsultorLookupCard } from "@/components/ConsultorLookupCard";
 import {
@@ -2923,11 +2924,23 @@ export default function MobileCadastroScreen() {
       Boolean(p.dataNascimento || p.idade != null),
     );
 
+  // A sugestão e a criação devem sempre operar na mesma base. Em links de
+  // consultor, o tenant informado no link é conhecido antes da etapa de plano;
+  // após a validação, o tenant retornado pelo consultor passa a prevalecer.
+  const tenantPlanos =
+    consultorSelecionado?.tenantId?.trim().toLowerCase() ||
+    consultorFromQuery?.tenantId?.trim().toLowerCase() ||
+    getTenantFromHost()?.trim().toLowerCase() ||
+    undefined;
+
   const { data: planosData = [], isLoading: isLoadingPlanos } = useQuery<
     Plano[]
   >({
-    queryKey: ["planos-mobile-cad", participantesPayload],
-    queryFn: () => fetchSuggestedPlanosWithRetry(participantesPayload),
+    queryKey: ["planos-mobile-cad", tenantPlanos, participantesPayload],
+    queryFn: () =>
+      fetchSuggestedPlanosWithRetry(participantesPayload, {
+        tenantId: tenantPlanos,
+      }),
     enabled: canSuggestPlanos,
     retry: false,
     staleTime: 60_000,
@@ -3341,6 +3354,19 @@ export default function MobileCadastroScreen() {
     const consultorVinculado =
       consultorSelecionado ?? (await resolveConsultor(consultorCode));
     if (!consultorVinculado) {
+      return;
+    }
+    const tenantConsultor = consultorVinculado.tenantId.trim().toLowerCase();
+    if (tenantPlanos !== tenantConsultor) {
+      // O código foi validado somente na confirmação e aponta para outra
+      // empresa. Descarta o plano atual e retorna para uma nova recomendação
+      // no tenant correto, evitando enviar um plano Bosque para o Líder (ou
+      // vice-versa).
+      setSelectedPlano(null);
+      setPlanoError(
+        "O consultor pertence a outra empresa. Selecione novamente um plano compatível.",
+      );
+      setCurrentStep(6);
       return;
     }
     setSubmitError(null);
