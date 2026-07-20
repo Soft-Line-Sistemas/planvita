@@ -44,6 +44,7 @@ export type CreateTitularInput = {
   step3?: Step3Values;
   step5?: PlanoFormValues;
   consultorId?: number;
+  consultorCodigo?: string;
   consultorTenantId?: string;
   targetTenantId?: string;
   servicosAdicionais?: string[];

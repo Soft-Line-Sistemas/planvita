@@ -34,6 +34,31 @@ import { gerarBoletoPDF } from "@/utils/boleto";
 import EmissaoBoleto from "@/components/Financeiro/EmissaoBoleto";
 import { AsaasWingsMark } from "@/components/ui/AsaasWingsMark";
 import RecorrenciasFinanceiro from "@/components/Financeiro/RecorrenciasFinanceiro";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const GestaoFinanceira = () => {
   const {
@@ -377,28 +402,26 @@ const GestaoFinanceira = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4 text-center px-4">
-        <p className="text-gray-700 text-lg font-medium">
-          Não foi possível carregar os pagamentos.
-        </p>
-        {error instanceof Error && (
-          <p className="text-sm text-gray-500 max-w-md">
-            Detalhes: {error.message}
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-8 flex flex-col items-center gap-4 text-center max-w-md">
+          <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+            <AlertCircle className="h-6 w-6 text-red-600" />
+          </div>
+          <p className="text-gray-700 text-lg font-medium">
+            Não foi possível carregar os pagamentos.
           </p>
-        )}
-        <button
-          onClick={() => refetch()}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-        >
-          Tentar novamente
-        </button>
+          {error instanceof Error && (
+            <p className="text-sm text-gray-500">Detalhes: {error.message}</p>
+          )}
+          <Button onClick={() => refetch()}>Tentar novamente</Button>
+        </div>
       </div>
     );
   }
@@ -410,13 +433,8 @@ const GestaoFinanceira = () => {
         <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
-              {/* <button
-                className="text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                ← Voltar
-              </button> */}
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">
+                <h1 className="text-3xl font-bold tracking-tight text-gray-900">
                   Gestão Financeira
                 </h1>
                 <p className="text-sm text-gray-500">
@@ -425,13 +443,10 @@ const GestaoFinanceira = () => {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <button
-                onClick={handleExportarHeader}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-              >
+              <Button onClick={handleExportarHeader}>
                 <Download className="w-4 h-4" />
                 <span>Exportar</span>
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -440,25 +455,23 @@ const GestaoFinanceira = () => {
       {/* Navegação por abas */}
       <div className="bg-white border-b">
         <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10">
-          <nav className="flex space-x-8">
-            {abas.map((aba) => {
-              const Icon = aba.icon;
-              return (
-                <button
-                  key={aba.id}
-                  onClick={() => setAbaAtiva(aba.id)}
-                  className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    abaAtiva === aba.id
-                      ? "border-green-500 text-green-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{aba.nome}</span>
-                </button>
-              );
-            })}
-          </nav>
+          <Tabs value={abaAtiva} onValueChange={setAbaAtiva}>
+            <TabsList className="h-auto bg-transparent p-0 gap-6 border-b-0">
+              {abas.map((aba) => {
+                const Icon = aba.icon;
+                return (
+                  <TabsTrigger
+                    key={aba.id}
+                    value={aba.id}
+                    className="rounded-none border-b-2 border-transparent bg-transparent px-1 py-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{aba.nome}</span>
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </Tabs>
         </div>
       </div>
 
@@ -466,95 +479,87 @@ const GestaoFinanceira = () => {
       <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-8">
         {/* Estatísticas */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Pagos</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {isLoadingContas ? (
-                    <Loader2 className="w-6 h-6 animate-spin text-green-500" />
-                  ) : (
-                    resumoCards.pagos.quantidade
-                  )}
-                </p>
-                <p className="text-sm text-gray-500">
-                  {isLoadingContas
-                    ? "Carregando..."
-                    : formatCurrency(resumoCards.pagos.valor)}
-                </p>
-              </div>
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
+            <div className="h-11 w-11 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Pagos</p>
+              <p className="text-2xl font-bold text-green-600">
+                {isLoadingContas ? (
+                  <Loader2 className="w-6 h-6 animate-spin text-green-500" />
+                ) : (
+                  resumoCards.pagos.quantidade
+                )}
+              </p>
+              <p className="text-sm text-gray-500">
+                {isLoadingContas
+                  ? "Carregando..."
+                  : formatCurrency(resumoCards.pagos.valor)}
+              </p>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                <Clock className="w-6 h-6 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Pendentes</p>
-                <p className="text-2xl font-bold text-yellow-600">
-                  {isLoadingContas ? (
-                    <Loader2 className="w-6 h-6 animate-spin text-yellow-500" />
-                  ) : (
-                    resumoCards.pendentes.quantidade
-                  )}
-                </p>
-                <p className="text-sm text-gray-500">
-                  {isLoadingContas
-                    ? "Carregando..."
-                    : formatCurrency(resumoCards.pendentes.valor)}
-                </p>
-              </div>
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
+            <div className="h-11 w-11 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
+              <Clock className="w-6 h-6 text-yellow-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Pendentes</p>
+              <p className="text-2xl font-bold text-yellow-600">
+                {isLoadingContas ? (
+                  <Loader2 className="w-6 h-6 animate-spin text-yellow-500" />
+                ) : (
+                  resumoCards.pendentes.quantidade
+                )}
+              </p>
+              <p className="text-sm text-gray-500">
+                {isLoadingContas
+                  ? "Carregando..."
+                  : formatCurrency(resumoCards.pendentes.valor)}
+              </p>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                <AlertCircle className="w-6 h-6 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Vencidos</p>
-                <p className="text-2xl font-bold text-red-600">
-                  {isLoadingContas ? (
-                    <Loader2 className="w-6 h-6 animate-spin text-red-500" />
-                  ) : (
-                    resumoCards.vencidos.quantidade
-                  )}
-                </p>
-                <p className="text-sm text-gray-500">
-                  {isLoadingContas
-                    ? "Carregando..."
-                    : formatCurrency(resumoCards.vencidos.valor)}
-                </p>
-              </div>
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
+            <div className="h-11 w-11 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+              <AlertCircle className="w-6 h-6 text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Vencidos</p>
+              <p className="text-2xl font-bold text-red-600">
+                {isLoadingContas ? (
+                  <Loader2 className="w-6 h-6 animate-spin text-red-500" />
+                ) : (
+                  resumoCards.vencidos.quantidade
+                )}
+              </p>
+              <p className="text-sm text-gray-500">
+                {isLoadingContas
+                  ? "Carregando..."
+                  : formatCurrency(resumoCards.vencidos.valor)}
+              </p>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {isLoadingContas ? (
-                    <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-                  ) : (
-                    resumoCards.total.quantidade
-                  )}
-                </p>
-                <p className="text-sm text-gray-500">
-                  {isLoadingContas
-                    ? "Carregando..."
-                    : formatCurrency(resumoCards.total.valor)}
-                </p>
-              </div>
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
+            <div className="h-11 w-11 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+              <DollarSign className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Total</p>
+              <p className="text-2xl font-bold text-blue-600">
+                {isLoadingContas ? (
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                ) : (
+                  resumoCards.total.quantidade
+                )}
+              </p>
+              <p className="text-sm text-gray-500">
+                {isLoadingContas
+                  ? "Carregando..."
+                  : formatCurrency(resumoCards.total.valor)}
+              </p>
             </div>
           </div>
         </div>
@@ -562,196 +567,200 @@ const GestaoFinanceira = () => {
         {abaAtiva === "pagamentos" && (
           <>
             {/* Filtros e Busca */}
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-6">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
                 <div className="flex-1 max-w-md">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <input
+                    <Input
                       type="text"
                       placeholder="Buscar por cliente, email ou referência..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="pl-10"
                     />
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-2">
-                    <Filter className="w-4 h-4 text-gray-400" />
-                    <select
+                    <Filter className="w-4 h-4 text-gray-400 shrink-0" />
+                    <Select
                       value={filtroStatus}
-                      onChange={(e) => setFiltroStatus(e.target.value)}
-                      className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      onValueChange={setFiltroStatus}
                     >
-                      <option value="todos">Todos os Status</option>
-                      <option value="PAGO">Pagos</option>
-                      <option value="PENDENTE">Pendentes</option>
-                      <option value="VENCIDO">Vencidos</option>
-                      <option value="CANCELADO">Cancelados</option>
-                    </select>
+                      <SelectTrigger className="w-[170px]">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos os Status</SelectItem>
+                        <SelectItem value="PAGO">Pagos</SelectItem>
+                        <SelectItem value="PENDENTE">Pendentes</SelectItem>
+                        <SelectItem value="VENCIDO">Vencidos</SelectItem>
+                        <SelectItem value="CANCELADO">Cancelados</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="flex items-center space-x-2">
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                    <select
-                      value={filtroData}
-                      onChange={(e) => setFiltroData(e.target.value)}
-                      className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    >
-                      <option value="todos">Todas as Datas</option>
-                      <option value="vencendo">Vencendo em 7 dias</option>
-                      <option value="vencidos">Vencidos</option>
-                      <option value="mes_atual">Mês Atual</option>
-                    </select>
+                    <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
+                    <Select value={filtroData} onValueChange={setFiltroData}>
+                      <SelectTrigger className="w-[190px]">
+                        <SelectValue placeholder="Data" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todas as Datas</SelectItem>
+                        <SelectItem value="vencendo">
+                          Vencendo em 7 dias
+                        </SelectItem>
+                        <SelectItem value="vencidos">Vencidos</SelectItem>
+                        <SelectItem value="mes_atual">Mês Atual</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Lista de Pagamentos */}
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">
                   Pagamentos ({pagamentosFiltrados.length})
                 </h3>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Cliente
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Valor
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Vencimento
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Método
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ações
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {pagamentosFiltrados.map((pagamento) => {
-                      const StatusIcon = getStatusColor(pagamento.status).icon;
-                      return (
-                        <tr key={pagamento.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                                <User className="w-5 h-5 text-green-600" />
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="px-6 py-3 text-xs uppercase tracking-wider text-gray-500">
+                      Cliente
+                    </TableHead>
+                    <TableHead className="px-6 py-3 text-xs uppercase tracking-wider text-gray-500">
+                      Valor
+                    </TableHead>
+                    <TableHead className="px-6 py-3 text-xs uppercase tracking-wider text-gray-500">
+                      Vencimento
+                    </TableHead>
+                    <TableHead className="px-6 py-3 text-xs uppercase tracking-wider text-gray-500">
+                      Status
+                    </TableHead>
+                    <TableHead className="px-6 py-3 text-xs uppercase tracking-wider text-gray-500">
+                      Método
+                    </TableHead>
+                    <TableHead className="px-6 py-3 text-xs uppercase tracking-wider text-gray-500">
+                      Ações
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pagamentosFiltrados.map((pagamento) => {
+                    const StatusIcon = getStatusColor(pagamento.status).icon;
+                    return (
+                      <TableRow key={pagamento.id}>
+                        <TableCell className="px-6 py-4">
+                          <div className="flex items-center">
+                            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3 shrink-0">
+                              <User className="w-5 h-5 text-green-600" />
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {pagamento.cliente.nome}
                               </div>
-                              <div>
-                                <div className="text-sm font-medium text-gray-900">
-                                  {pagamento.cliente.nome}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  {pagamento.cliente.plano}
-                                </div>
+                              <div className="text-sm text-gray-500">
+                                {pagamento.cliente.plano}
                               </div>
                             </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
-                              R$ {pagamento.valor.toFixed(2)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            R$ {pagamento.valor.toFixed(2)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <div className="text-sm text-gray-900">
+                            {new Date(
+                              pagamento.dataVencimento,
+                            ).toLocaleDateString("pt-BR")}
+                          </div>
+                          {pagamento.diasAtraso > 0 && (
+                            <div className="text-sm text-red-600">
+                              {pagamento.diasAtraso} dias de atraso
                             </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {new Date(
-                                pagamento.dataVencimento,
-                              ).toLocaleDateString("pt-BR")}
-                            </div>
-                            {pagamento.diasAtraso > 0 && (
-                              <div className="text-sm text-red-600">
-                                {pagamento.diasAtraso} dias de atraso
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center space-x-2">
-                              <StatusIcon
-                                className={`w-4 h-4 ${getStatusColor(pagamento.status).color}`}
-                              />
-                              <span
-                                className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(pagamento.status).bg} ${getStatusColor(pagamento.status).color}`}
-                              >
-                                {pagamento.status}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                            {pagamento.metodoPagamento}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <div className="flex items-center space-x-2">
+                          )}
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <div className="flex items-center space-x-2">
+                            <StatusIcon
+                              className={`w-4 h-4 ${getStatusColor(pagamento.status).color}`}
+                            />
+                            <span
+                              className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(pagamento.status).bg} ${getStatusColor(pagamento.status).color}`}
+                            >
+                              {pagamento.status}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4 text-sm text-gray-600">
+                          {pagamento.metodoPagamento}
+                        </TableCell>
+                        <TableCell className="px-6 py-4 text-sm text-gray-500">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() =>
+                                handleVisualizarPagamento(pagamento)
+                              }
+                              className="text-blue-600 hover:text-blue-800"
+                              title="Visualizar"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            {pagamento.status === "PENDENTE" && (
                               <button
                                 onClick={() =>
-                                  handleVisualizarPagamento(pagamento)
+                                  handleConfirmarPagamento(pagamento)
                                 }
-                                className="text-blue-600 hover:text-blue-800"
-                                title="Visualizar"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              {pagamento.status === "PENDENTE" && (
-                                <button
-                                  onClick={() =>
-                                    handleConfirmarPagamento(pagamento)
-                                  }
-                                  className="text-green-600 hover:text-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                                  disabled={
-                                    atualizarStatusPagamento.isPending &&
-                                    (
-                                      atualizarStatusPagamento.variables?.id ??
-                                      ""
-                                    ).toString() === pagamento.id
-                                  }
-                                  title="Confirmar Pagamento"
-                                >
-                                  {atualizarStatusPagamento.isPending &&
+                                className="text-green-600 hover:text-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={
+                                  atualizarStatusPagamento.isPending &&
                                   (
                                     atualizarStatusPagamento.variables?.id ?? ""
-                                  ).toString() === pagamento.id ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                  ) : (
-                                    <CheckCircle className="w-4 h-4" />
-                                  )}
-                                </button>
-                              )}
-                              <button
-                                onClick={() => handleBaixarBoleto(pagamento)}
-                                className="text-gray-600 hover:text-gray-800"
-                                title="Baixar Boleto"
+                                  ).toString() === pagamento.id
+                                }
+                                title="Confirmar Pagamento"
                               >
-                                <Download className="w-4 h-4" />
+                                {atualizarStatusPagamento.isPending &&
+                                (
+                                  atualizarStatusPagamento.variables?.id ?? ""
+                                ).toString() === pagamento.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <CheckCircle className="w-4 h-4" />
+                                )}
                               </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                            )}
+                            <button
+                              onClick={() => handleBaixarBoleto(pagamento)}
+                              className="text-gray-600 hover:text-gray-800"
+                              title="Baixar Boleto"
+                            >
+                              <Download className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
           </>
         )}
 
         {abaAtiva === "inadimplencia" && (
           <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm">
+            <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
               <div className="p-6 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -842,28 +851,18 @@ const GestaoFinanceira = () => {
                               </p>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <button
+                              <Button
+                                size="sm"
                                 disabled={!telefone}
-                                className={`px-3 py-1 rounded text-sm flex items-center space-x-1 ${
-                                  telefone
-                                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                                    : "bg-gray-300 text-gray-600 cursor-not-allowed"
-                                }`}
+                                className="bg-emerald-600 hover:bg-emerald-700"
                               >
                                 <MessageCircle className="w-3 h-3" />
                                 <span>WhatsApp</span>
-                              </button>
-                              <button
-                                disabled={!email}
-                                className={`px-3 py-1 rounded text-sm flex items-center space-x-1 ${
-                                  email
-                                    ? "bg-green-600 text-white hover:bg-green-700"
-                                    : "bg-gray-300 text-gray-600 cursor-not-allowed"
-                                }`}
-                              >
+                              </Button>
+                              <Button size="sm" disabled={!email}>
                                 <Mail className="w-3 h-3" />
                                 <span>Email</span>
-                              </button>
+                              </Button>
                             </div>
                           </div>
                         </div>
@@ -879,7 +878,7 @@ const GestaoFinanceira = () => {
         {abaAtiva === "relatorios" && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Receita Mensal
                 </h3>
@@ -923,7 +922,7 @@ const GestaoFinanceira = () => {
                 )}
               </div>
 
-              <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Liquidez de Caixa
                 </h3>
@@ -967,7 +966,7 @@ const GestaoFinanceira = () => {
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Taxa de Inadimplência Global (&gt; 5 dias)
                 </h3>
@@ -1008,12 +1007,12 @@ const GestaoFinanceira = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Gerar Relatórios
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button className="p-4 border border-gray-300 rounded-lg hover:bg-gray-50 text-left">
+                <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left transition-colors">
                   <FileText className="w-6 h-6 text-blue-600 mb-2" />
                   <h4 className="font-medium">Relatório de Pagamentos</h4>
                   <p className="text-sm text-gray-600">
@@ -1021,7 +1020,7 @@ const GestaoFinanceira = () => {
                   </p>
                 </button>
 
-                <button className="p-4 border border-gray-300 rounded-lg hover:bg-gray-50 text-left">
+                <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left transition-colors">
                   <AlertCircle className="w-6 h-6 text-red-600 mb-2" />
                   <h4 className="font-medium">Relatório de Inadimplência</h4>
                   <p className="text-sm text-gray-600">
@@ -1029,7 +1028,7 @@ const GestaoFinanceira = () => {
                   </p>
                 </button>
 
-                <button className="p-4 border border-gray-300 rounded-lg hover:bg-gray-50 text-left">
+                <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left transition-colors">
                   <DollarSign className="w-6 h-6 text-green-600 mb-2" />
                   <h4 className="font-medium">Relatório Financeiro</h4>
                   <p className="text-sm text-gray-600">
@@ -1053,15 +1052,16 @@ const GestaoFinanceira = () => {
       </div>
 
       {/* Modal de Detalhes do Pagamento */}
-      {modalAberto && pagamentoSelecionado && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
+      <Dialog
+        open={modalAberto && !!pagamentoSelecionado}
+        onOpenChange={setModalAberto}
+      >
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          {pagamentoSelecionado && (
+            <>
+              <DialogHeader>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Detalhes do Pagamento
-                  </h3>
+                  <DialogTitle>Detalhes do Pagamento</DialogTitle>
                   {(pagamentoSelecionado.asaasPaymentId ||
                     pagamentoSelecionado.asaasSubscriptionId) && (
                     <AsaasWingsMark
@@ -1070,153 +1070,145 @@ const GestaoFinanceira = () => {
                     />
                   )}
                 </div>
-                <button
-                  onClick={() => setModalAberto(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
+              </DialogHeader>
 
-            <div className="p-6 space-y-6">
-              {/* Informações do Cliente */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-3">
-                  Informações do Cliente
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm text-gray-600">Nome</label>
-                    <p className="font-medium">
-                      {pagamentoSelecionado.cliente.nome}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-600">CPF</label>
-                    <p className="font-medium">
-                      {pagamentoSelecionado.cliente.cpf}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-600">Email</label>
-                    <p className="font-medium">
-                      {pagamentoSelecionado.cliente.email}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-600">Telefone</label>
-                    <p className="font-medium">
-                      {pagamentoSelecionado.cliente.telefone}
-                    </p>
+              <div className="space-y-6">
+                {/* Informações do Cliente */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-3">
+                    Informações do Cliente
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm text-gray-600">Nome</label>
+                      <p className="font-medium">
+                        {pagamentoSelecionado.cliente.nome}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">CPF</label>
+                      <p className="font-medium">
+                        {pagamentoSelecionado.cliente.cpf}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Email</label>
+                      <p className="font-medium">
+                        {pagamentoSelecionado.cliente.email}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Telefone</label>
+                      <p className="font-medium">
+                        {pagamentoSelecionado.cliente.telefone}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Informações do Pagamento */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-3">
-                  Informações do Pagamento
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm text-gray-600">Valor</label>
-                    <p className="font-medium text-lg">
-                      R$ {pagamentoSelecionado.valor.toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-600">Status</label>
-                    <div className="flex items-center space-x-2">
-                      {React.createElement(
-                        getStatusColor(pagamentoSelecionado.status).icon,
-                        {
-                          className: `w-4 h-4 ${getStatusColor(pagamentoSelecionado.status).color}`,
-                        },
-                      )}
-                      <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(pagamentoSelecionado.status).bg} ${getStatusColor(pagamentoSelecionado.status).color}`}
-                      >
-                        {pagamentoSelecionado.status}
-                      </span>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-600">
-                      Data de Vencimento
-                    </label>
-                    <p className="font-medium">
-                      {new Date(
-                        pagamentoSelecionado.dataVencimento,
-                      ).toLocaleDateString("pt-BR")}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-600">
-                      Método de Pagamento
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">
-                        {pagamentoSelecionado.metodoPagamento}
+                {/* Informações do Pagamento */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-3">
+                    Informações do Pagamento
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm text-gray-600">Valor</label>
+                      <p className="font-medium text-lg">
+                        R$ {pagamentoSelecionado.valor.toFixed(2)}
                       </p>
-                      {(pagamentoSelecionado.asaasPaymentId ||
-                        pagamentoSelecionado.asaasSubscriptionId) && (
-                        <AsaasWingsMark variant="inline" />
-                      )}
                     </div>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-600">Referência</label>
-                    <p className="font-medium">
-                      {pagamentoSelecionado.referencia}
-                    </p>
-                  </div>
-                  {pagamentoSelecionado.dataPagamento && (
+                    <div>
+                      <label className="text-sm text-gray-600">Status</label>
+                      <div className="flex items-center space-x-2">
+                        {React.createElement(
+                          getStatusColor(pagamentoSelecionado.status).icon,
+                          {
+                            className: `w-4 h-4 ${getStatusColor(pagamentoSelecionado.status).color}`,
+                          },
+                        )}
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(pagamentoSelecionado.status).bg} ${getStatusColor(pagamentoSelecionado.status).color}`}
+                        >
+                          {pagamentoSelecionado.status}
+                        </span>
+                      </div>
+                    </div>
                     <div>
                       <label className="text-sm text-gray-600">
-                        Data de Pagamento
+                        Data de Vencimento
                       </label>
                       <p className="font-medium">
                         {new Date(
-                          pagamentoSelecionado.dataPagamento,
+                          pagamentoSelecionado.dataVencimento,
                         ).toLocaleDateString("pt-BR")}
                       </p>
                     </div>
-                  )}
+                    <div>
+                      <label className="text-sm text-gray-600">
+                        Método de Pagamento
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">
+                          {pagamentoSelecionado.metodoPagamento}
+                        </p>
+                        {(pagamentoSelecionado.asaasPaymentId ||
+                          pagamentoSelecionado.asaasSubscriptionId) && (
+                          <AsaasWingsMark variant="inline" />
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">
+                        Referência
+                      </label>
+                      <p className="font-medium">
+                        {pagamentoSelecionado.referencia}
+                      </p>
+                    </div>
+                    {pagamentoSelecionado.dataPagamento && (
+                      <div>
+                        <label className="text-sm text-gray-600">
+                          Data de Pagamento
+                        </label>
+                        <p className="font-medium">
+                          {new Date(
+                            pagamentoSelecionado.dataPagamento,
+                          ).toLocaleDateString("pt-BR")}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                {/* Observações */}
+                {pagamentoSelecionado.observacoes && (
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-3">
+                      Observações
+                    </h4>
+                    <p className="text-gray-700">
+                      {pagamentoSelecionado.observacoes}
+                    </p>
+                  </div>
+                )}
               </div>
 
-              {/* Observações */}
-              {pagamentoSelecionado.observacoes && (
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-3">
-                    Observações
-                  </h4>
-                  <p className="text-gray-700">
-                    {pagamentoSelecionado.observacoes}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
-              <button
-                onClick={() => setModalAberto(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Fechar
-              </button>
-              <button
-                onClick={() => handleBaixarBoleto(pagamentoSelecionado)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-              >
-                <Download className="w-4 h-4" />
-                <span>Baixar Boleto</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setModalAberto(false)}>
+                  Fechar
+                </Button>
+                <Button
+                  onClick={() => handleBaixarBoleto(pagamentoSelecionado)}
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Baixar Boleto</span>
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

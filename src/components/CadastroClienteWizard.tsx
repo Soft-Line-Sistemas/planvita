@@ -47,6 +47,12 @@ import {
 } from "@/hooks/mutations/useCreateTitular";
 import { validateCPF } from "@/helpers/formHelpers";
 import api from "@/utils/api";
+import {
+  normalizeConsultorCode,
+  resolveConsultorPublicByCode,
+  resolveConsultorPublicLegacy,
+  type ConsultorPublicResult,
+} from "@/utils/consultorPublic";
 
 type CadastroClienteWizardVariant = "dashboard" | "public";
 
@@ -71,19 +77,12 @@ export interface TypedWizardStepsData {
   step5?: PlanoFormValues;
 }
 
-interface ConsultorOption {
-  id: number;
-  nome: string;
-  tenantId: string;
-  tenantLabel: string;
-  selectionKey: string;
-}
-
 export function CadastroClienteWizard({
   variant = "dashboard",
 }: CadastroClienteWizardProps) {
   const isPublic = variant === "public";
   const [consultorFromQuery, setConsultorFromQuery] = useState<{
+    codigo?: string;
     id: number;
     tenantId?: string;
   } | null>(null);
@@ -101,14 +100,13 @@ export function CadastroClienteWizard({
     number | null
   >(null);
   const [usarMesmosDados, setUsarMesmosDados] = useState(false);
-  const [consultores, setConsultores] = useState<ConsultorOption[]>([]);
-  const [isLoadingConsultores, setIsLoadingConsultores] = useState(true);
+  const [consultorCode, setConsultorCode] = useState("");
+  const [consultorSelecionado, setConsultorSelecionado] =
+    useState<ConsultorPublicResult | null>(null);
+  const [isResolvingConsultor, setIsResolvingConsultor] = useState(false);
   const [consultorError, setConsultorError] = useState<string | null>(null);
   const [planoStepError, setPlanoStepError] = useState<string | null>(null);
   const [hasCompatiblePlans, setHasCompatiblePlans] = useState(true);
-  const [selectedConsultorKey, setSelectedConsultorKey] = useState<
-    string | undefined
-  >();
   const { mutateAsync, isPending } = useCreateTitular({ variant });
   const steps = [
     { id: 1, title: "Dados pessoais", icon: User },
@@ -133,11 +131,24 @@ export function CadastroClienteWizard({
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
+    const consultorCodigoParam = normalizeConsultorCode(
+      params.get("consultorCodigo"),
+    );
     const consultorIdParam = params.get("consultorId");
     const consultorTenantParam = params.get("consultorTenant");
     const consultorId = consultorIdParam ? Number(consultorIdParam) : undefined;
+    if (consultorCodigoParam) {
+      setConsultorCode(consultorCodigoParam);
+      setConsultorFromQuery({
+        codigo: consultorCodigoParam,
+        id: 0,
+        tenantId: consultorTenantParam?.trim().toLowerCase() || undefined,
+      });
+      return;
+    }
     if (consultorId && Number.isFinite(consultorId) && consultorId > 0) {
       setConsultorFromQuery({
+        codigo: undefined,
         id: consultorId,
         tenantId: consultorTenantParam?.trim().toLowerCase() || undefined,
       });
@@ -185,75 +196,44 @@ export function CadastroClienteWizard({
     return { isValid, errors };
   };
 
-  useEffect(() => {
-    let ativo = true;
-    setIsLoadingConsultores(true);
-    api
-      .get("/consultor/public")
-      .then((res) => {
-        if (!ativo) return;
-        const data = Array.isArray(res.data) ? res.data : [];
-        const options = data
-          .map((item) => ({
-            id: Number(item?.id),
-            nome: String(item?.nome ?? "").trim(),
-            tenantId: String(item?.tenantId ?? "")
-              .trim()
-              .toLowerCase(),
-            tenantLabel: String(item?.tenantLabel ?? "").trim(),
-            selectionKey: String(item?.selectionKey ?? "").trim(),
-          }))
-          .filter(
-            (item) =>
-              Number.isFinite(item.id) &&
-              item.id > 0 &&
-              item.nome.length > 0 &&
-              item.tenantId.length > 0 &&
-              item.selectionKey.length > 0,
-          );
+  const resolveConsultor = async (
+    inputCode = consultorCode,
+    legacy = consultorFromQuery,
+  ) => {
+    const normalizedCode = normalizeConsultorCode(inputCode);
+    if (!normalizedCode && !(legacy?.id && legacy.tenantId)) {
+      setConsultorSelecionado(null);
+      setConsultorError("Informe o código do consultor.");
+      return null;
+    }
 
-        setConsultores(options);
-      })
-      .catch(() => {
-        if (!ativo) return;
-        setConsultores([]);
-      })
-      .finally(() => {
-        if (ativo) setIsLoadingConsultores(false);
-      });
-
-    return () => {
-      ativo = false;
-    };
-  }, [isPublic]);
+    setIsResolvingConsultor(true);
+    try {
+      const resolved = normalizedCode
+        ? await resolveConsultorPublicByCode(normalizedCode)
+        : await resolveConsultorPublicLegacy(legacy!.id, legacy!.tenantId!);
+      if (!resolved) {
+        setConsultorSelecionado(null);
+        setConsultorError("Consultor não encontrado para o código informado.");
+        return null;
+      }
+      setConsultorSelecionado(resolved);
+      setConsultorCode(resolved.codigo);
+      setConsultorError(null);
+      return resolved;
+    } catch {
+      setConsultorSelecionado(null);
+      setConsultorError("Consultor não encontrado para o código informado.");
+      return null;
+    } finally {
+      setIsResolvingConsultor(false);
+    }
+  };
 
   useEffect(() => {
-    if (!consultorFromQuery || consultores.length === 0) return;
-    const matched =
-      (consultorFromQuery.tenantId
-        ? consultores.find(
-            (item) =>
-              item.id === consultorFromQuery.id &&
-              item.tenantId === consultorFromQuery.tenantId,
-          )
-        : undefined) ??
-      consultores.find((item) => item.id === consultorFromQuery.id);
-    if (!matched) return;
-    setSelectedConsultorKey(matched.selectionKey);
-    setConsultorError(null);
-  }, [consultorFromQuery, consultores]);
-
-  useEffect(() => {
-    if (consultorFromQuery) return;
-    if (selectedConsultorKey) return;
-    if (isLoadingConsultores) return;
-    setSelectedConsultorKey(consultores[0]?.selectionKey);
-  }, [
-    consultorFromQuery,
-    consultores,
-    isLoadingConsultores,
-    selectedConsultorKey,
-  ]);
+    if (!consultorFromQuery) return;
+    void resolveConsultor(consultorFromQuery.codigo ?? "", consultorFromQuery);
+  }, [consultorFromQuery]);
 
   useEffect(() => {
     let ativo = true;
@@ -426,15 +406,9 @@ export function CadastroClienteWizard({
     currentStep !== 4 || validateDependentes(dependentes).isValid;
 
   const handleFinish = async () => {
-    if (!selectedConsultorKey) {
-      setConsultorError("Selecione o consultor para vincular este cliente.");
-      return;
-    }
-    const consultorSelecionado = consultores.find(
-      (item) => item.selectionKey === selectedConsultorKey,
-    );
-    if (!consultorSelecionado) {
-      setConsultorError("Consultor selecionado não foi encontrado.");
+    const consultorVinculado =
+      consultorSelecionado ?? (await resolveConsultor(consultorCode));
+    if (!consultorVinculado) {
       return;
     }
 
@@ -450,9 +424,10 @@ export function CadastroClienteWizard({
       step5: step5Data,
       dependentes,
       usarMesmosDados,
-      consultorId: consultorSelecionado.id,
-      consultorTenantId: consultorSelecionado.tenantId,
-      targetTenantId: isPublic ? consultorSelecionado.tenantId : undefined,
+      consultorId: consultorVinculado.id,
+      consultorCodigo: consultorVinculado.codigo,
+      consultorTenantId: consultorVinculado.tenantId,
+      targetTenantId: isPublic ? consultorVinculado.tenantId : undefined,
     };
 
     await mutateAsync(payload);
@@ -601,14 +576,18 @@ export function CadastroClienteWizard({
                       formData.step3 ?? responsavelForm.getValues(),
                     usarMesmosDados,
                   }}
-                  consultores={consultores}
-                  selectedConsultorKey={selectedConsultorKey}
-                  onSelectConsultor={(consultorKey) => {
-                    setSelectedConsultorKey(consultorKey);
+                  consultorCode={consultorCode}
+                  onConsultorCodeChange={(codigo) => {
+                    setConsultorCode(normalizeConsultorCode(codigo));
+                    setConsultorSelecionado(null);
                     setConsultorError(null);
                   }}
+                  onResolveConsultor={() => {
+                    void resolveConsultor();
+                  }}
+                  consultorSelecionado={consultorSelecionado}
                   isConsultorLocked={Boolean(consultorFromQuery)}
-                  isLoadingConsultores={isLoadingConsultores}
+                  isResolvingConsultor={isResolvingConsultor}
                   consultorError={consultorError}
                 />
               );

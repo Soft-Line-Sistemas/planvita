@@ -12,6 +12,29 @@ import {
   salvarVantagemAdmin,
 } from "@/services/parcerias.service";
 import { useAuth } from "@/hooks/useAuth";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import {
+  Gift,
+  HeartHandshake,
+  Search,
+  Tag,
+  Trash2,
+  Loader2,
+} from "lucide-react";
+import { toast } from "sonner";
 
 export default function GestaoParceriasPage() {
   const { hasPermission, loading } = useAuth();
@@ -52,7 +75,8 @@ export default function GestaoParceriasPage() {
 
   if (loading) {
     return (
-      <div className="p-8 text-sm text-gray-700 animate-pulse">
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" />
         Carregando...
       </div>
     );
@@ -60,154 +84,221 @@ export default function GestaoParceriasPage() {
 
   if (!canView) {
     return (
-      <div className="p-8 text-sm text-gray-700">
-        Você não tem permissão para visualizar parcerias.
+      <div className="p-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Sem permissão</CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground">
+            Você não tem permissão para visualizar parcerias.
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-gray-900">Parcerias</h1>
-        <input
-          className="w-80 max-w-full border border-[#D5D5D5] rounded-[16px] bg-white px-4 py-3 text-sm"
-          placeholder="Buscar"
-          value={q}
-          onChange={(ev) => setQ(ev.target.value)}
-        />
+    <div className="p-8 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Parcerias</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Gerencie categorias, parceiros e vantagens exibidas aos clientes.
+          </p>
+        </div>
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            className="pl-9"
+            placeholder="Buscar"
+            value={q}
+            onChange={(ev) => setQ(ev.target.value)}
+          />
+        </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <button
-          className={`rounded-[16px] px-4 py-3 text-sm font-semibold border transition-colors ${
-            aba === "vantagens"
-              ? "border-[#1EBA4B] bg-[#F2FAF4] text-[#1EBA4B]"
-              : "border-[#D5D5D5] bg-white text-gray-700 hover:bg-gray-50"
-          }`}
-          onClick={() => setAba("vantagens")}
-        >
-          Vantagens
-        </button>
-        <button
-          className={`rounded-[16px] px-4 py-3 text-sm font-semibold border transition-colors ${
-            aba === "parceiros"
-              ? "border-[#1EBA4B] bg-[#F2FAF4] text-[#1EBA4B]"
-              : "border-[#D5D5D5] bg-white text-gray-700 hover:bg-gray-50"
-          }`}
-          onClick={() => setAba("parceiros")}
-        >
-          Parceiros
-        </button>
-        <button
-          className={`rounded-[16px] px-4 py-3 text-sm font-semibold border transition-colors ${
-            aba === "categorias"
-              ? "border-[#1EBA4B] bg-[#F2FAF4] text-[#1EBA4B]"
-              : "border-[#D5D5D5] bg-white text-gray-700 hover:bg-gray-50"
-          }`}
-          onClick={() => setAba("categorias")}
-        >
-          Categorias
-        </button>
-      </div>
+      <Tabs value={aba} onValueChange={(v) => setAba(v as typeof aba)}>
+        <TabsList>
+          <TabsTrigger value="vantagens">
+            <Gift className="h-4 w-4" />
+            Vantagens
+          </TabsTrigger>
+          <TabsTrigger value="parceiros">
+            <HeartHandshake className="h-4 w-4" />
+            Parceiros
+          </TabsTrigger>
+          <TabsTrigger value="categorias">
+            <Tag className="h-4 w-4" />
+            Categorias
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {aba === "categorias" && (
-        <section className="bg-white border border-[#E9E9E9] rounded-[24px] p-6 space-y-4">
-          {canWrite && (
-            <CategoriaForm
-              onSave={async (payload) => {
-                await salvarCategoriaAdmin(payload);
-                await refetchCategorias();
-              }}
-            />
-          )}
-          <div className="divide-y divide-gray-100">
-            {categorias.map((c) => (
-              <div key={c.id} className="py-3 text-sm text-gray-700">
-                {c.nome} ({c.slug})
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Categorias</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {canWrite && (
+              <CategoriaForm
+                onSave={async (payload) => {
+                  await salvarCategoriaAdmin(payload);
+                  await refetchCategorias();
+                  toast.success("Categoria salva com sucesso");
+                }}
+              />
+            )}
+            {canWrite && <Separator />}
+            {categorias.length === 0 ? (
+              <EmptyState label="Nenhuma categoria cadastrada." />
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {categorias.map((c) => (
+                  <div
+                    key={c.id}
+                    className="py-3 flex items-center gap-2 text-sm"
+                  >
+                    <span className="font-medium">{c.nome}</span>
+                    <Badge variant="outline" className="font-mono text-[11px]">
+                      {c.slug}
+                    </Badge>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </section>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {aba === "parceiros" && (
-        <section className="bg-white border border-[#E9E9E9] rounded-[24px] p-6 space-y-4">
-          {canWrite && (
-            <ParceiroForm
-              onSave={async (payload) => {
-                await salvarParceiroAdmin(payload);
-                await refetchParceiros();
-              }}
-            />
-          )}
-          <div className="divide-y divide-gray-100">
-            {(
-              parceiros as Array<{ id: number; nome: string; slug: string }>
-            ).map((p) => (
-              <div key={p.id} className="py-3 text-sm text-gray-700">
-                {p.nome} ({p.slug})
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Parceiros</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {canWrite && (
+              <ParceiroForm
+                onSave={async (payload) => {
+                  await salvarParceiroAdmin(payload);
+                  await refetchParceiros();
+                  toast.success("Parceiro salvo com sucesso");
+                }}
+              />
+            )}
+            {canWrite && <Separator />}
+            {parceiros.length === 0 ? (
+              <EmptyState label="Nenhum parceiro cadastrado." />
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {(
+                  parceiros as Array<{
+                    id: number;
+                    nome: string;
+                    slug: string;
+                  }>
+                ).map((p) => (
+                  <div
+                    key={p.id}
+                    className="py-3 flex items-center gap-2 text-sm"
+                  >
+                    <span className="font-medium">{p.nome}</span>
+                    <Badge variant="outline" className="font-mono text-[11px]">
+                      {p.slug}
+                    </Badge>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </section>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {aba === "vantagens" && (
-        <section className="bg-white border border-[#E9E9E9] rounded-[24px] p-6 space-y-4">
-          {canWrite && (
-            <VantagemForm
-              categorias={categorias}
-              parceiros={parceiros}
-              onSave={async (payload) => {
-                await salvarVantagemAdmin(payload);
-                await refetchVantagens();
-              }}
-            />
-          )}
-          <div className="divide-y divide-gray-100">
-            {(
-              vantagens as Array<{
-                id: number;
-                titulo: string;
-                parceiroId: number;
-                categoriaId?: number | null;
-                status: string;
-              }>
-            ).map((v) => (
-              <div
-                key={v.id}
-                className="py-3 flex items-center justify-between gap-4"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">
-                    {v.titulo}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    {parceirosPorId[v.parceiroId] ?? "—"} •{" "}
-                    {v.categoriaId != null
-                      ? (categoriasPorId[v.categoriaId] ?? "Sem categoria")
-                      : "Sem categoria"}{" "}
-                    • {v.status}
-                  </p>
-                </div>
-                {canDelete && (
-                  <button
-                    className="rounded-[12px] border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700"
-                    onClick={async () => {
-                      await excluirVantagemAdmin(v.id);
-                      await refetchVantagens();
-                    }}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Vantagens</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {canWrite && (
+              <VantagemForm
+                categorias={categorias}
+                parceiros={parceiros}
+                onSave={async (payload) => {
+                  await salvarVantagemAdmin(payload);
+                  await refetchVantagens();
+                  toast.success("Vantagem salva com sucesso");
+                }}
+              />
+            )}
+            {canWrite && <Separator />}
+            {vantagens.length === 0 ? (
+              <EmptyState label="Nenhuma vantagem cadastrada." />
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {(
+                  vantagens as Array<{
+                    id: number;
+                    titulo: string;
+                    parceiroId: number;
+                    categoriaId?: number | null;
+                    status: string;
+                  }>
+                ).map((v) => (
+                  <div
+                    key={v.id}
+                    className="py-3 flex items-center justify-between gap-4"
                   >
-                    Excluir
-                  </button>
-                )}
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold">{v.titulo}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{parceirosPorId[v.parceiroId] ?? "—"}</span>
+                        <span>•</span>
+                        <span>
+                          {v.categoriaId != null
+                            ? (categoriasPorId[v.categoriaId] ??
+                              "Sem categoria")
+                            : "Sem categoria"}
+                        </span>
+                        <Badge
+                          variant={
+                            v.status === "PUBLICADO" ? "default" : "outline"
+                          }
+                          className="text-[11px]"
+                        >
+                          {v.status}
+                        </Badge>
+                      </div>
+                    </div>
+                    {canDelete && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={async () => {
+                          await excluirVantagemAdmin(v.id);
+                          await refetchVantagens();
+                          toast.success("Vantagem excluída");
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Excluir
+                      </Button>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </section>
+            )}
+          </CardContent>
+        </Card>
       )}
     </div>
+  );
+}
+
+function EmptyState({ label }: { label: string }) {
+  return (
+    <p className="text-sm text-muted-foreground text-center py-6">{label}</p>
   );
 }
 
@@ -227,18 +318,13 @@ function CategoriaForm({
         setNome("");
       }}
     >
-      <input
-        className="min-w-[240px] flex-1 border border-[#D5D5D5] rounded-[16px] bg-white px-4 py-3 text-sm"
+      <Input
+        className="min-w-[240px] flex-1"
         placeholder="Nova categoria"
         value={nome}
         onChange={(ev) => setNome(ev.target.value)}
       />
-      <button
-        className="rounded-[16px] bg-[#1EBA4B] px-4 py-3 text-sm font-semibold text-white hover:bg-green-700"
-        type="submit"
-      >
-        Salvar
-      </button>
+      <Button type="submit">Salvar</Button>
     </form>
   );
 }
@@ -257,7 +343,7 @@ function ParceiroForm({
   const [uf, setUf] = useState("");
   return (
     <form
-      className="grid gap-2 md:grid-cols-4"
+      className="grid gap-3 md:grid-cols-4"
       onSubmit={async (ev) => {
         ev.preventDefault();
         if (!nome.trim()) return;
@@ -267,31 +353,27 @@ function ParceiroForm({
         setUf("");
       }}
     >
-      <input
-        className="border border-[#D5D5D5] rounded-[16px] bg-white px-4 py-3 text-sm"
-        placeholder="Nome do parceiro"
-        value={nome}
-        onChange={(ev) => setNome(ev.target.value)}
-      />
-      <input
-        className="border border-[#D5D5D5] rounded-[16px] bg-white px-4 py-3 text-sm"
-        placeholder="Cidade"
-        value={cidade}
-        onChange={(ev) => setCidade(ev.target.value)}
-      />
-      <input
-        className="border border-[#D5D5D5] rounded-[16px] bg-white px-4 py-3 text-sm"
-        placeholder="UF"
-        maxLength={2}
-        value={uf}
-        onChange={(ev) => setUf(ev.target.value.toUpperCase())}
-      />
-      <button
-        className="rounded-[16px] bg-[#1EBA4B] px-4 py-3 text-sm font-semibold text-white hover:bg-green-700"
-        type="submit"
-      >
-        Salvar
-      </button>
+      <div className="flex flex-col gap-1.5">
+        <Label>Nome do parceiro</Label>
+        <Input value={nome} onChange={(ev) => setNome(ev.target.value)} />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label>Cidade</Label>
+        <Input value={cidade} onChange={(ev) => setCidade(ev.target.value)} />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label>UF</Label>
+        <Input
+          maxLength={2}
+          value={uf}
+          onChange={(ev) => setUf(ev.target.value.toUpperCase())}
+        />
+      </div>
+      <div className="flex items-end">
+        <Button type="submit" className="w-full">
+          Salvar
+        </Button>
+      </div>
     </form>
   );
 }
@@ -325,7 +407,7 @@ function VantagemForm({
 
   return (
     <form
-      className="grid gap-2 md:grid-cols-3"
+      className="grid gap-3 md:grid-cols-3"
       onSubmit={async (ev) => {
         ev.preventDefault();
         if (!form.titulo || !form.parceiroId) return;
@@ -337,54 +419,63 @@ function VantagemForm({
         setForm({ ...form, titulo: "", descricaoCurta: "" });
       }}
     >
-      <select
-        className="border border-[#D5D5D5] rounded-[16px] bg-white px-4 py-3 text-sm"
-        value={form.parceiroId}
-        onChange={(ev) =>
-          setForm((p) => ({ ...p, parceiroId: ev.target.value }))
-        }
-      >
-        <option value="">Parceiro</option>
-        {parceiros.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.nome}
-          </option>
-        ))}
-      </select>
-      <select
-        className="border border-[#D5D5D5] rounded-[16px] bg-white px-4 py-3 text-sm"
-        value={form.categoriaId}
-        onChange={(ev) =>
-          setForm((p) => ({ ...p, categoriaId: ev.target.value }))
-        }
-      >
-        <option value="">Categoria</option>
-        {categorias.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.nome}
-          </option>
-        ))}
-      </select>
-      <input
-        className="border border-[#D5D5D5] rounded-[16px] bg-white px-4 py-3 text-sm"
-        placeholder="Título"
-        value={form.titulo}
-        onChange={(ev) => setForm((p) => ({ ...p, titulo: ev.target.value }))}
-      />
-      <input
-        className="border border-[#D5D5D5] rounded-[16px] bg-white px-4 py-3 text-sm md:col-span-2"
-        placeholder="Descrição curta"
-        value={form.descricaoCurta}
-        onChange={(ev) =>
-          setForm((p) => ({ ...p, descricaoCurta: ev.target.value }))
-        }
-      />
-      <button
-        className="rounded-[16px] bg-[#1EBA4B] px-4 py-3 text-sm font-semibold text-white hover:bg-green-700"
-        type="submit"
-      >
-        Salvar vantagem
-      </button>
+      <div className="flex flex-col gap-1.5">
+        <Label>Parceiro</Label>
+        <Select
+          value={form.parceiroId}
+          onValueChange={(v) => setForm((p) => ({ ...p, parceiroId: v }))}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione um parceiro" />
+          </SelectTrigger>
+          <SelectContent>
+            {parceiros.map((p) => (
+              <SelectItem key={p.id} value={String(p.id)}>
+                {p.nome}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label>Categoria</Label>
+        <Select
+          value={form.categoriaId}
+          onValueChange={(v) => setForm((p) => ({ ...p, categoriaId: v }))}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione uma categoria" />
+          </SelectTrigger>
+          <SelectContent>
+            {categorias.map((c) => (
+              <SelectItem key={c.id} value={String(c.id)}>
+                {c.nome}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label>Título</Label>
+        <Input
+          value={form.titulo}
+          onChange={(ev) => setForm((p) => ({ ...p, titulo: ev.target.value }))}
+        />
+      </div>
+      <div className="flex flex-col gap-1.5 md:col-span-2">
+        <Label>Descrição curta</Label>
+        <Input
+          value={form.descricaoCurta}
+          onChange={(ev) =>
+            setForm((p) => ({ ...p, descricaoCurta: ev.target.value }))
+          }
+        />
+      </div>
+      <div className="flex items-end">
+        <Button type="submit" className="w-full">
+          Salvar vantagem
+        </Button>
+      </div>
     </form>
   );
 }

@@ -2,8 +2,25 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/utils/api";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  Loader2,
+  ReceiptText,
+} from "lucide-react";
 
 type ComissaoItem = {
   id: number;
@@ -36,6 +53,15 @@ const moeda = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
+const statusBadgeVariant = (
+  status: string,
+): "default" | "secondary" | "outline" => {
+  const normalized = status.toUpperCase();
+  if (normalized === "PAGO" || normalized === "RECEBIDO") return "default";
+  if (normalized === "PENDENTE") return "secondary";
+  return "outline";
+};
+
 export default function MinhasComissoesPage() {
   const { user, hasPermission, loading: authLoading } = useAuth();
   const canView = hasPermission("titular.view");
@@ -50,75 +76,139 @@ export default function MinhasComissoesPage() {
   });
 
   if (authLoading) {
-    return <div className="p-6 animate-pulse">Carregando...</div>;
-  }
-
-  if (!canView) {
     return (
-      <div className="p-6">
-        Você não possui permissão para visualizar comissões.
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+        Carregando...
       </div>
     );
   }
 
-  return (
-    <div className="p-6 space-y-4">
-      <h1 className="text-2xl font-bold">Minhas Comissões</h1>
-      <p className="text-sm text-gray-600">{user?.nome}</p>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  if (!canView) {
+    return (
+      <div className="p-8">
         <Card>
           <CardHeader>
-            <CardTitle>Pendente</CardTitle>
+            <CardTitle>Sem permissão</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-semibold text-amber-600">
-            {moeda.format(data?.totais.pendente ?? 0)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Pago</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold text-emerald-600">
-            {moeda.format(data?.totais.pago ?? 0)}
+          <CardContent className="text-muted-foreground">
+            Você não possui permissão para visualizar comissões.
           </CardContent>
         </Card>
       </div>
+    );
+  }
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Listagem</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading && <p>Carregando...</p>}
-          {isError && <p>Falha ao carregar comissões.</p>}
-          {!isLoading && !isError && (data?.comissoes?.length ?? 0) === 0 && (
-            <p>Nenhuma comissão encontrada.</p>
-          )}
-          {!isLoading && !isError && (data?.comissoes?.length ?? 0) > 0 && (
-            <div className="space-y-3">
-              {data!.comissoes.map((comissao) => (
-                <div key={comissao.id} className="border rounded p-3">
-                  <div className="flex justify-between">
-                    <strong>{comissao.titular.nome}</strong>
-                    <span>{moeda.format(comissao.valor)}</span>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    Status: {comissao.statusPagamento} | Gerada em:{" "}
-                    {new Date(comissao.dataGeracao).toLocaleDateString("pt-BR")}
-                  </div>
-                  {comissao.contaPagar && (
-                    <div className="text-xs text-gray-500">
-                      Conta a pagar #{comissao.contaPagar.id} (
-                      {comissao.contaPagar.status})
+  const comissoes = data?.comissoes ?? [];
+
+  return (
+    <div className="p-8 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Minhas Comissões</h1>
+        <p className="text-sm text-muted-foreground mt-1">{user?.nome}</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
+          <div className="h-11 w-11 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
+            <Clock className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-amber-600 leading-none">
+              {moeda.format(data?.totais.pendente ?? 0)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Pendente</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
+          <div className="h-11 w-11 rounded-full bg-[#f2faf0] flex items-center justify-center text-primary flex-shrink-0">
+            <CheckCircle2 className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-primary leading-none">
+              {moeda.format(data?.totais.pago ?? 0)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Pago</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+        <div className="px-6 py-4 border-b border-slate-100">
+          <h3 className="text-lg font-semibold">Listagem</h3>
+        </div>
+
+        {isError ? (
+          <div className="flex flex-col items-center gap-2 py-12 text-center">
+            <AlertCircle className="h-8 w-8 text-destructive" />
+            <p className="text-sm font-medium text-destructive">
+              Falha ao carregar comissões.
+            </p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Cliente</TableHead>
+                <TableHead>Valor</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Gerada em</TableHead>
+                <TableHead>Conta a pagar</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <TableRow key={i}>
+                    {Array.from({ length: 5 }).map((__, j) => (
+                      <TableCell key={j}>
+                        <Skeleton className="h-4 w-full" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : comissoes.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-12">
+                    <div className="flex flex-col items-center gap-2 text-center text-muted-foreground">
+                      <ReceiptText className="h-8 w-8 text-muted-foreground/60" />
+                      <p className="text-sm font-medium">
+                        Nenhuma comissão encontrada.
+                      </p>
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                comissoes.map((comissao) => (
+                  <TableRow key={comissao.id}>
+                    <TableCell className="font-medium">
+                      {comissao.titular.nome}
+                    </TableCell>
+                    <TableCell>{moeda.format(comissao.valor)}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={statusBadgeVariant(comissao.statusPagamento)}
+                      >
+                        {comissao.statusPagamento}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(comissao.dataGeracao).toLocaleDateString(
+                        "pt-BR",
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {comissao.contaPagar
+                        ? `#${comissao.contaPagar.id} (${comissao.contaPagar.status})`
+                        : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        )}
+      </div>
     </div>
   );
 }

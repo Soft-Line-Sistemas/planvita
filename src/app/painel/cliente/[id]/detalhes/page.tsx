@@ -19,6 +19,7 @@ import {
   Download,
   Eye,
   Loader2,
+  ArrowLeft,
 } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
@@ -36,6 +37,18 @@ import api from "@/utils/api";
 import { extractApiError } from "@/utils/httpError";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AsaasWingsMark } from "@/components/ui/AsaasWingsMark";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDatePtBr } from "@/utils/date";
@@ -110,18 +123,18 @@ const DetalhesCliente = () => {
     },
   });
 
-  const getStatusColor = (status: string) => {
+  const getStatusBadgeVariant = (
+    status: string,
+  ): "default" | "outline" | "secondary" | "destructive" => {
     switch (status) {
       case "ATIVO":
-        return "text-green-600 bg-green-100";
+        return "default";
       case "PENDENTE":
-        return "text-yellow-600 bg-yellow-100";
+        return "secondary";
       case "INADIMPLENTE":
-        return "text-red-600 bg-red-100";
-      case "CANCELADO":
-        return "text-gray-600 bg-gray-100";
+        return "destructive";
       default:
-        return "text-gray-600 bg-gray-100";
+        return "outline";
     }
   };
 
@@ -248,46 +261,36 @@ const DetalhesCliente = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4 text-center px-4">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-center px-4">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+          <h2 className="text-xl font-semibold mb-2">
             Não foi possível carregar o cliente
           </h2>
           {error instanceof Error && (
-            <p className="text-gray-500">{error.message}</p>
+            <p className="text-muted-foreground">{error.message}</p>
           )}
         </div>
-        <button
-          onClick={() => refetch()}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-        >
-          Tentar novamente
-        </button>
+        <Button onClick={() => refetch()}>Tentar novamente</Button>
       </div>
     );
   }
 
   if (!cliente) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            Cliente não encontrado
-          </h2>
-          <button
-            onClick={() => router.back()}
-            className="text-green-600 hover:text-green-700 font-medium"
-          >
+          <h2 className="text-xl font-semibold mb-2">Cliente não encontrado</h2>
+          <Button variant="link" onClick={() => router.back()}>
             Voltar
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -404,65 +407,56 @@ const DetalhesCliente = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50/50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-white border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <button
+          <div className="flex flex-wrap items-center justify-between gap-4 py-4">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => router.back()}
-                className="text-gray-600 hover:text-gray-900 transition-colors"
+                className="text-muted-foreground"
               >
-                ← Voltar
-              </button>
+                <ArrowLeft className="w-4 h-4" />
+                Voltar
+              </Button>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">
-                  {cliente.nome}
-                </h1>
-                <p className="text-sm text-gray-500">CPF: {cliente.cpf}</p>
+                <h1 className="text-xl font-semibold">{cliente.nome}</h1>
+                <p className="text-sm text-muted-foreground">
+                  CPF: {cliente.cpf}
+                </p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(cliente.statusPlano)}`}
-              >
+            <div className="flex items-center gap-3">
+              <Badge variant={getStatusBadgeVariant(cliente.statusPlano)}>
                 {cliente.statusPlano}
-              </span>
-              <button
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
-                onClick={() => setOpenEdit(true)}
-              >
+              </Badge>
+              <Button onClick={() => setOpenEdit(true)}>
                 <Edit className="w-4 h-4" />
-                <span>Editar</span>
-              </button>
+                Editar
+              </Button>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Navegação por abas */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
-            {abas.map((aba) => {
-              const Icon = aba.icon;
-              return (
-                <button
-                  key={aba.id}
-                  onClick={() => setAbaAtiva(aba.id)}
-                  className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    abaAtiva === aba.id
-                      ? "border-green-500 text-green-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{aba.nome}</span>
-                </button>
-              );
-            })}
-          </nav>
+          <Tabs value={abaAtiva} onValueChange={setAbaAtiva}>
+            <TabsList className="h-auto bg-transparent p-0 gap-6 border-b-0">
+              {abas.map((aba) => {
+                const Icon = aba.icon;
+                return (
+                  <TabsTrigger
+                    key={aba.id}
+                    value={aba.id}
+                    className="rounded-none border-b-2 border-transparent bg-transparent px-1 py-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    <Icon className="w-4 h-4" />
+                    {aba.nome}
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </Tabs>
         </div>
       </div>
 
@@ -472,36 +466,38 @@ const DetalhesCliente = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Informações Pessoais */}
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+                <h3 className="text-lg font-semibold mb-4">
                   Informações Pessoais
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center space-x-3">
-                    <User className="w-5 h-5 text-gray-400" />
+                  <div className="flex items-center gap-3">
+                    <User className="w-5 h-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-gray-500">Nome Completo</p>
+                      <p className="text-sm text-muted-foreground">
+                        Nome Completo
+                      </p>
                       <p className="font-medium">{cliente.nome}</p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <Calendar className="w-5 h-5 text-gray-400" />
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-5 h-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-gray-500">Idade</p>
+                      <p className="text-sm text-muted-foreground">Idade</p>
                       <p className="font-medium">{cliente.idade} anos</p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <Mail className="w-5 h-5 text-gray-400" />
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-5 h-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-gray-500">Email</p>
+                      <p className="text-sm text-muted-foreground">Email</p>
                       <p className="font-medium">{cliente.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <Phone className="w-5 h-5 text-gray-400" />
+                  <div className="flex items-center gap-3">
+                    <Phone className="w-5 h-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-gray-500">Telefone</p>
+                      <p className="text-sm text-muted-foreground">Telefone</p>
                       <p className="font-medium">{cliente.telefone}</p>
                     </div>
                   </div>
@@ -509,23 +505,23 @@ const DetalhesCliente = () => {
               </div>
 
               {/* Endereço */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Endereço
-                </h3>
-                <div className="flex items-start space-x-3">
-                  <MapPin className="w-5 h-5 text-gray-400 mt-1" />
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+                <h3 className="text-lg font-semibold mb-4">Endereço</h3>
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-5 h-5 text-muted-foreground mt-1" />
                   <div>
                     <p className="font-medium">
                       {cliente.endereco.logradouro}, {cliente.endereco.numero}
                       {cliente.endereco.complemento &&
                         `, ${cliente.endereco.complemento}`}
                     </p>
-                    <p className="text-gray-600">
+                    <p className="text-muted-foreground">
                       {cliente.endereco.bairro}, {cliente.endereco.cidade} -{" "}
                       {cliente.endereco.uf}
                     </p>
-                    <p className="text-gray-600">CEP: {cliente.endereco.cep}</p>
+                    <p className="text-muted-foreground">
+                      CEP: {cliente.endereco.cep}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -533,20 +529,18 @@ const DetalhesCliente = () => {
 
             {/* Resumo do Plano */}
             <div className="space-y-6">
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Plano Atual
-                </h3>
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+                <h3 className="text-lg font-semibold mb-4">Plano Atual</h3>
                 <div className="space-y-4">
                   <div>
-                    <p className="text-2xl font-bold text-green-600">
+                    <p className="text-2xl font-bold text-primary">
                       {cliente.plano.nome}
                     </p>
-                    <p className="text-gray-600">
+                    <p className="text-muted-foreground">
                       R$ {valorMensalComAdicionais.toFixed(2)}/mês
                     </p>
                     {totalAdicionaisDependentes > 0 ? (
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         Base: R$ {cliente.plano.valorMensal.toFixed(2)} + R${" "}
                         {totalAdicionaisDependentes.toFixed(2)} de adicionais
                       </p>
@@ -554,62 +548,68 @@ const DetalhesCliente = () => {
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Contratação:</span>
+                      <span className="text-muted-foreground">
+                        Contratação:
+                      </span>
                       <span className="font-medium">
                         {formatDatePtBr(cliente.dataContratacao)}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Possível renovação:</span>
+                      <span className="text-muted-foreground">
+                        Possível renovação:
+                      </span>
                       <span className="font-medium">
                         {dataPossivelRenovacao}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Carência:</span>
+                      <span className="text-muted-foreground">Carência:</span>
                       <span className="font-medium">
                         {cliente.carenciaRestante} dias
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Vencimento:</span>
+                      <span className="text-muted-foreground">Vencimento:</span>
                       <span className="font-medium">
                         Todo dia {cliente.diaVencimento}
                       </span>
                     </div>
                   </div>
-                  <button
+                  <Button
                     type="button"
                     onClick={handleBaixarContrato}
                     disabled={baixandoContrato}
-                    className="w-full mt-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                    className="w-full mt-2"
                   >
                     {baixandoContrato ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <Download className="w-4 h-4" />
                     )}
-                    <span>
-                      {baixandoContrato
-                        ? "Gerando contrato..."
-                        : "Baixar contrato"}
-                    </span>
-                  </button>
+                    {baixandoContrato
+                      ? "Gerando contrato..."
+                      : "Baixar contrato"}
+                  </Button>
                 </div>
               </div>
 
               {/* Consultor Responsável */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+                <h3 className="text-lg font-semibold mb-4">
                   Consultor Responsável
                 </h3>
                 <div className="space-y-2">
                   <p className="font-medium">{cliente.consultor.nome}</p>
-                  <p className="text-gray-600">
+                  <p className="text-muted-foreground">
                     Código: {cliente.consultor.codigo}
                   </p>
-                  <p className="text-gray-600">{cliente.consultor.email}</p>
-                  <p className="text-gray-600">{cliente.consultor.telefone}</p>
+                  <p className="text-muted-foreground">
+                    {cliente.consultor.email}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {cliente.consultor.telefone}
+                  </p>
                 </div>
               </div>
             </div>
@@ -618,11 +618,11 @@ const DetalhesCliente = () => {
 
         {abaAtiva === "carteirinha" && (
           <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+              <h3 className="text-lg font-semibold mb-2">
                 Carteirinha do Cliente
               </h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 Visualize a carteirinha e faça download em PDF.
               </p>
             </div>
@@ -645,22 +645,20 @@ const DetalhesCliente = () => {
         {abaAtiva === "coberturas" && (
           <div className="space-y-8">
             {/* Serviços Padrão Inclusos */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">
+            <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+              <h3 className="text-lg font-semibold mb-6">
                 Serviços Padrão Inclusos
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {coberturasPorGrupo.servicosPadrao.map((servico, index) => (
                   <div
                     key={index}
-                    className="flex items-start space-x-3 p-4 bg-green-50 rounded-lg"
+                    className="flex items-start gap-3 p-4 bg-[#f2faf0] rounded-lg"
                   >
-                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+                    <CheckCircle className="w-5 h-5 text-primary mt-0.5 shrink-0" />
                     <div>
-                      <p className="font-medium text-gray-900">
-                        {servico.nome}
-                      </p>
-                      <p className="text-sm text-gray-600">
+                      <p className="font-medium">{servico.nome}</p>
+                      <p className="text-sm text-muted-foreground">
                         {servico.descricao}
                       </p>
                     </div>
@@ -670,8 +668,8 @@ const DetalhesCliente = () => {
             </div>
 
             {/* Cobertura e Translado */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">
+            <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+              <h3 className="text-lg font-semibold mb-6">
                 Cobertura e Translado
               </h3>
               <div className="space-y-4">
@@ -679,19 +677,18 @@ const DetalhesCliente = () => {
                   (cobertura, index) => (
                     <div
                       key={index}
-                      className="flex items-start space-x-3 p-4 bg-blue-50 rounded-lg"
+                      className="flex items-start gap-3 p-4 bg-slate-50 rounded-lg"
                     >
-                      <Shield className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+                      <Shield className="w-5 h-5 text-slate-600 mt-0.5 shrink-0" />
                       <div className="flex-1">
-                        <p className="font-medium text-gray-900">
-                          {cobertura.nome}
-                        </p>
-                        <p className="text-sm text-gray-600">
+                        <p className="font-medium">{cobertura.nome}</p>
+                        <p className="text-sm text-muted-foreground">
                           {cobertura.descricao}
                         </p>
                         {cobertura.observacoes && (
-                          <p className="text-sm text-orange-600 mt-1">
-                            ⚠️ {cobertura.observacoes}
+                          <p className="text-sm text-amber-600 mt-1 flex items-center gap-1">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            {cobertura.observacoes}
                           </p>
                         )}
                       </div>
@@ -702,8 +699,8 @@ const DetalhesCliente = () => {
             </div>
 
             {/* Serviços Específicos do Plano */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">
+            <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+              <h3 className="text-lg font-semibold mb-6">
                 Serviços Específicos do Plano
               </h3>
               <div className="space-y-4">
@@ -711,14 +708,12 @@ const DetalhesCliente = () => {
                   (servico, index) => (
                     <div
                       key={index}
-                      className="flex items-start space-x-3 p-4 bg-purple-50 rounded-lg"
+                      className="flex items-start gap-3 p-4 bg-[#f2faf0] rounded-lg"
                     >
-                      <Gift className="w-5 h-5 text-purple-600 mt-0.5 shrink-0" />
+                      <Gift className="w-5 h-5 text-primary mt-0.5 shrink-0" />
                       <div>
-                        <p className="font-medium text-gray-900">
-                          {servico.nome}
-                        </p>
-                        <p className="text-sm text-gray-600">
+                        <p className="font-medium">{servico.nome}</p>
+                        <p className="text-sm text-muted-foreground">
                           {servico.descricao}
                         </p>
                       </div>
@@ -733,22 +728,22 @@ const DetalhesCliente = () => {
         {abaAtiva === "dependentes" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold">
                 Dependentes ({cliente.dependentes.length})
               </h3>
               {limiteBeneficiarios && limiteBeneficiarios > 0 ? (
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-muted-foreground">
                   Limite: {limiteBeneficiarios}
                 </span>
               ) : null}
             </div>
 
             <form
-              className="bg-white rounded-lg shadow-sm p-6 space-y-4"
+              className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 space-y-4"
               onSubmit={handleAdicionarDependente}
             >
               {limiteAtingido ? (
-                <p className="text-sm text-red-600">
+                <p className="text-sm text-destructive">
                   Limite de beneficiários atingido para este cliente.
                 </p>
               ) : null}
@@ -798,18 +793,15 @@ const DetalhesCliente = () => {
                 </div>
               </div>
               <div className="flex justify-end">
-                <button
+                <Button
                   type="submit"
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 disabled:opacity-60"
                   disabled={criarDependenteMutation.isPending || limiteAtingido}
                 >
                   <Plus className="w-4 h-4" />
-                  <span>
-                    {criarDependenteMutation.isPending
-                      ? "Adicionando..."
-                      : "Adicionar Dependente"}
-                  </span>
-                </button>
+                  {criarDependenteMutation.isPending
+                    ? "Adicionando..."
+                    : "Adicionar Dependente"}
+                </Button>
               </div>
             </form>
 
@@ -817,46 +809,48 @@ const DetalhesCliente = () => {
               {cliente.dependentes.map((dependente) => (
                 <div
                   key={dependente.id}
-                  className="bg-white rounded-lg shadow-sm p-6"
+                  className="bg-white rounded-xl border border-slate-100 shadow-sm p-6"
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <User className="w-6 h-6 text-green-600" />
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-[#f2faf0] rounded-full flex items-center justify-center">
+                        <User className="w-6 h-6 text-primary" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-gray-900">
-                          {dependente.nome}
-                        </h4>
-                        <p className="text-sm text-gray-600">
+                        <h4 className="font-semibold">{dependente.nome}</h4>
+                        <p className="text-sm text-muted-foreground">
                           {dependente.parentesco}
                         </p>
                       </div>
                     </div>
-                    <button className="text-gray-400 hover:text-gray-600">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground h-8 w-8"
+                    >
                       <Edit className="w-4 h-4" />
-                    </button>
+                    </Button>
                   </div>
 
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Idade:</span>
+                      <span className="text-muted-foreground">Idade:</span>
                       <span className="font-medium">
                         {dependente.idade} anos
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">CPF:</span>
+                      <span className="text-muted-foreground">CPF:</span>
                       <span className="font-medium">{dependente.cpf}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Carência:</span>
+                      <span className="text-muted-foreground">Carência:</span>
                       <span className="font-medium">
                         {dependente.carenciaRestante} dias
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Adicional:</span>
+                      <span className="text-muted-foreground">Adicional:</span>
                       <span className="font-medium">
                         R${" "}
                         {Number(dependente.valorAdicionalMensal ?? 0).toFixed(
@@ -865,13 +859,12 @@ const DetalhesCliente = () => {
                       </span>
                     </div>
                     {dependente.foraGradeFamiliar ? (
-                      <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-3">
-                        <span className="text-xs text-gray-600">
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-3">
+                        <span className="text-xs text-muted-foreground">
                           Excluir cobrança adicional
                         </span>
                         <label className="inline-flex items-center gap-2 text-xs">
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={Boolean(
                               dependente.excluirCobrancaAdicional ?? false,
                             )}
@@ -879,10 +872,10 @@ const DetalhesCliente = () => {
                               !podeAlternarIsencaoAdicional ||
                               atualizarCobrancaDependenteMutation.isPending
                             }
-                            onChange={(e) =>
+                            onCheckedChange={(checked) =>
                               atualizarCobrancaDependenteMutation.mutate({
                                 dependenteId: Number(dependente.id),
-                                excluir: e.target.checked,
+                                excluir: checked === true,
                               })
                             }
                           />
@@ -892,7 +885,7 @@ const DetalhesCliente = () => {
                         </label>
                       </div>
                     ) : (
-                      <p className="text-xs text-gray-500 pt-2 border-t border-gray-100">
+                      <p className="text-xs text-muted-foreground pt-2 border-t border-slate-100">
                         Dependente dentro da grade familiar do plano.
                       </p>
                     )}
@@ -907,93 +900,98 @@ const DetalhesCliente = () => {
           <div className="space-y-6">
             {/* Resumo Financeiro */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-center space-x-3">
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+                <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                     <CheckCircle className="w-6 h-6 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Pagamentos em Dia</p>
+                    <p className="text-sm text-muted-foreground">
+                      Pagamentos em Dia
+                    </p>
                     <p className="text-2xl font-bold text-green-600">1</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-center space-x-3">
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+                <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
                     <Clock className="w-6 h-6 text-yellow-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Pendentes</p>
+                    <p className="text-sm text-muted-foreground">Pendentes</p>
                     <p className="text-2xl font-bold text-yellow-600">1</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <CreditCard className="w-6 h-6 text-blue-600" />
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-[#f2faf0] rounded-full flex items-center justify-center">
+                    <CreditCard className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Valor Mensal</p>
-                    <p className="text-2xl font-bold text-blue-600">
+                    <p className="text-sm text-muted-foreground">
+                      Valor Mensal
+                    </p>
+                    <p className="text-2xl font-bold text-primary">
                       R$ {valorMensalComAdicionais.toFixed(2)}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-purple-600" />
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center">
+                    <Calendar className="w-6 h-6 text-slate-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Próximo Vencimento</p>
-                    <p className="text-lg font-bold text-purple-600">30/11</p>
+                    <p className="text-sm text-muted-foreground">
+                      Próximo Vencimento
+                    </p>
+                    <p className="text-lg font-bold text-slate-700">30/11</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Histórico de Pagamentos */}
-            <div className="bg-white rounded-lg shadow-sm">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">
+            <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+              <div className="p-6 border-b border-slate-100">
+                <h3 className="text-lg font-semibold">
                   Histórico de Pagamentos
                 </h3>
               </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Data Vencimento
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Valor
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Método
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ações
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {cliente.pagamentos.map((pagamento) => {
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data Vencimento</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Método</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cliente.pagamentos.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={5}
+                        className="text-center py-8 text-muted-foreground"
+                      >
+                        Nenhum pagamento encontrado.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    cliente.pagamentos.map((pagamento) => {
                       const StatusIcon = getStatusPagamento(
                         pagamento.status,
                       ).icon;
                       return (
-                        <tr key={pagamento.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <TableRow key={pagamento.id}>
+                          <TableCell>
                             <div className="flex items-center gap-2">
                               {formatDatePtBr(pagamento.dataVencimento)}
                               {(pagamento.asaasPaymentId ||
@@ -1001,12 +999,12 @@ const DetalhesCliente = () => {
                                 <AsaasWingsMark variant="inline" />
                               )}
                             </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          </TableCell>
+                          <TableCell className="font-medium">
                             R$ {pagamento.valor.toFixed(2)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center space-x-2">
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
                               <StatusIcon
                                 className={`w-4 h-4 ${getStatusPagamento(pagamento.status).color}`}
                               />
@@ -1016,26 +1014,34 @@ const DetalhesCliente = () => {
                                 {pagamento.status}
                               </span>
                             </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
                             {pagamento.metodoPagamento}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                            <div className="flex items-center space-x-2">
-                              <button className="text-blue-600 hover:text-blue-800">
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-600"
+                              >
                                 <Eye className="w-4 h-4" />
-                              </button>
-                              <button className="text-green-600 hover:text-green-800">
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-primary"
+                              >
                                 <Download className="w-4 h-4" />
-                              </button>
+                              </Button>
                             </div>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                    })
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </div>
         )}

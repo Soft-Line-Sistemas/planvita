@@ -1,6 +1,11 @@
 "use client";
 import React from "react";
 import { Veiculo } from "@/types/VeiculoType";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 
 export default function VeiculoForm({
   form,
@@ -21,55 +26,56 @@ export default function VeiculoForm({
   actionLabel: string;
 }) {
   return (
-    <form onSubmit={onSubmit} className="space-y-3">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <label className="flex flex-col">
-          <span className="text-sm">Placa</span>
-          <input
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="placa">Placa</Label>
+          <Input
+            id="placa"
             required
             value={form.placa ?? ""}
             onChange={(e) => updateForm("placa", e.target.value)}
-            className="border rounded px-2 py-1"
           />
-        </label>
+        </div>
 
-        <label className="flex flex-col">
-          <span className="text-sm">Modelo</span>
-          <input
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="modelo">Modelo</Label>
+          <Input
+            id="modelo"
             required
             value={form.modelo ?? ""}
             onChange={(e) => updateForm("modelo", e.target.value)}
-            className="border rounded px-2 py-1"
           />
-        </label>
+        </div>
 
-        <label className="flex flex-col">
-          <span className="text-sm">Ano</span>
-          <input
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="ano">Ano</Label>
+          <Input
+            id="ano"
             required
             type="number"
             min={1900}
             max={new Date().getFullYear() + 1}
             value={form.ano ?? new Date().getFullYear()}
             onChange={(e) => updateForm("ano", Number(e.target.value))}
-            className="border rounded px-2 py-1"
           />
-        </label>
+        </div>
 
-        <label className="flex flex-col">
-          <span className="text-sm">Tipo</span>
-          <input
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="tipo">Tipo</Label>
+          <Input
+            id="tipo"
             required
             value={form.tipo ?? ""}
             onChange={(e) => updateForm("tipo", e.target.value)}
             placeholder="ex: van, carro funerário"
-            className="border rounded px-2 py-1"
           />
-        </label>
+        </div>
 
-        <label className="flex flex-col">
-          <span className="text-sm">Quilometragem atual</span>
-          <input
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="km">Quilometragem atual</Label>
+          <Input
+            id="km"
             type="number"
             value={form.quilometragemAtual ?? ""}
             onChange={(e) =>
@@ -78,38 +84,29 @@ export default function VeiculoForm({
                 e.target.value ? Number(e.target.value) : undefined,
               )
             }
-            className="border rounded px-2 py-1"
           />
-        </label>
+        </div>
 
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
+        <div className="flex items-center gap-2 pt-6">
+          <Checkbox
+            id="ativo"
             checked={form.ativo ?? true}
-            onChange={(e) => updateForm("ativo", e.target.checked)}
+            onCheckedChange={(checked) => updateForm("ativo", checked === true)}
           />
-          <span className="text-sm">Ativo</span>
-        </label>
+          <Label htmlFor="ativo" className="font-normal">
+            Veículo ativo
+          </Label>
+        </div>
       </div>
 
-      <div className="flex justify-end gap-2 pt-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-4 py-2 border rounded"
-        >
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>
           Cancelar
-        </button>
-        <button
-          type="submit"
-          disabled={saving}
-          className={`px-4 py-2 ${
-            actionLabel === "Salvar" ? "bg-amber-600" : "bg-green-600"
-          } text-white rounded disabled:opacity-60`}
-        >
+        </Button>
+        <Button type="submit" disabled={saving}>
           {saving ? "Salvando..." : actionLabel}
-        </button>
-      </div>
+        </Button>
+      </DialogFooter>
     </form>
   );
 }
