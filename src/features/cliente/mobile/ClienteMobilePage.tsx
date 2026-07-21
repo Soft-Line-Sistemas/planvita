@@ -76,11 +76,24 @@ const SCREENS_WITH_TABBAR: ScreenId[] = [
 
 const DEFAULT_DIAS_SUSPENSAO = 90;
 const DEFAULT_DIAS_POS_SUSPENSAO = 92;
+const DIRECT_AUTH_FLOW_MODES = new Set([
+  "reset",
+  "primeiro-acesso",
+  "pagamento-pendente",
+]);
 const TENANTS_CLIENTE = [
   { slug: "lider", label: "Funerária Lider" },
   { slug: "pax", label: "Pax Lírios" },
   { slug: "bosque", label: "Campo do Bosque" },
 ] as const;
+
+function getPaymentPendingVisitKey(login: string) {
+  let hash = 5381;
+  for (const char of login.trim().toLowerCase()) {
+    hash = ((hash * 33) ^ char.charCodeAt(0)) >>> 0;
+  }
+  return `payment-pending-visit:${hash.toString(36)}`;
+}
 
 type TenantCadastro = {
   tenant: (typeof TENANTS_CLIENTE)[number];
@@ -281,6 +294,7 @@ export default function ClienteMobilePage() {
   const [ppLoading, setPpLoading] = useState(false);
   const [ppError, setPpError] = useState<string | null>(null);
   const [ppSucesso, setPpSucesso] = useState(false);
+  const [ppAguardandoConfirmacao, setPpAguardandoConfirmacao] = useState(false);
 
   const populatePaymentPending = useCallback((d: PaymentPendingPayload) => {
     setPpNome(d.nome ?? null);
@@ -306,6 +320,86 @@ export default function ClienteMobilePage() {
       populatePaymentPending(res.data as PaymentPendingPayload);
     },
     [populatePaymentPending],
+  );
+
+  const verificarPagamento = useCallback(
+    async (login: string, mostrarModalSePendente: boolean) => {
+      setPpError(null);
+      setPpSucesso(false);
+      setPpAguardandoConfirmacao(false);
+
+      const loginErr = validarLoginCliente(login);
+      if (loginErr) {
+        setPpError(loginErr);
+        return;
+      }
+
+      setPpLoading(true);
+      try {
+        setFaLogin(login);
+        const { data } = await api.post("/auth/first-access", { login });
+        const destination =
+          data?.start?.destinationMasked ||
+          data?.start?.channel ||
+          "seu contato";
+        setFaDestination(destination);
+        setFaChannel(
+          data?.start?.channel === "whatsapp" ? "whatsapp" : "email",
+        );
+        const devOtp = data?.start?.dev?.otp;
+        setFaInfo(
+          devOtp
+            ? `Pagamento confirmado. Codigo (dev): ${devOtp}`
+            : "Pagamento confirmado. Enviamos um codigo para validar seu primeiro acesso.",
+        );
+        setFaStep("verify");
+        setAuthView("first-access");
+      } catch (err) {
+        const status = (err as { response?: { status?: number } })?.response
+          ?.status;
+        const code = extractServerCode(err);
+        const msg = extractServerMessage(err);
+
+        if (status === 402 && code === "PAYMENT_REQUIRED") {
+          if (mostrarModalSePendente) setPpAguardandoConfirmacao(true);
+          try {
+            await loadPaymentPending(login);
+          } catch {
+            // Mantém os dados de cobrança já exibidos, se houver.
+          }
+          return;
+        }
+
+        setPpError(msg ?? "Nao foi possivel verificar o pagamento agora.");
+      } finally {
+        setPpLoading(false);
+      }
+    },
+    [loadPaymentPending],
+  );
+
+  const abrirPagamentoPendente = useCallback(
+    async (login: string) => {
+      setAuthView("payment-pending");
+
+      const visitKey = getPaymentPendingVisitKey(login);
+      const isReturningVisit = window.localStorage.getItem(visitKey) === "1";
+      window.localStorage.setItem(visitKey, "1");
+
+      if (isReturningVisit) {
+        await verificarPagamento(login, false);
+        return;
+      }
+
+      try {
+        await loadPaymentPending(login);
+      } catch {
+        setPpError(
+          "Nao foi possivel carregar os dados da cobranca. Voce ainda pode reenviar o link abaixo.",
+        );
+      }
+    },
+    [loadPaymentPending, verificarPagamento],
   );
 
   /* --- Navigation --- */
@@ -432,6 +526,12 @@ export default function ClienteMobilePage() {
     const tokenFromUrl = (params.get("token") || "").trim();
     const tenantFromUrl = (params.get("tenant") || "").trim().toLowerCase();
 
+    // Links de continuidade do cadastro devem abrir diretamente o fluxo
+    // correspondente, sem voltar ao carrossel de boas-vindas.
+    if (modo && DIRECT_AUTH_FLOW_MODES.has(modo)) {
+      setShowOnboarding(false);
+    }
+
     if (tenantFromUrl) {
       setTenantSelecionado(tenantFromUrl);
       document.cookie = `tenant=${tenantFromUrl}; path=/; max-age=31536000; SameSite=Lax`;
@@ -455,13 +555,10 @@ export default function ClienteMobilePage() {
         setLoginValue(loginHint);
         setFaLogin(loginHint);
       }
-      setAuthView("payment-pending");
       if (loginHint) {
-        void loadPaymentPending(loginHint).catch(() => {
-          setPpError(
-            "Nao foi possivel carregar os dados da cobranca. Voce ainda pode reenviar o link abaixo.",
-          );
-        });
+        void abrirPagamentoPendente(loginHint);
+      } else {
+        setAuthView("payment-pending");
       }
     }
 
@@ -477,7 +574,7 @@ export default function ClienteMobilePage() {
       }
       setAuthView("forgot");
     }
-  }, [loadPaymentPending]);
+  }, [abrirPagamentoPendente]);
 
   /* ===== Auth check ===== */
   useEffect(() => {
@@ -485,8 +582,7 @@ export default function ClienteMobilePage() {
       const params = new URLSearchParams(window.location.search);
       const modo = params.get("modo");
       const hasRecovery =
-        modo === "reset" ||
-        modo === "primeiro-acesso" ||
+        (modo !== null && DIRECT_AUTH_FLOW_MODES.has(modo)) ||
         Boolean(params.get("token"));
       if (hasRecovery) {
         setAuthChecked(true);
@@ -616,12 +712,7 @@ export default function ClienteMobilePage() {
         return;
       }
       if (status === 402 && code === "PAYMENT_REQUIRED") {
-        setAuthView("payment-pending");
-        try {
-          await loadPaymentPending(loginValue.trim());
-        } catch {
-          // non-fatal — view already shown with "reenviar" option
-        }
+        await abrirPagamentoPendente(loginValue.trim());
         return;
       }
       if (status === 401 && code === "CORRESPONSAVEL_OTP_REQUIRED") {
@@ -672,12 +763,7 @@ export default function ClienteMobilePage() {
           return;
         }
         if (status === 402 && code === "PAYMENT_REQUIRED") {
-          setAuthView("payment-pending");
-          try {
-            await loadPaymentPending(loginValue.trim());
-          } catch {
-            // non-fatal
-          }
+          await abrirPagamentoPendente(loginValue.trim());
           return;
         }
         if (status === 401 && code === "CORRESPONSAVEL_OTP_REQUIRED") {
@@ -699,8 +785,8 @@ export default function ClienteMobilePage() {
     },
     [
       authLoading,
+      abrirPagamentoPendente,
       carregarCliente,
-      loadPaymentPending,
       loginValue,
       selecionarTenant,
       senhaValue,
@@ -1073,55 +1159,9 @@ export default function ClienteMobilePage() {
   }, [loadPaymentPending, loginValue]);
 
   const onVerificarPagamento = useCallback(async () => {
-    setPpError(null);
-    setPpSucesso(false);
-
     const login = loginValue.trim();
-    const loginErr = validarLoginCliente(login);
-    if (loginErr) {
-      setPpError(loginErr);
-      return;
-    }
-
-    setPpLoading(true);
-    try {
-      setFaLogin(login);
-      const { data } = await api.post("/auth/first-access", { login });
-      const destination =
-        data?.start?.destinationMasked || data?.start?.channel || "seu contato";
-      setFaDestination(destination);
-      setFaChannel(data?.start?.channel === "whatsapp" ? "whatsapp" : "email");
-      const devOtp = data?.start?.dev?.otp;
-      setFaInfo(
-        devOtp
-          ? `Pagamento confirmado. Codigo (dev): ${devOtp}`
-          : "Pagamento confirmado. Enviamos um codigo para validar seu primeiro acesso.",
-      );
-      setFaStep("verify");
-      setAuthView("first-access");
-    } catch (err) {
-      const status = (err as { response?: { status?: number } })?.response
-        ?.status;
-      const code = extractServerCode(err);
-      const msg = extractServerMessage(err);
-
-      if (status === 402 && code === "PAYMENT_REQUIRED") {
-        setPpError(
-          "O pagamento ainda nao foi confirmado. Assim que o webhook atualizar, este botao liberara o primeiro acesso.",
-        );
-        try {
-          await loadPaymentPending(login);
-        } catch {
-          // keep current state
-        }
-        return;
-      }
-
-      setPpError(msg ?? "Nao foi possivel verificar o pagamento agora.");
-    } finally {
-      setPpLoading(false);
-    }
-  }, [loadPaymentPending, loginValue]);
+    await verificarPagamento(login, true);
+  }, [loginValue, verificarPagamento]);
 
   const faCooldownRemaining = faCooldownUntil
     ? Math.max(0, Math.ceil((faCooldownUntil - otpCooldownNow) / 1000))
@@ -1467,8 +1507,12 @@ export default function ClienteMobilePage() {
           ppLoading={ppLoading}
           ppError={ppError}
           ppSucesso={ppSucesso}
+          ppAguardandoConfirmacao={ppAguardandoConfirmacao}
           onReenviarPagamento={onReenviarPagamento}
           onVerificarPagamento={onVerificarPagamento}
+          onFecharAguardandoConfirmacao={() =>
+            setPpAguardandoConfirmacao(false)
+          }
         />
 
         {modalCadastroAberto && (

@@ -1,6 +1,13 @@
 "use client";
 
-import { Loader2, ArrowLeft, AlertCircle, CheckCircle } from "lucide-react";
+import {
+  Loader2,
+  ArrowLeft,
+  AlertCircle,
+  CheckCircle,
+  Clock3,
+  Mail,
+} from "lucide-react";
 import Image from "next/image";
 
 /* ===================================================================
@@ -85,8 +92,10 @@ export interface MobileLoginProps {
   ppLoading: boolean;
   ppError: string | null;
   ppSucesso: boolean;
+  ppAguardandoConfirmacao: boolean;
   onReenviarPagamento: () => void;
   onVerificarPagamento: () => void;
+  onFecharAguardandoConfirmacao: () => void;
 }
 
 /* ===================================================================
@@ -1070,8 +1079,10 @@ function PaymentPendingView({
   ppLoading,
   ppError,
   ppSucesso,
+  ppAguardandoConfirmacao,
   onReenviarPagamento,
   onVerificarPagamento,
+  onFecharAguardandoConfirmacao,
   setAuthView,
 }: Pick<
   MobileLoginProps,
@@ -1084,8 +1095,10 @@ function PaymentPendingView({
   | "ppLoading"
   | "ppError"
   | "ppSucesso"
+  | "ppAguardandoConfirmacao"
   | "onReenviarPagamento"
   | "onVerificarPagamento"
+  | "onFecharAguardandoConfirmacao"
   | "setAuthView"
 >) {
   const formatCurrency = (v: number) =>
@@ -1238,6 +1251,91 @@ function PaymentPendingView({
           Voltar ao login
         </button>
       </div>
+
+      {ppAguardandoConfirmacao && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="payment-confirmation-pending-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+            background: "rgba(0, 0, 0, 0.52)",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 360,
+              borderRadius: 20,
+              padding: 24,
+              background: "#fff",
+              textAlign: "center",
+              boxShadow: "0 18px 48px rgba(0, 0, 0, 0.24)",
+            }}
+          >
+            <span
+              aria-hidden="true"
+              style={{
+                width: 52,
+                height: 52,
+                margin: "0 auto 16px",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#fff4df",
+                color: "#a86400",
+              }}
+            >
+              <Clock3 size={27} />
+            </span>
+            <h2
+              id="payment-confirmation-pending-title"
+              style={{ margin: "0 0 10px", color: "#1e293b", fontSize: 20 }}
+            >
+              Pagamento em confirmação
+            </h2>
+            <p
+              style={{
+                margin: "0 0 20px",
+                color: "#475569",
+                fontSize: 15,
+                lineHeight: 1.5,
+              }}
+            >
+              Seu pagamento ainda está sendo confirmado. Aguarde o e-mail de
+              confirmação para continuar com o primeiro acesso.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 7,
+                marginBottom: 20,
+                color: "#64748b",
+                fontSize: 13,
+              }}
+            >
+              <Mail size={16} aria-hidden="true" />
+              Confira também sua caixa de spam.
+            </div>
+            <button
+              type="button"
+              className="cm-login-btn-primary"
+              onClick={onFecharAguardandoConfirmacao}
+            >
+              Entendi
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -1285,8 +1383,10 @@ export default function MobileLoginScreen(props: MobileLoginProps) {
             ppLoading={props.ppLoading}
             ppError={props.ppError}
             ppSucesso={props.ppSucesso}
+            ppAguardandoConfirmacao={props.ppAguardandoConfirmacao}
             onReenviarPagamento={props.onReenviarPagamento}
             onVerificarPagamento={props.onVerificarPagamento}
+            onFecharAguardandoConfirmacao={props.onFecharAguardandoConfirmacao}
             setAuthView={setAuthView}
           />
         )}
