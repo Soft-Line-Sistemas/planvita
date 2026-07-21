@@ -2,7 +2,10 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import type { ConsultorPublicResult } from "@/utils/consultorPublic";
+import {
+  buildConsultorAvatarProxyUrl,
+  type ConsultorPublicResult,
+} from "@/utils/consultorPublic";
 
 function getInitials(name?: string | null) {
   const trimmed = String(name ?? "").trim();
@@ -19,12 +22,14 @@ type Props = {
 };
 
 export function ConsultorLookupCard({ consultor, locked = false }: Props) {
+  const avatarUrl = buildConsultorAvatarProxyUrl(consultor.codigo);
+
   return (
     <div className="rounded-xl border border-emerald-200 bg-white p-4 shadow-sm">
       <div className="flex items-start gap-3">
         <Avatar className="size-14 border border-emerald-100">
           <AvatarImage
-            src={consultor.avatarUrl ?? undefined}
+            src={avatarUrl ?? undefined}
             alt={consultor.nomeCompleto}
           />
           <AvatarFallback className="bg-emerald-50 text-emerald-700 font-semibold">
