@@ -1,4 +1,5 @@
 import api from "@/utils/api";
+import { API_VERSION, getApiUrl } from "@/config/api-config";
 
 export type ConsultorPublicResult = {
   id: number;
@@ -46,6 +47,16 @@ export async function resolveConsultorPublicLegacy(
   });
 
   return data;
+}
+
+export function buildConsultorAvatarProxyUrl(
+  codigo?: string | null,
+): string | null {
+  const normalizedCode = normalizeConsultorCode(codigo);
+  if (!normalizedCode) return null;
+
+  const params = new URLSearchParams({ codigo: normalizedCode });
+  return `${getApiUrl()}/${API_VERSION}/consultor/public/avatar?${params.toString()}`;
 }
 
 export function buildConsultorCadastroLink(
