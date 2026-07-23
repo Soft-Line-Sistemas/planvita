@@ -130,6 +130,14 @@ const fluxoOptions: Record<
     descricao:
       "Envio único após o prazo pós-suspensão para orientar regularização e reativação.",
   },
+  "reajuste-anual": {
+    titulo: "Reajuste anual",
+    descricao: "Aviso único na data anual de reajuste do contrato.",
+  },
+  "renovacao-automatica": {
+    titulo: "Renovação automática",
+    descricao: "Aviso único na renovação do contrato após 60 meses.",
+  },
 };
 
 const flowLabel = (flow?: NotificationFlow | null) =>
@@ -141,10 +149,13 @@ const flowLabelFlexible = (flow?: string | null) =>
     : flow || "Sem fluxo";
 
 const painelFlowOrder: NotificationFlow[] = [
-  "lembrete-3-dias-antes",
-  "cobranca-no-vencimento",
-  "atraso-1-dia",
-  "atraso-7-dias",
+  "aviso-vencimento",
+  "pendencia-periodica",
+  "suspensao-preventiva",
+  "suspensao",
+  "pos-suspensao",
+  "reajuste-anual",
+  "renovacao-automatica",
 ];
 
 export default function NotificacoesRecorrentesPage() {
