@@ -9,7 +9,9 @@ export type NotificationFlow =
   | "aviso-pendencia"
   | "suspensao-preventiva"
   | "suspensao"
-  | "pos-suspensao";
+  | "pos-suspensao"
+  | "reajuste-anual"
+  | "renovacao-automatica";
 
 export interface NotificationRecipient {
   titularId: number;
